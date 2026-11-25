@@ -1017,9 +1017,77 @@ function escolherCadastro(){
   modal(`<h3>Cadastro de pessoas</h3>
   <div class="ulist">
     <button class="ubtn" data-act="formPessoa"><div class="av">➕</div><div><b>Novo cadastro</b><small>Pessoa ou fornecedor que ainda não está no app</small></div></button>
+    <button class="ubtn" data-act="importarPessoas"><div class="av">📊</div><div><b>Importar planilha</b><small>Cadastrar várias pessoas de uma vez a partir de um Excel ou CSV</small></div></button>
     <button class="ubtn" data-act="escolherAtualizar"><div class="av">✏️</div><div><b>Atualização de cadastro</b><small>Alterar os dados de alguém já cadastrado — a alteração fica registrada no histórico</small></div></button>
   </div>
   <div class="actions"><button class="btn" data-act="fechar">Cancelar</button></div>`);
+}
+// ===== Cadastro de várias pessoas por planilha =====
+let IMP_PES = null;
+const COLS_PES = [['nome',/^(nome|razao|favorecido|fornecedor|pessoa)/],['doc',/(cpf|cnpj|documento|^doc)/],['funcao',/(funcao|servico|cargo|atividade)/],
+  ['tel',/(telefone|whats|celular|^fone|^tel)/],['email',/(e-?mail)/],['pixTipo',/tipo.*(pix|chave)/],['pix',/(pix|chave)/],['banco',/^banco/],
+  ['tipoConta',/tipo.*conta/],['agencia',/^ag/],['conta',/^conta|n.*conta/]];
+function importarPessoas(){
+  modal(`<h3>📊 Importar pessoas por planilha</h3>
+  <p class="meta" style="margin:-6px 0 12px">Uma pessoa por linha. Colunas: <b>Nome</b> e <b>CPF/CNPJ</b> (obrigatórias), Função, Telefone, E-mail, Chave PIX, Banco, Agência, Conta e Tipo de conta. Antes de cadastrar, você confere tudo, e quem já está cadastrado fica de fora.</p>
+  <div class="btns" style="margin:0"><label class="btn pri" style="cursor:pointer">📥 Escolher planilha (Excel ou CSV)<input type="file" id="arqPessoas" accept=".xlsx,.csv,.txt" hidden></label><button class="btn" data-act="modeloPessoas">⬇️ Baixar modelo</button></div>
+  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button></div>`, 620);
+}
+function modeloPessoas(){
+  const blob = xlsx(['Nome','CPF/CNPJ','Função','Telefone','E-mail','Chave PIX','Banco','Agência','Conta','Tipo de conta'],
+    [['DJ Exemplo da Silva','123.456.789-09','DJ','(11) 99999-0000','dj@exemplo.com','dj@exemplo.com','','','',''],
+     ['Gráfica Exemplo Ltda','12.345.678/0001-95','Gráfica','(11) 3000-0000','','','Itaú','1234','56789-0','Corrente PJ']], [32,20,18,18,26,26,14,10,14,16]);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'modelo_cadastro_pessoas.xlsx'; a.click();
+}
+async function lerPlanilhaPessoas(file){
+  const nome = file.name.toLowerCase();
+  try {
+    const linhas = nome.endsWith('.xlsx') ? await lerXLSX(await file.arrayBuffer()) : (nome.endsWith('.csv') || nome.endsWith('.txt')) ? lerCSV(await lerTexto(file)) : null;
+    if (!linhas) return toast('Formato não suportado. Use Excel (.xlsx) ou CSV.');
+    const hdr = linhas.slice(0,15).findIndex(r => r.some(c=>/^(nome|razao|favorecido|fornecedor)/.test(semAcento(String(c||'')).trim())));
+    if (hdr < 0) return toast('Não achei a coluna "Nome" na planilha. Use o modelo.');
+    const cab = linhas[hdr].map(c=>semAcento(String(c||'')).trim()), col = {};
+    COLS_PES.forEach(([k,re]) => { const i = cab.findIndex((c,j)=>c && re.test(c) && !Object.values(col).includes(j)); if (i>=0) col[k] = i; });
+    if (col.doc === undefined) return toast('Não achei a coluna "CPF/CNPJ" na planilha. Use o modelo.');
+    const docsApp = {}; db.pessoas.forEach(p=>{ const d=String(p.doc||'').replace(/\D/g,''); if (d) docsApp[d]=p; });
+    const nomesApp = {}; db.pessoas.forEach(p=>{ nomesApp[semAcento(p.nome).replace(/\s+/g,' ').trim()] = p; });
+    const vistos = {}, itens = [];
+    linhas.slice(hdr+1).forEach((r, n) => {
+      const v = k => col[k]===undefined ? '' : String(r[col[k]]??'').trim();
+      if (!Object.values(col).some(i=>String(r[i]??'').trim())) return;
+      let docN = v('doc').replace(/\D/g,''); if (docN.length===10 || docN.length===13) docN = '0'+docN;
+      const doc = docN.length===11 ? docN.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4') : docN.length===14 ? docN.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5') : v('doc');
+      const p = {nome:v('nome'), doc, funcao:v('funcao'), tel:v('tel'), email:v('email'), pix:v('pix'), pixTipo:v('pixTipo'), banco:v('banco'), agencia:v('agencia'), conta:v('conta'), tipoConta:v('tipoConta')};
+      if (!p.pixTipo) p.pixTipo = tipoPix(p.pix);
+      const it = {linha: hdr+n+2, p, status:'ok', motivo:''}, kn = semAcento(p.nome).replace(/\s+/g,' ').trim();
+      if (!p.nome) { it.status='erro'; it.motivo='sem nome'; }
+      else if (!docN) { it.status='erro'; it.motivo='sem CPF/CNPJ'; }
+      else if (docsApp[docN]) { it.status='ja'; it.motivo='já cadastrado como '+docsApp[docN].nome; }
+      else if (!docValido(docN)) { it.status='erro'; it.motivo='CPF/CNPJ inválido'; }
+      else if (nomesApp[kn]) { it.status='ja'; it.motivo='já existe alguém com este nome'; }
+      else if (vistos[docN]) { it.status='ja'; it.motivo='repetido na planilha (linha '+vistos[docN]+')'; }
+      if (docN && !vistos[docN]) vistos[docN] = it.linha;
+      itens.push(it);
+    });
+    if (!itens.length) return toast('A planilha não tem nenhuma pessoa.');
+    IMP_PES = itens; conferirPessoas(file.name);
+  } catch(e){ console.error(e); toast('Não consegui ler o arquivo: ' + e.message); }
+}
+function conferirPessoas(nomeArq){
+  const it = IMP_PES, ok = it.filter(i=>i.status==='ok'), ja = it.filter(i=>i.status==='ja'), er = it.filter(i=>i.status==='erro');
+  const banco = p => p.pix ? 'PIX '+h(p.pix) : p.banco ? h(p.banco)+' · Ag '+h(p.agencia)+' · Conta '+h(p.conta) : '<span style="color:var(--muted)">—</span>';
+  const tag = i => i.status==='ok' ? '<span class="tag" style="background:var(--pago)">Novo</span>' : i.status==='ja' ? `<span class="tag" style="background:var(--cancelado)">Fica de fora</span><br><small style="color:var(--muted)">${h(i.motivo)}</small>` : `<span class="tag" style="background:var(--recusado)">Erro</span><br><small style="color:#b91c1c">${h(i.motivo)}</small>`;
+  modal(`<h3>📊 ${h(nomeArq)}: confira antes de cadastrar</h3>
+  <p class="meta" style="margin:-6px 0 12px"><b>${ok.length}</b> ${ok.length===1?'pessoa nova':'pessoas novas'}${ja.length?` · <b>${ja.length}</b> já ${ja.length===1?'cadastrada':'cadastradas'} (não serão duplicadas)`:''}${er.length?` · <b style="color:#b91c1c">${er.length}</b> com erro (corrija na planilha e importe de novo)`:''}</p>
+  <div style="max-height:52vh;overflow:auto"><table><thead><tr><th>Linha</th><th>Nome</th><th>CPF / CNPJ</th><th>Função</th><th>Dados bancários</th><th style="min-width:220px">Situação</th></tr></thead><tbody>
+  ${it.map(i=>`<tr style="${i.status==='ok'?'':'opacity:.75'}"><td>${i.linha}</td><td><b>${h(i.p.nome||'—')}</b></td><td>${h(i.p.doc||'—')}</td><td>${h(i.p.funcao||'—')}</td><td>${banco(i.p)}</td><td>${tag(i)}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="confirmarImpPessoas" ${ok.length?'':'disabled'}>Cadastrar ${ok.length} ${ok.length===1?'pessoa':'pessoas'}</button></div>`, 980);
+}
+function confirmarImpPessoas(){
+  if (!IMP_PES) return; const ok = IMP_PES.filter(i=>i.status==='ok');
+  ok.forEach(i => { const novo = {id:uid('p'), ...i.p, funcao:i.p.funcao||'', tipoConta:i.p.tipoConta||''}; db.pessoas.push(novo); registrarHist(novo.id, 'criacao'); });
+  IMP_PES = null; save(); fechar(); render(); toast(ok.length + (ok.length===1 ? ' pessoa cadastrada' : ' pessoas cadastradas'));
 }
 function escolherAtualizar(){
   modal(`<h3>Atualização de cadastro</h3>
@@ -1867,6 +1935,8 @@ function nomeEmpresa(){
   return (window.NUVEM && window.NUVEM.clienteNome) || '';
 }
 // PIX parcialmente escondido: quem tem o link confere se é a chave certa sem ver a chave inteira
+// resumo curto do CPF/CNPJ para o formulário achar cadastro repetido sem receber o número (igual ao formulario.html)
+function docResumo(d){ d = String(d||'').replace(/\D/g,''); if (!d) return ''; let h = 0x811c9dc5; for (let k = 0; k < d.length; k++){ h ^= d.charCodeAt(k); h = Math.imul(h, 16777619) >>> 0; } return ('00000' + (h >>> 8).toString(16)).slice(-6); }
 function pixMascarado(p){
   const k = String(p.pix||'').trim();
   if (!k) return p.banco && p.conta ? `Conta ${p.banco} ••••${String(p.conta).replace(/\D/g,'').slice(-3)}` : '';
@@ -1881,7 +1951,7 @@ function opcoesForm(tipo){
   const desde = addDias(HOJE, -120);
   return {...base,
     eventos: [...db.eventos].filter(e=>!e.data || e.data >= desde).sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(e=>({id:e.id, nome:e.nome, data:e.data||''})),
-    favorecidos: db.pessoas.filter(p=>p.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(p=>({id:p.id, nome:p.nome, pix:pixMascarado(p)})),
+    favorecidos: db.pessoas.filter(p=>p.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(p=>({id:p.id, nome:p.nome, pix:pixMascarado(p), dh:docResumo(p.doc)})),
     categorias: [...db.categorias], formas: [...FORMAS],
     equipe: db.users.filter(u=>u.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(u=>({id:u.id, nome:u.nome}))};
 }
@@ -2191,6 +2261,9 @@ const acoes = {
     }
     save(); fechar(); render(); },
   cadastrar: () => escolherCadastro(),
+  importarPessoas: () => importarPessoas(),
+  modeloPessoas: () => modeloPessoas(),
+  confirmarImpPessoas: () => confirmarImpPessoas(),
   escolherAtualizar: () => escolherAtualizar(),
   irAtualizar: () => { const d=lerForm('fEscolha'); if(d) formPessoa(d.pid); },
   verHist: id => verHistorico(id),
@@ -2263,7 +2336,7 @@ document.addEventListener('click', e => {
   e.stopPropagation();
   acoes[t.dataset.act]?.(t.dataset.id, t.dataset.arg);
 });
-document.addEventListener('change', e => { if (e.target.id==='arqExtrato'){ [...e.target.files].forEach(importarArquivo); e.target.value=''; return; } const k=e.target.dataset?.f; if(k){ F[k]=[...e.target.selectedOptions].map(o=>o.value).filter(Boolean); render(); } });
+document.addEventListener('change', e => { if (e.target.id==='arqExtrato'){ [...e.target.files].forEach(importarArquivo); e.target.value=''; return; } if (e.target.id==='arqPessoas'){ const f=e.target.files[0]; e.target.value=''; if (f) lerPlanilhaPessoas(f); return; } const k=e.target.dataset?.f; if(k){ F[k]=[...e.target.selectedOptions].map(o=>o.value).filter(Boolean); render(); } });
 // Tela de exportação Zig: filtros e plano de contas por categoria
 document.addEventListener('change', e => {
   const ds = e.target.dataset || {};
@@ -2625,7 +2698,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '6.5';
+const APP_VERSAO = '6.6';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar

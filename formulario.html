@@ -89,6 +89,15 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
 .tab .sub{font-size:12px;color:var(--muted);margin-top:2px}
 .tab .pb{color:#b91c1c;font-size:12px}.tab .av{color:var(--cobre);font-size:12px}
 .tg{background:#efbb3c40;border-radius:6px;padding:1px 6px;font-size:11px}
+label.cb{position:relative}
+.sug{position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border:1px solid var(--linha);border-radius:10px;box-shadow:0 10px 28px #00262029;max-height:290px;overflow:auto;margin-top:4px;display:none}
+.sug .op{padding:9px 12px;cursor:pointer;font-size:14px;color:var(--verde);border-bottom:1px solid #c37f361a}
+.sug .op small{display:block;font-size:11.5px;color:var(--muted);overflow-wrap:anywhere}
+.sug .op.at{background:#efbb3c2e}.sug .op b{font-weight:700}
+.sug .op.nv{color:var(--cobre);font-weight:600;border-bottom:0}.sug .vz{padding:10px 12px;color:var(--muted);font-size:13px}
+.stFav{font-size:12px;margin-top:2px;color:var(--muted)}.stFav.ok{color:#15803d}.stFav a,.qm{color:var(--cobre);font-weight:600;text-decoration:underline;cursor:pointer}
+.qm{font-size:12px;display:inline-block;margin-top:3px}
+.erroCad .usaFav{margin-top:10px;width:auto;padding:10px 16px;font-size:13.5px}
 .rodape{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
 @media (max-width:560px){ .form{grid-template-columns:1fr} h1{font-size:24px} }
 </style>
@@ -112,6 +121,9 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
   }
   function fmt(d){ return d ? d.split('-').reverse().join('/') : ''; }
   function hoje(){ var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+  // resumo curto do CPF/CNPJ (o app manda só isso, nunca o número): serve para achar cadastro repetido
+  function docResumo(d){ d = String(d || '').replace(/\D/g, ''); if (!d) return ''; var h = 0x811c9dc5; for (var k = 0; k < d.length; k++){ h ^= d.charCodeAt(k); h = Math.imul(h, 16777619) >>> 0; } return ('00000' + (h >>> 8).toString(16)).slice(-6); }
+  function favPorDoc(d){ var r = docResumo(d); return r ? ((F.opcoes && F.opcoes.favorecidos) || []).filter(function(f){ return f.dh === r; })[0] : null; }
   function docValido(d){
     d = (d||'').replace(/\D/g,'');
     if (d.length === 11){ if (/^(\d)\1+$/.test(d)) return false;
@@ -159,16 +171,18 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     var fm = ev.target; document.getElementById('msg').style.display = 'none';
     if (!fm.reportValidity()) return;
     var d = new FormData(fm);
+    if (!d.get('pessoaId')) return erro('Escolha o favorecido na lista, ou digite o nome e clique em "Cadastrar como novo favorecido".');
     if (!(Number(d.get('valor')) > 0)) return erro('Informe um valor maior que zero.');
     var nova = d.get('pessoaId') === '__novo__';
-    if (nova){ var np = pessoaDoForm(d); if (typeof np === 'string') return erro(np); }
+    if (nova){ var ja = favPorDoc(d.get('p_doc')); if (ja) return erro('Este CPF/CNPJ já está cadastrado como ' + ja.nome + '. Não precisa cadastrar de novo: volte ao campo Favorecido e escolha ' + ja.nome + ' na lista.');
+      var np = pessoaDoForm(d); if (typeof np === 'string') return erro(np); }
     var emp = (F.opcoes && F.opcoes.empresa) || 'a empresa';
     var linha = function(t, v){ return v ? '<dt>' + t + '</dt><dd>' + v + '</dd>' : ''; };
     var p2 = document.getElementById('passo2');
     p2.innerHTML = '<div class="passos"><span class="on"></span><span class="on"></span></div><h1>Confira os dados</h1><p class="intro">Veja se está tudo certo antes de enviar.</p><dl class="res">'
       + linha('Quem está pedindo', esc(d.get('s_nome')) + (d.get('s_contato') ? ' · ' + esc(d.get('s_contato')) : ''))
       + linha('Evento', esc(txtSel(fm, 'eventoId')))
-      + linha('Favorecido', nova ? esc(d.get('p_nome')) + ' <small>(cadastro novo)</small>' : esc(txtSel(fm, 'pessoaId')))
+      + linha('Favorecido', nova ? esc(d.get('p_nome')) + ' <small>(cadastro novo)</small>' : esc(((F.opcoes.favorecidos||[]).filter(function(x){ return x.id === d.get('pessoaId'); })[0] || {}).nome))
       + linha('PIX', nova ? (esc(d.get('p_pix')) || (d.get('p_banco') ? esc(d.get('p_banco')) + ' · ag. ' + esc(d.get('p_agencia')) + ' · conta ' + esc(d.get('p_conta')) : '')) : (function(){ var f = (F.opcoes.favorecidos||[]).filter(function(x){ return x.id === d.get('pessoaId'); })[0]; return f && f.pix ? esc(f.pix) : '<span style="color:var(--cobre)">sem PIX no cadastro</span>'; })())
       + linha('Categoria', esc(txtSel(fm, 'categoria')) || '<span style="color:var(--muted)">não informada</span>')
       + linha('Valor', '<b>' + brl(d.get('valor')) + '</b>')
@@ -247,6 +261,65 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     {k:'forma',      t:'Forma de pagamento', re:/^forma/},
     {k:'descricao',  t:'Descrição',  re:/^(descri|observa|obs|servi|referente)/}];
   function semAcento(s){ return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  // nomes parecidos: começo do nome, começo de uma palavra, trecho e erros de digitação
+  function semelhanca(a, b){
+    if (a === b) return 1; var m = a.length, n = b.length; if (!m || !n) return 0;
+    var d = []; for (var i = 0; i <= m; i++){ d[i] = [i]; } for (var j = 1; j <= n; j++) d[0][j] = j;
+    for (i = 1; i <= m; i++) for (j = 1; j <= n; j++) d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    return 1 - d[m][n] / Math.max(m, n);
+  }
+  function notaNome(q, nome){
+    var a = semAcento(q).replace(/[^\w ]/g, ' ').replace(/\s+/g, ' ').trim(), b = semAcento(nome).replace(/[^\w ]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!a || !b) return 0;
+    if (a === b) return 100; if (b.indexOf(a) === 0) return 90;
+    var pb = b.split(' '); if (pb.some(function(w){ return w.indexOf(a) === 0; })) return 80;
+    if (b.indexOf(a) >= 0) return 70; if (b.length >= 4 && a.indexOf(b) >= 0) return 65;
+    var pa = a.split(' ').filter(function(w){ return w.length >= 3; }); if (!pa.length) return 0;
+    var r = pa.reduce(function(t, w){ return t + Math.max.apply(null, pb.map(function(x){ return Math.max(semelhanca(w, x), w.length >= 4 ? semelhanca(w, x.slice(0, w.length)) : 0); })); }, 0) / pa.length;
+    return r >= 0.7 ? Math.round(40 + r * 20) : 0;
+  }
+  function parecidos(q, favs){
+    favs = favs || [];
+    if (!String(q || '').trim()) return favs.slice().sort(function(x, y){ return semAcento(x.nome) < semAcento(y.nome) ? -1 : 1; });
+    return favs.map(function(f){ return {f:f, s:notaNome(q, f.nome)}; }).filter(function(x){ return x.s > 0; })
+      .sort(function(x, y){ return y.s - x.s || (semAcento(x.f.nome) < semAcento(y.f.nome) ? -1 : 1); }).map(function(x){ return x.f; });
+  }
+  // o mais parecido, só quando não há dúvida (para preencher sozinho)
+  function melhorFav(q, favs){
+    var l = (favs || []).map(function(f){ return {f:f, s:notaNome(q, f.nome)}; }).sort(function(x, y){ return y.s - x.s; });
+    return l[0] && l[0].s >= 80 && semAcento(q).length >= 3 && !(l[1] && l[1].s >= l[0].s) ? l[0].f : null;
+  }
+  // campo de favorecido com lista que vai filtrando enquanto digita
+  function buscaFav(inp, favs, aoMudar){
+    var box = document.createElement('div'), sel = null, at = 0, ops = [];
+    box.className = 'sug'; inp.parentNode.classList.add('cb'); inp.parentNode.appendChild(box); inp.setAttribute('autocomplete', 'off');
+    var fecha = function(){ box.style.display = 'none'; };
+    var desenha = function(){
+      var q = inp.value.trim(), l = parecidos(q, favs).slice(0, 8);
+      ops = l.map(function(f){ return {f:f}; });
+      if (q && !(l[0] && semAcento(l[0].nome) === semAcento(q))) ops.push({novo:q});
+      if (at >= ops.length) at = 0;
+      box.innerHTML = ops.map(function(x, k){ return '<div class="op' + (x.novo ? ' nv' : '') + (k === at ? ' at' : '') + '" data-k="' + k + '">'
+        + (x.f ? esc(x.f.nome) + (x.f.pix ? '<small>PIX ' + esc(x.f.pix) + '</small>' : '') : '➕ Cadastrar <b>' + esc(x.novo) + '</b> como novo favorecido') + '</div>'; }).join('')
+        || '<div class="vz">Nenhum favorecido cadastrado ainda. Digite o nome.</div>';
+      box.style.top = (inp.offsetTop + inp.offsetHeight) + 'px'; box.style.display = 'block';
+    };
+    var escolhe = function(x){ if (!x) return; if (x.f){ sel = x.f; inp.value = x.f.nome; } else sel = null; fecha(); aoMudar(sel, inp.value.trim(), true); };
+    inp.addEventListener('input', function(){ sel = null; at = 0; desenha(); aoMudar(null, inp.value.trim(), false); });
+    inp.addEventListener('focus', function(){ at = 0; desenha(); });
+    inp.addEventListener('blur', function(){ setTimeout(function(){
+      if (box.style.display === 'none') return; fecha();
+      if (!sel && inp.value.trim()){ var igual = favs.filter(function(f){ return semAcento(f.nome) === semAcento(inp.value); })[0]; if (igual){ sel = igual; inp.value = igual.nome; } aoMudar(sel, inp.value.trim(), true); }
+    }, 150); });
+    inp.addEventListener('keydown', function(e){
+      if (box.style.display === 'none' && e.key === 'ArrowDown'){ desenha(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); at = (at + (e.key === 'ArrowDown' ? 1 : -1) + ops.length) % (ops.length || 1); desenha(); var a = box.querySelector('.at'); if (a) a.scrollIntoView({block:'nearest'}); }
+      else if (e.key === 'Enter' && box.style.display !== 'none' && ops.length){ e.preventDefault(); escolhe(ops[at]); }
+      else if (e.key === 'Escape') fecha();
+    });
+    box.addEventListener('mousedown', function(e){ e.preventDefault(); var o = e.target.closest('.op'); if (o) escolhe(ops[+o.dataset.k]); });
+    return {get:function(){ return sel; }, set:function(f){ sel = f; inp.value = f ? f.nome : inp.value; aoMudar(sel, inp.value.trim(), true); }};
+  }
   function lerValor(v){
     if (typeof v === 'number') return Math.round(v * 100) / 100;
     var s = String(v == null ? '' : v).replace(/[R$\s]/g, '');
@@ -398,9 +471,12 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
           .replace(/[!?]+/g, ' ')
           .replace(/[-–—:;,*_|•]+/g, ' ').replace(/\s+/g, ' ').trim();
         it.nome = resto.slice(0, 80);
-        if (it.nome) it.novaPessoa = {nome:it.nome, doc:doc, pix:pix.slice(0, 120)};
+        var perto = it.nome && melhorFav(it.nome, o.favorecidos);
+        var nomeTxt = it.nome;
+        if (perto){ it.aviso = 'na mensagem: "' + it.nome + '"'; it.pessoaId = perto.id; it.nome = perto.nome; }
+        else if (it.nome){ it.novaPessoa = {nome:it.nome, doc:doc, pix:pix.slice(0, 120)}; var sg = parecidos(it.nome, o.favorecidos)[0]; if (sg) it.sugestao = sg.id; }
       }
-      var nc = f ? n.split(f.n).join(' ') : semAcento(b.replace(it.nome || '\u0000', ' '));
+      var nc = f ? n.split(f.n).join(' ') : semAcento(b.replace(nomeTxt || '\u0000', ' '));
       var c = cats.filter(function(x){ return x.n && nc.indexOf(x.n) >= 0; })[0]; if (c) it.categoria = c.c;
       it.forma = /boleto/i.test(b) ? 'Boleto' : /transfer|ted\b|doc\b/i.test(b) ? 'Transferência' : (o.formas||['PIX'])[0];
       if ((o.formas||[]).indexOf(it.forma) < 0) it.forma = (o.formas||['PIX'])[0];
@@ -451,7 +527,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       return '<span class="pv">' + (i.novaPessoa && i.novaPessoa.pix ? pixHtml(i.novaPessoa.pix) : '<span class="av">não informado</span>') + '</span>'
         + (i.novaPessoa && i.nome ? '<br><a href="#" class="lkcad' + (i.cadOk ? ' feito' : '') + '" data-k="' + esc(semAcento(i.nome)) + '">' + (i.cadOk ? '✓ Cadastrado (editar)' : 'Cadastrar favorecido') + '</a>' : ''); };
     var tab = '<div class="tab"><table><thead><tr><th>Favorecido</th><th>PIX</th><th class="r">Valor / venc.</th></tr></thead><tbody>'
-      + itens.map(function(i){ return '<tr' + (i.problemas.length ? ' class="ruim"' : '') + '><td>' + esc(i.nome || '—') + (i.novaPessoa && i.nome ? ' <small class="tg">novo</small>' : '')
+      + itens.map(function(i){ return '<tr' + (i.problemas.length ? ' class="ruim"' : '') + '><td>' + esc(i.nome || '—') + (i.novaPessoa && i.nome ? ' <small class="tg">novo</small>' : '') + (function(){ var sg = i.novaPessoa && i.sugestao && (o.favorecidos||[]).filter(function(x){ return x.id === i.sugestao; })[0]; return sg ? '<br><a href="#" class="qm" data-i="' + itens.indexOf(i) + '">Você quis dizer ' + esc(sg.nome) + '?</a>' : ''; })()
         + '<div class="sub">' + (i.problemas.length ? '<span class="pb">' + (modo === 'texto' ? '' : 'Linha ' + i.linha + ': ') + '⚠ ' + esc(i.problemas.join(', ')) + '</span>' : esc(i.categoria || 'sem categoria') + (i.descricao && modo !== 'texto' ? ' · ' + esc(i.descricao) : '') + (i.aviso ? '<br><span class="av">' + esc(i.aviso) + '</span>' : '')) + '</div>'
         + '</td><td class="pixc"' + (i.novaPessoa ? ' data-nk="' + esc(semAcento(i.nome)) + '"' : '') + '>' + pixDe(i) + '</td><td class="r"><b>' + (i.valor > 0 ? brl(i.valor) : '—') + '</b><div class="sub">' + (fmt(i.vencimento) || '—') + '</div><a href="#" class="lked" data-i="' + itens.indexOf(i) + '">Editar</a></td></tr>'; }).join('')
       + '</tbody><tfoot><tr><td colspan="2">' + itens.length + (itens.length > 1 ? ' pagamentos' : ' pagamento') + '</td><td class="r">' + brl(total) + '</td></tr></tfoot></table></div>';
@@ -488,6 +564,12 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       var e2 = document.getElementById('msg2'); if (e2) e2.style.display = 'none'; fechaCad(); }; });
     var lg = document.getElementById('lgpdLote'); if (lg){ lg.checked = !!LGPD_OK; lg.onchange = function(){ LGPD_OK = lg.checked; document.getElementById('msg2').style.display = 'none'; }; }
     p2.querySelectorAll('.lked').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); editarItem(fm, itens, o, modo, +a.dataset.i); }; });
+    // troca um favorecido novo por um já cadastrado em todas as linhas dele
+    var usar = function(k, id, y){ var f = (o.favorecidos||[]).filter(function(x){ return x.id === id; })[0]; if (!f) return; capturaCaixas(itens);
+      itens.forEach(function(x){ if (x.novaPessoa && semAcento(x.nome) === k){ if (semAcento(x.nome) !== semAcento(f.nome)) x.aviso = 'escrito: "' + x.nome + '"'; x.pessoaId = f.id; x.nome = f.nome; delete x.novaPessoa; delete x.cadOk; delete x.sugestao; checarItem(x); } });
+      revisarLote(fm, itens, o, modo); setTimeout(function(){ window.scrollTo(0, y); }, 0); };
+    p2.querySelectorAll('.qm').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); var i = itens[+a.dataset.i]; usar(semAcento(i.nome), i.sugestao, window.scrollY); }; });
+    p2.onclick = function(ev){ var b = ev.target.closest('.usaFav'); if (!b) return; ev.preventDefault(); p2.classList.remove('soCad'); usar(b.closest('.cadn').dataset.k, b.dataset.id, posConf); };
     if (!ruins.length) document.getElementById('btConf').onclick = function(){ if (lerNovos(itens)) enviarLote(d, itens, modo); };
     window.scrollTo(0,0);
   }
@@ -511,33 +593,42 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
   function editarItem(fm, itens, o, modo, idx){
     capturaCaixas(itens);
     var i = itens[idx], p2 = document.getElementById('passo2'), y = window.scrollY;
-    var opts = (o.favorecidos||[]).map(function(f){ return '<option value="' + esc(f.id) + '"' + (f.id === i.pessoaId ? ' selected' : '') + '>' + esc(f.nome) + '</option>'; }).join('');
     p2.innerHTML = '<a href="#" class="voltar" id="edVolta">← Voltar para a conferência</a><h1 style="margin-bottom:2px">Editar pagamento</h1><p class="intro">Mude o que precisar e salve.</p><div class="form">'
-      + '<label class="full"><span>Favorecido <b>*</b></span><select id="edFav"><option value="">Selecione…</option>' + opts + '<option value="__novo__"' + (!i.pessoaId ? ' selected' : '') + '>➕ Não está na lista (digitar o nome)</option></select></label>'
-      + '<label class="full" id="edNomeBox"><span>Nome do favorecido <b>*</b></span><input id="edNome" maxlength="150" value="' + esc(i.pessoaId ? '' : i.nome) + '"></label>'
+      + '<label class="full"><span>Favorecido <b>*</b></span><input id="edFav" maxlength="150" placeholder="Digite para buscar" value="' + esc(i.nome || '') + '"><div class="stFav" id="edSt"></div></label>'
       + '<label><span>Valor (R$) <b>*</b></span><input id="edValor" type="number" step="0.01" min="0.01" inputmode="decimal" value="' + (i.valor > 0 ? i.valor : '') + '"></label>'
       + '<label><span>Vencimento <b>*</b></span><input id="edVenc" type="date" value="' + esc(i.vencimento || '') + '"></label>'
       + '</div><div class="lado"><button class="btn sec" id="edRemove" type="button">🗑 Tirar esta linha</button><button class="btn" id="edSalva" type="button">Salvar</button></div><div class="msg" id="msgEd"></div>';
     window.scrollTo(0,0);
-    var sel = document.getElementById('edFav'), nb = document.getElementById('edNomeBox');
-    var mostra = function(){ nb.style.display = sel.value === '__novo__' ? '' : 'none'; }; sel.onchange = mostra; mostra();
+    var favs = o.favorecidos || [], st = document.getElementById('edSt'), inpF = document.getElementById('edFav');
+    var mostra = function(f, txt, fim){
+      if (!f && txt && !fim){ st.className = 'stFav'; st.innerHTML = ''; return; }
+      if (f){ st.className = 'stFav ok'; st.innerHTML = '✓ Favorecido cadastrado' + (f.pix ? ' · PIX ' + esc(f.pix) : ''); return; }
+      st.className = 'stFav'; if (!txt){ st.innerHTML = 'Digite o nome e escolha na lista.'; return; }
+      var sg = parecidos(txt, favs)[0];
+      st.innerHTML = 'Novo favorecido: os dados dele você preenche em "Cadastrar favorecido".' + (sg ? ' <a href="#" id="edSug">Você quis dizer ' + esc(sg.nome) + '?</a>' : '');
+      var a = document.getElementById('edSug'); if (a) a.onmousedown = function(ev){ ev.preventDefault(); cb.set(sg); };
+    };
+    var cb = buscaFav(inpF, favs, mostra);
+    var atual = i.pessoaId && favs.filter(function(x){ return x.id === i.pessoaId; })[0];
+    if (atual) cb.set(atual); else mostra(null, inpF.value.trim(), true);
     var volta = function(){ revisarLote(fm, itens, o, modo); setTimeout(function(){ window.scrollTo(0, y); }, 0); };
     document.getElementById('edVolta').onclick = function(ev){ ev.preventDefault(); volta(); };
     document.getElementById('edRemove').onclick = function(){
       if (itens.length === 1){ var m = document.getElementById('msgEd'); m.textContent = 'É o único pagamento. Para desistir, use Voltar e Corrigir.'; m.style.display = 'block'; return; }
       itens.splice(idx, 1); volta(); };
     document.getElementById('edSalva').onclick = function(){
-      var m = document.getElementById('msgEd'), v = lerValor(document.getElementById('edValor').value), dt = document.getElementById('edVenc').value, nome = document.getElementById('edNome').value.trim();
-      var err = !sel.value ? 'Escolha o favorecido.' : sel.value === '__novo__' && !nome ? 'Digite o nome do favorecido.' : !(v > 0) ? 'Informe um valor maior que zero.' : !/^\d{4}-\d{2}-\d{2}$/.test(dt) ? 'Informe o vencimento.' : '';
+      var m = document.getElementById('msgEd'), v = lerValor(document.getElementById('edValor').value), dt = document.getElementById('edVenc').value, nome = inpF.value.trim();
+      var fSel = cb.get() || favs.filter(function(x){ return semAcento(x.nome) === semAcento(nome); })[0];
+      var err = !nome ? 'Digite o nome do favorecido.' : !(v > 0) ? 'Informe um valor maior que zero.' : !/^\d{4}-\d{2}-\d{2}$/.test(dt) ? 'Informe o vencimento.' : '';
       if (err){ m.textContent = err; m.style.display = 'block'; return; }
-      if (sel.value === '__novo__'){
+      if (!fSel){
         var k = semAcento(nome), outro = itens.filter(function(x){ return x !== i && x.novaPessoa && semAcento(x.nome) === k; })[0];
         var mesmo = i.novaPessoa && semAcento(i.nome || '') === k;
         delete i.pessoaId; i.nome = nome.slice(0, 150);
         if (outro){ i.novaPessoa = JSON.parse(JSON.stringify(outro.novaPessoa)); i.cadOk = !!outro.cadOk; }
         else if (!mesmo){ i.novaPessoa = {nome:i.nome, doc:'', pix:''}; i.cadOk = false; }
-        i.novaPessoa.nome = i.nome;
-      } else { var f = (o.favorecidos||[]).filter(function(x){ return x.id === sel.value; })[0]; i.pessoaId = f.id; i.nome = f.nome; delete i.novaPessoa; delete i.cadOk; }
+        i.novaPessoa.nome = i.nome; var sg = parecidos(i.nome, favs)[0]; if (sg) i.sugestao = sg.id; else delete i.sugestao; delete i.aviso;
+      } else { if (i.pessoaId !== fSel.id) delete i.aviso; i.pessoaId = fSel.id; i.nome = fSel.nome; delete i.novaPessoa; delete i.cadOk; delete i.sugestao; }
       i.valor = v; i.vencimento = dt; checarItem(i); volta();
     };
   }
@@ -565,9 +656,11 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
   }
   function validaCaixa(cx1){
     var g = function(c){ var e = cx1.querySelector('[data-c=' + c + ']'); return e ? String(e.value).trim() : ''; }, msg = '';
-    if (!docValido(g('doc'))) msg = 'CPF ou CNPJ inválido. Confira os números.';
+    var ja = favPorDoc(g('doc'));
+    if (ja) msg = 'Este CPF/CNPJ já está cadastrado como <b>' + esc(ja.nome) + '</b>. Não precisa cadastrar de novo.<br><button type="button" class="btn usaFav" data-id="' + esc(ja.id) + '">Usar ' + esc(ja.nome) + ' e voltar</button>';
+    else if (!docValido(g('doc'))) msg = 'CPF ou CNPJ inválido. Confira os números.';
     else if (!g('pix') && !(g('banco') && g('agencia') && g('conta'))) msg = 'Informe a chave PIX ou os dados completos da conta (banco, agência e conta).';
-    var er = cx1.querySelector('.erroCad'); er.textContent = msg; er.style.display = msg ? 'block' : 'none'; cx1.classList.toggle('comErro', !!msg);
+    var er = cx1.querySelector('.erroCad'); er.innerHTML = msg; er.style.display = msg ? 'block' : 'none'; cx1.classList.toggle('comErro', !!msg);
     return !msg;
   }
   function lerNovos(itens){
@@ -614,7 +707,6 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
   }
   function telaPedido(o){
     var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
-    var fav = (o.favorecidos||[]).map(function(p){ return '<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>'; }).join('');
     var cat = (o.categorias||[]).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
     var fr = (o.formas||['PIX','Transferência','Boleto','Dinheiro']).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
     ARQS = [];
@@ -624,7 +716,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       + camposSol(o) + '</div>'
       + '<div class="grupo">Pagamento</div><div class="form">'
       + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label>'
-      + '<label class="full"><span>Favorecido (quem vai receber) <b>*</b></span><select name="pessoaId" id="selFav" required><option value="">Selecione…</option>' + fav + '<option value="__novo__">➕ Não está na lista: cadastrar agora</option></select></label>'
+      + '<label class="full"><span>Favorecido (quem vai receber) <b>*</b></span><input id="busFav" maxlength="150" placeholder="Digite para buscar"><input type="hidden" name="pessoaId"><div class="stFav" id="stFav">Digite o nome e escolha na lista. Se não estiver, cadastre na hora.</div></label>'
       + '<div class="full novo" id="boxNovo" style="display:none"><div class="form">' + CAMPOS_PESSOA + '</div></div>'
       + '<label>Categoria<select name="categoria"><option value="">Não sei / deixar para a equipe</option>' + cat + '</select></label>'
       + '<label><span>Valor (R$) <b>*</b></span><input name="valor" type="number" step="0.01" min="0.01" required inputmode="decimal"></label>'
@@ -635,9 +727,14 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       + '<div class="full"><label>Anexos: nota fiscal, planilha Excel ou print da conversa</label><div class="arq" id="arqBox">📎 Toque para escolher arquivos<small>PDF, foto/print ou planilha Excel (.xlsx, .xls, .csv) · até 5 arquivos de 10 MB</small></div>'
       + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,.csv,.xls,.xlsx,.ods,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul></div>'
       + '</div><button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
-    var sel = document.getElementById('selFav'), box = document.getElementById('boxNovo');
-    function novoOn(){ var on = sel.value === '__novo__'; box.style.display = on ? '' : 'none'; box.querySelectorAll('[required]').forEach(function(i){ i.disabled = !on; }); box.querySelectorAll('input,select').forEach(function(i){ i.disabled = !on; }); }
-    sel.addEventListener('change', novoOn); novoOn(); voltarInicio();
+    var hid = document.querySelector('[name=pessoaId]'), box = document.getElementById('boxNovo'), stF = document.getElementById('stFav');
+    buscaFav(document.getElementById('busFav'), o.favorecidos || [], function(f, txt, fim){
+      hid.value = f ? f.id : txt && fim ? '__novo__' : '';
+      stF.className = 'stFav' + (f ? ' ok' : ''); stF.innerHTML = !f && txt && !fim ? '' : f ? '✓ Favorecido cadastrado' + (f.pix ? ' · PIX ' + esc(f.pix) : '') : hid.value ? 'Novo favorecido: preencha o cadastro abaixo.' : 'Digite o nome e escolha na lista. Se não estiver, cadastre na hora.';
+      if (hid.value === '__novo__'){ var pn = box.querySelector('[name=p_nome]'); if (pn && (!pn.value || pn.dataset.auto)){ pn.value = txt; pn.dataset.auto = 1; } }
+      novoOn(); });
+    function novoOn(){ var on = hid.value === '__novo__'; box.style.display = on ? '' : 'none'; box.querySelectorAll('[required]').forEach(function(i){ i.disabled = !on; }); box.querySelectorAll('input,select').forEach(function(i){ i.disabled = !on; }); }
+    novoOn(); voltarInicio();
     var inp = document.getElementById('arqIn');
     document.getElementById('arqBox').onclick = function(){ inp.click(); };
     inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(addArq); inp.value = ''; listarArqs(); });
