@@ -97,6 +97,7 @@ label.cb{position:relative}
 .sug .op.nv{color:var(--cobre);font-weight:600;border-bottom:0}.sug .vz{padding:10px 12px;color:var(--muted);font-size:13px}
 .stFav{font-size:12px;margin-top:2px;color:var(--muted)}.stFav.ok{color:#15803d}.stFav a,.qm{color:var(--cobre);font-weight:600;text-decoration:underline;cursor:pointer}
 .qm{font-size:12px;display:inline-block;margin-top:3px}
+.erroCad .usaFav{margin-top:10px;width:auto;padding:10px 16px;font-size:13.5px}
 .rodape{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
 @media (max-width:560px){ .form{grid-template-columns:1fr} h1{font-size:24px} }
 </style>
@@ -120,6 +121,9 @@ label.cb{position:relative}
   }
   function fmt(d){ return d ? d.split('-').reverse().join('/') : ''; }
   function hoje(){ var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+  // resumo curto do CPF/CNPJ (o app manda só isso, nunca o número): serve para achar cadastro repetido
+  function docResumo(d){ d = String(d || '').replace(/\D/g, ''); if (!d) return ''; var h = 0x811c9dc5; for (var k = 0; k < d.length; k++){ h ^= d.charCodeAt(k); h = Math.imul(h, 16777619) >>> 0; } return ('00000' + (h >>> 8).toString(16)).slice(-6); }
+  function favPorDoc(d){ var r = docResumo(d); return r ? ((F.opcoes && F.opcoes.favorecidos) || []).filter(function(f){ return f.dh === r; })[0] : null; }
   function docValido(d){
     d = (d||'').replace(/\D/g,'');
     if (d.length === 11){ if (/^(\d)\1+$/.test(d)) return false;
@@ -170,7 +174,8 @@ label.cb{position:relative}
     if (!d.get('pessoaId')) return erro('Escolha o favorecido na lista, ou digite o nome e clique em "Cadastrar como novo favorecido".');
     if (!(Number(d.get('valor')) > 0)) return erro('Informe um valor maior que zero.');
     var nova = d.get('pessoaId') === '__novo__';
-    if (nova){ var np = pessoaDoForm(d); if (typeof np === 'string') return erro(np); }
+    if (nova){ var ja = favPorDoc(d.get('p_doc')); if (ja) return erro('Este CPF/CNPJ já está cadastrado como ' + ja.nome + '. Não precisa cadastrar de novo: volte ao campo Favorecido e escolha ' + ja.nome + ' na lista.');
+      var np = pessoaDoForm(d); if (typeof np === 'string') return erro(np); }
     var emp = (F.opcoes && F.opcoes.empresa) || 'a empresa';
     var linha = function(t, v){ return v ? '<dt>' + t + '</dt><dd>' + v + '</dd>' : ''; };
     var p2 = document.getElementById('passo2');
@@ -559,10 +564,12 @@ label.cb{position:relative}
       var e2 = document.getElementById('msg2'); if (e2) e2.style.display = 'none'; fechaCad(); }; });
     var lg = document.getElementById('lgpdLote'); if (lg){ lg.checked = !!LGPD_OK; lg.onchange = function(){ LGPD_OK = lg.checked; document.getElementById('msg2').style.display = 'none'; }; }
     p2.querySelectorAll('.lked').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); editarItem(fm, itens, o, modo, +a.dataset.i); }; });
-    p2.querySelectorAll('.qm').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); capturaCaixas(itens); var i = itens[+a.dataset.i], f = (o.favorecidos||[]).filter(function(x){ return x.id === i.sugestao; })[0]; if (!f) return;
-      var k = semAcento(i.nome), y = window.scrollY;
-      itens.forEach(function(x){ if (x.novaPessoa && semAcento(x.nome) === k){ x.aviso = 'na mensagem: "' + x.nome + '"'; x.pessoaId = f.id; x.nome = f.nome; delete x.novaPessoa; delete x.cadOk; delete x.sugestao; checarItem(x); } });
-      revisarLote(fm, itens, o, modo); setTimeout(function(){ window.scrollTo(0, y); }, 0); }; });
+    // troca um favorecido novo por um já cadastrado em todas as linhas dele
+    var usar = function(k, id, y){ var f = (o.favorecidos||[]).filter(function(x){ return x.id === id; })[0]; if (!f) return; capturaCaixas(itens);
+      itens.forEach(function(x){ if (x.novaPessoa && semAcento(x.nome) === k){ if (semAcento(x.nome) !== semAcento(f.nome)) x.aviso = 'escrito: "' + x.nome + '"'; x.pessoaId = f.id; x.nome = f.nome; delete x.novaPessoa; delete x.cadOk; delete x.sugestao; checarItem(x); } });
+      revisarLote(fm, itens, o, modo); setTimeout(function(){ window.scrollTo(0, y); }, 0); };
+    p2.querySelectorAll('.qm').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); var i = itens[+a.dataset.i]; usar(semAcento(i.nome), i.sugestao, window.scrollY); }; });
+    p2.onclick = function(ev){ var b = ev.target.closest('.usaFav'); if (!b) return; ev.preventDefault(); p2.classList.remove('soCad'); usar(b.closest('.cadn').dataset.k, b.dataset.id, posConf); };
     if (!ruins.length) document.getElementById('btConf').onclick = function(){ if (lerNovos(itens)) enviarLote(d, itens, modo); };
     window.scrollTo(0,0);
   }
@@ -649,9 +656,11 @@ label.cb{position:relative}
   }
   function validaCaixa(cx1){
     var g = function(c){ var e = cx1.querySelector('[data-c=' + c + ']'); return e ? String(e.value).trim() : ''; }, msg = '';
-    if (!docValido(g('doc'))) msg = 'CPF ou CNPJ inválido. Confira os números.';
+    var ja = favPorDoc(g('doc'));
+    if (ja) msg = 'Este CPF/CNPJ já está cadastrado como <b>' + esc(ja.nome) + '</b>. Não precisa cadastrar de novo.<br><button type="button" class="btn usaFav" data-id="' + esc(ja.id) + '">Usar ' + esc(ja.nome) + ' e voltar</button>';
+    else if (!docValido(g('doc'))) msg = 'CPF ou CNPJ inválido. Confira os números.';
     else if (!g('pix') && !(g('banco') && g('agencia') && g('conta'))) msg = 'Informe a chave PIX ou os dados completos da conta (banco, agência e conta).';
-    var er = cx1.querySelector('.erroCad'); er.textContent = msg; er.style.display = msg ? 'block' : 'none'; cx1.classList.toggle('comErro', !!msg);
+    var er = cx1.querySelector('.erroCad'); er.innerHTML = msg; er.style.display = msg ? 'block' : 'none'; cx1.classList.toggle('comErro', !!msg);
     return !msg;
   }
   function lerNovos(itens){
