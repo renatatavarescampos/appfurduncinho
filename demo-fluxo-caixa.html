@@ -8,15 +8,15 @@
 <title>Pagamentos de Eventos</title>
 <style>
 :root{
-  --bg:#f4efeb;--card:#fff;--text:#002620;--muted:#6f6a63;--line:#e6ddd2;
-  --brand:#002620;--brand-soft:#f6ecd2;
-  --aguardando:#efbb3c;--aprovado:#c37f36;--pago:#002620;--recusado:#702b16;--cancelado:#a89f95;
+  --bg:#f4efeb;--card:#fff;--text:#002620;--muted:#002620b3;--line:#c37f3640;
+  --brand:#002620;--brand-soft:#efbb3c33;
+  --aguardando:#efbb3c;--aprovado:#c37f36;--pago:#002620;--recusado:#702b16;--cancelado:#0026208c;
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
 button,select,input,textarea{font:inherit}
 .demo-bar{background:#002620;color:#fff;font-size:12px;padding:6px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.demo-bar button{background:transparent;border:1px solid #ffffff55;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer}
+.demo-bar button{background:transparent;border:1px solid #f4efeb55;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer}
 header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .logo{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px}
 .logo span{background:var(--brand);color:#fff;border-radius:8px;width:28px;height:28px;display:grid;place-items:center}
@@ -30,27 +30,27 @@ h2{margin:0 0 12px;font-size:18px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .toolbar select,.toolbar input{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;cursor:pointer}
-.btn:hover{border-color:#cfc4b6}
+.btn:hover{border-color:#c37f3640}
 .btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
 .btn.ok{background:var(--pago);border-color:var(--pago);color:#fff}
 .btn.blue{background:var(--aprovado);border-color:var(--aprovado);color:#fff}
-.btn.bad{color:var(--recusado);border-color:#e8cfc6}
+.btn.bad{color:var(--recusado);border-color:#702b1633}
 .btn.sm{padding:4px 8px;font-size:12px}
 .spacer{flex:1}
 /* Kanban */
 .kanban{display:grid;grid-template-columns:repeat(5,minmax(240px,1fr));gap:12px;overflow-x:auto;padding-bottom:8px}
-.col{background:#ebe3d9;border-radius:12px;padding:10px;min-height:200px}
+.col{background:#f4efeb;border-radius:12px;padding:10px;min-height:200px}
 .col-h{display:flex;align-items:center;gap:6px;font-weight:600;margin-bottom:8px;font-size:13px}
 .dot{width:10px;height:10px;border-radius:50%;flex:none}
 .col-h small{margin-left:auto;color:var(--muted);font-weight:500}
 .col-total{font-size:12px;color:var(--muted);margin:-4px 0 8px 16px}
-.card{background:var(--card);border-radius:10px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px #0000000d;cursor:pointer;border-left:3px solid var(--line)}
-.card:hover{box-shadow:0 2px 8px #00000014}
+.card{background:var(--card);border-radius:10px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px #0026200d;cursor:pointer;border-left:3px solid var(--line)}
+.card:hover{box-shadow:0 2px 8px #00262014}
 /* Colunas finalizadas (pago, recusado, cancelado) mais claras para destacar as duas primeiras */
-.col-fim{background:#faf7f3}
+.col-fim{background:#f4efeb}
 .col-fim .col-h,.col-fim .col-total{opacity:.6}
 .col-fim .card{opacity:.55;box-shadow:none}
-.col-fim .card:hover{opacity:1;box-shadow:0 2px 8px #00000014}
+.col-fim .card:hover{opacity:1;box-shadow:0 2px 8px #00262014}
 .card-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
 .ev{font-size:11px;color:var(--brand);font-weight:600}
 .val{font-weight:700;white-space:nowrap}
@@ -64,7 +64,7 @@ table{width:100%;border-collapse:collapse}
 th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{font-size:12px;color:var(--muted);font-weight:600}
 tr.click{cursor:pointer}
-tr.click:hover td{background:#faf7f3}
+tr.click:hover td{background:#f4efeb}
 .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;color:#fff;font-weight:600}
 .right{text-align:right}
 /* dashboard */
@@ -73,7 +73,7 @@ tr.click:hover td{background:#faf7f3}
 .hist-item{border-top:1px solid var(--line);padding:10px 0}
 .hist-item:first-of-type{border-top:0}
 .hist-x{position:absolute;top:8px;right:0;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:18px;line-height:1;cursor:pointer}
-.hist-x:hover{background:#f5e6e0;color:var(--recusado);border-color:#e8cfc6}
+.hist-x:hover{background:#702b1614;color:var(--recusado);border-color:#702b1633}
 .hist-tab{margin:6px 0 0 4px;width:auto}
 .hist-tab td{border:0;padding:2px 8px 2px 0;white-space:normal;font-size:13px}
 .kpi.click{cursor:pointer;transition:border-color .15s,box-shadow .15s}
@@ -90,12 +90,12 @@ tr.click:hover td{background:#faf7f3}
 .bar .lab{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 .bar .tot{font-size:10px;color:var(--muted);text-align:center;margin-bottom:2px;white-space:nowrap}
 .hbar{display:grid;grid-template-columns:150px 1fr 110px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
-.hbar .track{background:#eee7df;border-radius:4px;height:14px;overflow:hidden}
+.hbar .track{background:#f4efeb;border-radius:4px;height:14px;overflow:hidden}
 .hbar .fill{height:100%;background:var(--brand);border-radius:4px}
 .hbar .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .evlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-top:10px}
 .evitem{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
-.evitem:hover{border-color:var(--pago);background:#e4ece9}
+.evitem:hover{border-color:var(--pago);background:#00262012}
 .evitem small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
 .legend span{display:flex;align-items:center;gap:4px}
@@ -114,7 +114,7 @@ tr.click:hover td{background:#faf7f3}
 .hist{border-left:2px solid var(--line);margin:8px 0 0 4px;padding-left:12px}
 .hist div{margin-bottom:8px;font-size:13px}
 .hist small{color:var(--muted);display:block}
-.note{background:#fbf3e0;border:1px solid #ecd29a;color:#702b16;border-radius:8px;padding:8px 10px;font-size:12px;margin-top:12px}
+.note{background:#f4efeb;border:1px solid #efbb3c;color:#702b16;border-radius:8px;padding:8px 10px;font-size:12px;margin-top:12px}
 /* login */
 .login{max-width:520px;margin:40px auto;background:var(--card);border-radius:16px;padding:24px;border:1px solid var(--line)}
 .login h1{font-size:20px;margin:0 0 4px}
@@ -127,14 +127,14 @@ tr.click:hover td{background:#faf7f3}
 /* campo de escolha com busca */
 /* filtro por coluna */
 .cf-row th{padding:4px 6px 8px;background:transparent}
-.cf-in{width:100%;min-width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-weight:400;background:#faf7f3;color:var(--text)}
+.cf-in{width:100%;min-width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-weight:400;background:#f4efeb;color:var(--text)}
 .cf-in:focus{outline:2px solid var(--brand-soft);border-color:var(--brand);background:#fff}
-.cf-row .combo-in{padding:5px 22px 5px 8px;font-size:12px;background:#faf7f3;min-width:90px;font-weight:400}
+.cf-row .combo-in{padding:5px 22px 5px 8px;font-size:12px;background:#f4efeb;min-width:90px;font-weight:400}
 .cf-row .combo::after{right:7px}
 /* múltipla escolha */
 .ms-btn{text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
 .ms-btn.ativo{border-color:var(--brand);background:var(--brand-soft)!important;color:var(--brand);font-weight:600}
-.ms-painel{position:fixed;z-index:60;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px #00000026;max-width:min(360px,92vw);display:flex;flex-direction:column}
+.ms-painel{position:fixed;z-index:60;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px #00262026;max-width:min(360px,92vw);display:flex;flex-direction:column}
 .ms-busca{margin:8px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}
 .ms-acoes{display:flex;justify-content:space-between;padding:0 10px 6px;font-size:12px}
 .ms-acoes a{color:var(--brand);text-decoration:none}
@@ -148,10 +148,10 @@ tr.click:hover td{background:#faf7f3}
 .combo::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:12px}
 .combo-in{width:100%;padding:7px 28px 7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
 .combo-in:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.combo-in:disabled{background:#efe8e1;color:var(--muted)}
+.combo-in:disabled{background:#f4efeb;color:var(--muted)}
 .form .combo-in{padding:8px 28px 8px 10px}
 .combo-sel{position:absolute!important;opacity:0;pointer-events:none;width:1px!important;height:1px!important;left:0;bottom:0;padding:0!important;border:0!important}
-.combo-list{display:none;position:absolute;z-index:40;left:0;top:calc(100% + 4px);min-width:100%;width:max-content;max-width:min(420px,90vw);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px #00000022;max-height:260px;overflow:auto}
+.combo-list{display:none;position:absolute;z-index:40;left:0;top:calc(100% + 4px);min-width:100%;width:max-content;max-width:min(420px,90vw);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px #00262022;max-height:260px;overflow:auto}
 .combo-op{padding:8px 10px;cursor:pointer;font-size:13px;white-space:normal}
 .combo-op:hover,.combo-op.at{background:var(--brand-soft)}
 .combo-op.sel{font-weight:600;color:var(--brand)}
@@ -174,23 +174,23 @@ tr.click:hover td{background:#faf7f3}
 .fc-col .seg:first-child{border-radius:3px 3px 0 0}
 .fc-plan{overflow:auto;max-height:75vh;border:1px solid var(--line);border-radius:8px}
 .fc-plan table{border-collapse:separate;border-spacing:0;font-size:12px}
-.fc-plan th,.fc-plan td{padding:4px 8px;border-bottom:1px solid #eee7df;border-right:1px solid #eee7df;min-width:92px}
-.fc-plan thead th{position:sticky;top:0;z-index:2;background:#f6e6d3;color:var(--text);font-weight:500;text-align:center;font-size:11px;line-height:1.35}
-.fc-plan thead th.fds{background:#f6ecd2}
+.fc-plan th,.fc-plan td{padding:4px 8px;border-bottom:1px solid #f4efeb;border-right:1px solid #f4efeb;min-width:92px}
+.fc-plan thead th{position:sticky;top:0;z-index:2;background:#c37f3626;color:var(--text);font-weight:500;text-align:center;font-size:11px;line-height:1.35}
+.fc-plan thead th.fds{background:#efbb3c33}
 .fc-plan .fc-rot{position:sticky;left:0;z-index:1;background:#fff;text-align:left;min-width:220px;max-width:260px;white-space:normal;font-weight:400;color:var(--text);font-size:12px}
-.fc-plan thead .fc-rot{z-index:3;background:#f6e6d3;text-align:center}
-.fc-plan td.hj{background:#fbf6ea}
-.fc-plan td.tot,.fc-plan th.tot{background:#efe8e1;font-weight:700}
+.fc-plan thead .fc-rot{z-index:3;background:#c37f3626;text-align:center}
+.fc-plan td.hj{background:#f4efeb}
+.fc-plan td.tot,.fc-plan th.tot{background:#f4efeb;font-weight:700}
 .fc-plan td.click{cursor:pointer}
 .fc-plan td.click:hover{outline:2px solid var(--brand);outline-offset:-2px}
 .fc-plan tr.r-ini td,.fc-plan tr.r-ini th{color:var(--muted)}
-.fc-plan tr.r-sec th,.fc-plan tr.r-sec td{background:#e3d9cc;font-weight:700}
-.fc-plan tr.r-pag th,.fc-plan tr.r-pag td{background:#ecd5cc;font-weight:700}
+.fc-plan tr.r-sec th,.fc-plan tr.r-sec td{background:#f4efeb;font-weight:700}
+.fc-plan tr.r-pag th,.fc-plan tr.r-pag td{background:#702b1626;font-weight:700}
 .fc-plan tr.r-atr th{font-style:italic}
 .fc-plan tr.r-saldo th,.fc-plan tr.r-saldo td{background:#002620;color:#fff;font-weight:700}
 .fc-plan tr.r-saldo td.neg{background:#702b16}
-.fc-plan tr.r-ent th,.fc-plan tr.r-ent td{background:#e4ece9}
-.fc-plan tr.r-sai th,.fc-plan tr.r-sai td{background:#f5e6e0}
+.fc-plan tr.r-ent th,.fc-plan tr.r-ent td{background:#00262012}
+.fc-plan tr.r-sai th,.fc-plan tr.r-sai td{background:#702b1614}
 .fc-mes .lab{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 @media (max-width:760px){
   table.cards thead{display:block}
@@ -210,12 +210,12 @@ tr.click:hover td{background:#faf7f3}
 }
 .sel-col{width:36px;text-align:center!important;padding-left:4px!important;padding-right:4px!important}
 .sel-col input{width:17px;height:17px;accent-color:#002620;cursor:pointer;vertical-align:middle}
-tr.sel-on td{background:#f6ecd2!important}
+tr.sel-on td{background:#efbb3c33!important}
 .tag[style*="--aguardando"]{color:#002620}
 .dica-rola{display:none;font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 @media (max-width:700px){.dica-rola{display:block}}
 /* cabeçalho compacto */
-.demo-bar{padding:3px 16px;font-size:11px;gap:8px;background:#0b3b33}
+.demo-bar{padding:3px 16px;font-size:11px;gap:8px;background:#002620}
 .demo-bar button{padding:1px 7px;font-size:11px}
 header{padding:6px 16px;gap:10px;border-bottom-width:2px}
 header .logo{font-size:19px}
@@ -223,8 +223,8 @@ header .logo span.marca{width:30px!important;height:26px!important}
 header .who .av{width:28px;height:28px;font-size:11px}
 header .who .nm{font-size:13px;line-height:1.15;display:flex;align-items:center;gap:6px}
 header .who .nm br{display:none}
-header.emb{padding:4px 12px;background:#0b3b33;border-bottom-width:1px}
-.demo-mini{font-size:11px;color:#d9cdb8;display:flex;align-items:center;gap:8px;white-space:nowrap}
+header.emb{padding:4px 12px;background:#002620;border-bottom-width:1px}
+.demo-mini{font-size:11px;color:#f4efebb3;display:flex;align-items:center;gap:8px;white-space:nowrap}
 .demo-mini button{background:transparent;border:1px solid #f4efeb55;color:#f4efeb;border-radius:6px;padding:1px 7px;font-size:11px;cursor:pointer}
 nav button{padding:9px 12px}
 @media (max-width:640px){
@@ -239,14 +239,14 @@ nav button{padding:9px 12px}
   .toolbar .combo-in{font-size:13px}
 }
 .graf-rola{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
-#dicaGraf{position:fixed;z-index:9999;pointer-events:none;display:none;background:#002620;color:#fff;font-size:12px;line-height:1.45;padding:7px 10px;border-radius:8px;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:260px}
+#dicaGraf{position:fixed;z-index:9999;pointer-events:none;display:none;background:#002620;color:#fff;font-size:12px;line-height:1.45;padding:7px 10px;border-radius:8px;white-space:pre-line;box-shadow:0 4px 14px #00262033;max-width:260px}
 /* ===== Identidade visual Renata Campos · Inteligência Financeira ===== */
-:root{--ouro:#efbb3c;--cobre:#c37f36;--terra:#702b16;--creme:#f4efeb;--line:#e6ddd2;--muted:#6f6a63;--text:#1c2422}
+:root{--ouro:#efbb3c;--cobre:#c37f36;--terra:#702b16;--creme:#f4efeb;--line:#c37f3640;--muted:#002620b3;--text:#002620}
 body{font-family:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 h1,h2,.modal h3,.login h1{font-family:'Cormorant Garamond',Georgia,serif;font-weight:600;letter-spacing:.2px}
 h2{font-size:24px}.login h1{font-size:28px}.modal h3{font-size:22px}
 header{background:#002620;color:var(--creme);border-bottom:3px solid var(--ouro)}
-header .meta,header small{color:#d9cdb8!important}
+header .meta,header small{color:#f4efebb3!important}
 header .btn{background:transparent;color:var(--creme);border-color:#f4efeb55}
 header .btn:hover{border-color:var(--ouro)}
 header .menu-pop,header .menu-pop *{color:var(--text)}
@@ -255,8 +255,10 @@ header .menu-pop,header .menu-pop *{color:var(--text)}
 .login .logo span.marca,.logo.claro span.marca{background-image:url(data:image/png;base64,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)!important}
 nav button.on{color:#002620;border-color:var(--cobre)}
 .btn.pri{color:var(--creme)}
-.btn.pri:hover{background:#0b3b33;border-color:#0b3b33;filter:none}
-.badge{background:#f6ecd2;color:#5b3a10}
+.btn.pri:hover{background:#002620;border-color:#002620;filter:none}
+.badge{background:#efbb3c33;color:#702b16}
+header .badge,.appbar .badge{background:#efbb3c!important;color:#002620!important}
+header .av{background:#f4efeb!important;color:#002620!important}
 </style>
 </head>
 <body>
@@ -444,7 +446,7 @@ function demoBar(){
 function telaLogin(){
   return `<div class="login">
     <h1>Pagamentos de Eventos</h1>
-    ${linkAprovar?`<div class="note" style="margin:0 0 12px;background:#e4ece9;border-color:#b9cdc7;color:#002620">🔗 Você abriu o link de aprovação de pagamentos. Entre como sócio para ver a lista completa e aprovar.</div>`:''}
+    ${linkAprovar?`<div class="note" style="margin:0 0 12px;background:#00262012;border-color:#00262033;color:#002620">🔗 Você abriu o link de aprovação de pagamentos. Entre como sócio para ver a lista completa e aprovar.</div>`:''}
     <p>Na versão real aqui terá e-mail e senha. Na demonstração, escolha com qual perfil entrar para ver o que cada pessoa enxerga:</p>
     <div class="ulist">${db.users.filter(u=>u.ativo!==false).map(u=>`
       <button class="ubtn" data-act="entrar" data-id="${u.id}"><div class="av">${iniciais(u.nome)}</div>
@@ -497,7 +499,7 @@ function card(p){
     <div class="card-top"><span class="ev">${ids.includes('evento')?h(evento(p.eventoId).nome):''}</span><span class="val">${brl(p.valor)}</span></div>
     ${ids.includes('fav')?`<div class="fav">${h(pessoa(p.pessoaId).nome)}</div>`:''}
     ${linhas.map(l=>`<div class="meta">${l}</div>`).join('')}
-    ${isProd() && p.status==='aguardando' ? '<div class="meta" style="margin-top:6px;color:#a8682a">⏳ Aguardando aprovação de um sócio ou da gestora financeira</div>' : ''}
+    ${isProd() && p.status==='aguardando' ? '<div class="meta" style="margin-top:6px;color:#c37f36">⏳ Aguardando aprovação de um sócio ou da gestora financeira</div>' : ''}
     ${botoes(p)?`<div class="btns">${botoes(p)}</div>`:''}</div>`;
 }
 function telaKanban(){
@@ -506,7 +508,7 @@ function telaKanban(){
     ${filtrosHTML({periodo:false,status:false})}
     ${isAdmin()?'<button class="btn" data-act="camposCard">⚙ Campos do card</button>':''}
     <button class="btn" data-act="compartilhar">🔗 Copiar link de aprovação</button>
-    ${isAdmin()?'<button class="btn" style="border-color:#e3c98a;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button>':''}
+    ${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button>':''}
     <button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="kanban">${ORDEM.map(s=>{
     const itens = lista.filter(p=>p.status===s).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
@@ -628,7 +630,7 @@ function telaLista(){
   const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0);
   [...SEL].forEach(id=>{ if(!db.pedidos.some(p=>p.id===id)) SEL.delete(id); });
   return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
-    ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#e3c98a;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#b9cdc7;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
+    ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
   <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th>${c.nome}</th>`).join('')}<th class="right">Valor</th><th>Pagamento</th></tr></thead>
   <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${['recusado','cancelado'].includes(p.status) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}<td class="right">${brl(p.valor)}</td>${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n+1}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
@@ -653,7 +655,7 @@ function formColunas(){
   if (!colsRasc) colsRasc = [...(db[cfg.chave]||cfg.padrao())];
   const TODAS = cfg.todas();
   const fora = TODAS.filter(c=>!colsRasc.includes(c.id));
-  const linha = (c, i, on) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:${on?'#fff':'#faf7f3'}">
+  const linha = (c, i, on) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:${on?'#fff':'#f4efeb'}">
     <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;${on?'':'color:var(--muted)'}"><input type="checkbox" data-col-tg="${c.id}" ${on?'checked':''}> ${c.nome}</label>
     ${on?`<button class="btn sm" data-act="colMove" data-id="${c.id}:-1" ${i===0?'disabled':''} title="Subir">↑</button><button class="btn sm" data-act="colMove" data-id="${c.id}:1" ${i===colsRasc.length-1?'disabled':''} title="Descer">↓</button>`:''}</div>`;
   modal(`<h3>${cfg.titulo}</h3>
@@ -696,7 +698,7 @@ function telaDash(){
       const pos = x.lucro>=0, alt = Math.abs(x.lucro)/escala*100*0.88;
       return `<div data-act="pagosEvento" data-id="${x.e.id}" style="flex:1;min-width:52px;max-width:160px;display:flex;flex-direction:column;cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Receita: ${brl(x.receita)}&#10;Custo: ${brl(x.custo)}&#10;Lucro: ${brl(x.lucro)}">
         <div style="height:${topo}%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch">${pos?`<div style="font-size:10px;color:#002620;text-align:center;font-weight:600">${brlK(x.lucro)}</div><div style="height:${alt/topo*100}%;background:#002620;border-radius:4px 4px 0 0;min-height:2px"></div>`:''}</div>
-        <div style="border-top:1px solid #a89f95"></div>
+        <div style="border-top:1px solid #0026208c"></div>
         <div style="flex:1;display:flex;flex-direction:column;align-items:stretch">${!pos?`<div style="height:${alt/(100-topo||1)*100}%;background:#702b16;border-radius:0 0 4px 4px"></div><div style="font-size:10px;color:#702b16;text-align:center;font-weight:600">-${brlK(-x.lucro)}</div>`:''}</div>
         <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h(x.e.nome)}</div>
         <div style="font-size:10px;color:var(--muted);text-align:center">${(LF.serie?fmt(x.e.data):fmt(x.e.data).slice(0,5))}</div></div>`; }).join('')}</div></div>${lucroEv.length>5?'<div class="dica-rola">↔ Deslize o gráfico para o lado para ver todos os eventos</div>':''}`
@@ -720,13 +722,13 @@ function telaDash(){
         <span class="tag" style="background:${sobe?'#002620':'#702b16'};font-size:12px;padding:4px 10px">${sobe?'▲ Lucro subindo':'▼ Lucro descendo'}</span>
         <span class="meta">Último evento × anterior: <b style="color:${dif>=0?'#002620':'#702b16'}">${dif>=0?'+':''}${brl(dif)}</b></span></div>
       <div class="graf-rola"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block;max-width:none">
-        ${ticks.map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eee7df"/><text x="${pl-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="#6f6a63">${brlK(v)}</text>`).join('')}
-        ${mn<0?`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="#a89f95"/>`:''}
+        ${ticks.map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#f4efeb"/><text x="${pl-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="#002620b3">${brlK(v)}</text>`).join('')}
+        ${mn<0?`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="#0026208c"/>`:''}
         <line x1="${X(0)}" y1="${Y(t0)}" x2="${X(n-1)}" y2="${Y(t1)}" stroke="${sobe?'#002620':'#702b16'}" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
         <polyline fill="none" stroke="#002620" stroke-width="3" stroke-linejoin="round" points="${vs.map((v,i)=>X(i)+','+Y(v)).join(' ')}"/>
         ${lucroEv.map((x,i)=>`<g data-act="pagosEvento" data-id="${x.e.id}" style="cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Lucro: ${brl(x.lucro)}"><circle cx="${X(i)}" cy="${Y(x.lucro)}" r="6" fill="${x.lucro>=0?'#002620':'#702b16'}" stroke="#fff" stroke-width="2"/>
           <text x="${X(i)}" y="${Y(x.lucro)-10}" text-anchor="middle" font-size="11" font-weight="600" fill="${x.lucro>=0?'#002620':'#702b16'}">${brlK(x.lucro)}</text>
-          <text x="${X(i)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#6f6a63">${h(x.e.nome.length>(estreito?11:16)?x.e.nome.slice(0,estreito?10:15)+'…':x.e.nome)}</text></g>`).join('')}
+          <text x="${X(i)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#002620b3">${h(x.e.nome.length>(estreito?11:16)?x.e.nome.slice(0,estreito?10:15)+'…':x.e.nome)}</text></g>`).join('')}
       </svg></div>
       <div class="meta">Linha escura: lucro de cada evento, em ordem de data. Linha tracejada: tendência (${sobe?'subindo':'descendo'} em média ${brl(Math.abs(slope))} por evento).</div></div>`;
   })();
@@ -805,7 +807,7 @@ function verAtrasos(){
               ...recs.map(r=>({ent:true, x:r, d:r.previsto, quem:r.origem, oque:r.descricao||'', sit:'A receber', cor:'var(--aprovado)'}))].sort((a,b)=>a.d.localeCompare(b.d));
   const sm = l => l.reduce((a,x)=>a+x.valor,0);
   modal(`<h3>⏰ Atrasados</h3>
-  <p class="meta" style="margin:-8px 0 12px">A pagar vencido: <b style="color:#702b16">${brl(sm(pags))}</b> (${pags.length})${isProd()?'':` · A receber atrasado: <b style="color:#a8682a">${brl(sm(recs))}</b> (${recs.length})`} · clique em uma linha para abrir</p>
+  <p class="meta" style="margin:-8px 0 12px">A pagar vencido: <b style="color:#702b16">${brl(sm(pags))}</b> (${pags.length})${isProd()?'':` · A receber atrasado: <b style="color:#c37f36">${brl(sm(recs))}</b> (${recs.length})`} · clique em uma linha para abrir</p>
   <div style="overflow-x:auto"><table class="filtravel" data-key="atrasos" style="font-size:13px"><thead><tr><th>Tipo</th><th>Vencimento</th><th>Atraso</th><th>Nome do evento</th><th>Favorecido / Origem</th><th>Categoria / Descrição</th><th>Situação</th><th class="right">Valor</th></tr></thead>
   <tbody>${ms.map(m=>{ const dias = Math.round(diasEntre(m.d, HOJE)); return `<tr class="click" data-act="${m.ent?'formReceb':'ver'}" data-id="${m.x.id}" data-valor="${m.x.valor}">
     <td data-v="${m.ent?'A receber':'A pagar'}"><span class="tag" style="background:${m.ent?'#002620':'#702b16'}">${m.ent?'⬆ A receber':'⬇ A pagar'}</span></td><td>${fmt(m.d)}</td><td data-v="${dias}"><b style="color:var(--recusado)">${dias} dia(s)</b></td>
@@ -835,7 +837,7 @@ function pagosEvento(id){
       return linhas.map(([n,v,cor,obs])=>`<div class="hbar"><div class="name"><b>${n}</b></div><div class="track" style="height:18px"><div class="fill" style="width:${v/mx*100}%;background:${cor};height:100%"></div></div><div class="right"><b>${brl(v)}</b>${obs?`<br><span class="meta" style="font-size:11px">${obs}</span>`:''}</div></div>`).join('')
         + `<div class="legend" style="margin:6px 0 12px">${isProd()?'':`<span>Resultado (recebido − pago): <b style="color:${res>=0?'#002620':'#702b16'}">${brl(res)}</b></span>`}${e.orcamento?`<span>Orçamento: <b>${brl(e.orcamento)}</b> (${(todos.reduce((a,p)=>a+p.valor,0)/e.orcamento*100).toFixed(0)}% usado)</span>`:''}</div>`;
     })()}
-    ${cats.length?`<b style="font-size:13px">Pago por categoria</b>${cats.map(([c,v])=>`<div class="hbar"><div class="name" title="${h(c)}">${h(c)}</div><div class="track"><div class="fill" style="width:${v/mxCat*100}%;background:#d9a593"></div></div><div class="right">${brl(v)}</div></div>`).join('')}`:''}
+    ${cats.length?`<b style="font-size:13px">Pago por categoria</b>${cats.map(([c,v])=>`<div class="hbar"><div class="name" title="${h(c)}">${h(c)}</div><div class="track"><div class="fill" style="width:${v/mxCat*100}%;background:#702b1680"></div></div><div class="right">${brl(v)}</div></div>`).join('')}`:''}
   </div>` : '';
   // todas as movimentações do evento: saídas (pedidos válidos) e entradas (recebimentos)
   const recsEv = isProd() ? [] : (db.recebimentos||[]).filter(r=>r.eventoId===id && r.status!=='cancelado');
@@ -853,7 +855,7 @@ function pagosEvento(id){
     <td data-v="${m.sit}"><span class="tag" style="background:${m.cor}">${m.sit}</span></td><td data-v="${h(m.banco||'—')}">${m.banco?h(m.banco):'<span class="meta">—</span>'}</td>
     <td class="right" style="color:${ent?'#002620':'#702b16'};white-space:nowrap"><b>${ent?'+ ':'− '}${brl(m.valor)}</b></td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">Nenhuma movimentação neste evento</td></tr>'}</tbody>
   <tfoot><tr><td colspan="8"><b data-cnt="movimentação(ões)">${movs.length} movimentação(ões)</b> · entradas <b style="color:#002620">${brl(totEnt)}</b> · saídas <b style="color:#702b16">${brl(totSai)}</b> · ${isProd()?'total':'saldo'}:</td><td class="right"><b data-tot>${brl(totEnt-totSai)}</b></td></tr></tfoot></table>`;
-  modal(`<div style="display:flex;align-items:center;gap:10px"><h3 style="flex:1">Movimentações — ${h(e.nome)}</h3>${movs.length?`<button class="btn" style="border-color:#b9cdc7;color:#002620" data-act="csvPagos" data-id="${id}">⬇ Exportar Excel do evento</button>`:''}</div>
+  modal(`<div style="display:flex;align-items:center;gap:10px"><h3 style="flex:1">Movimentações — ${h(e.nome)}</h3>${movs.length?`<button class="btn" style="border-color:#00262033;color:#002620" data-act="csvPagos" data-id="${id}">⬇ Exportar Excel do evento</button>`:''}</div>
   <p class="meta" style="margin:-8px 0 12px">${fmt(e.data)} · ${h(e.local||'')}${e.centroCusto?' · '+h(e.centroCusto):''}${e.responsavel?' · Responsável: <b>'+h(e.responsavel)+'</b>':''} · <b>${movs.length} movimentação(ões)</b>${isProd()?'':` · entradas <b style="color:#002620">${brl(totEnt)}</b> · saídas <b style="color:#702b16">${brl(totSai)}</b>`}</p>
   ${isProd()?'':`<div class="panel" style="margin-bottom:12px"><b>📝 Anotações</b> <span class="meta">— as mesmas do cadastro do evento</span>${notasEditor(id,'mov')}</div>`}
   ${isProd()?'':`<div class="panel" style="margin-bottom:12px"><b>🔗 Links</b> <span class="meta">— os mesmos do cadastro do evento</span>${linksEditor(id,'mov')}</div>`}
@@ -935,10 +937,10 @@ function modalLinkAuto(){
   const msg = `Olá! Para receber seus pagamentos, faça seu cadastro (dados pessoais e bancários) por este link: ${link}`;
   modal(`<h3>🔗 Link para a pessoa se cadastrar</h3>
   <p style="margin:0 0 12px;color:var(--muted)">Envie para o fornecedor, artista ou prestador. Ele mesmo preenche os dados pessoais e bancários, <b>sem precisar de login</b>. O cadastro entra direto em Pessoas, marcado como <span class="tag" style="background:var(--brand)">autocadastro</span>, e fica registrado no histórico.</p>
-  <input id="campoLink" readonly value="${h(link)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#faf7f3" onfocus="this.select()">
-  <div class="note" style="background:#e4ece9;border-color:#b9cdc7;color:#002620">🔒 Quem usa o link só consegue <b>criar um cadastro novo</b> — não vê nem altera dados de ninguém. Se o CPF/CNPJ já estiver cadastrado, o sistema avisa e não muda nada.</div>
+  <input id="campoLink" readonly value="${h(link)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#f4efeb" onfocus="this.select()">
+  <div class="note" style="background:#00262012;border-color:#00262033;color:#002620">🔒 Quem usa o link só consegue <b>criar um cadastro novo</b> — não vê nem altera dados de ninguém. Se o CPF/CNPJ já estiver cadastrado, o sistema avisa e não muda nada.</div>
   <div class="actions"><button class="btn" data-act="abrirFormAuto">👀 Testar o formulário</button>
-    <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}" style="text-decoration:none;color:#002620;border-color:#b9cdc7">Enviar pelo WhatsApp</a>
+    <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}" style="text-decoration:none;color:#002620;border-color:#00262033">Enviar pelo WhatsApp</a>
     <button class="btn pri" data-act="copiarLinkAuto">🔗 Copiar link</button></div>`, 600);
 }
 function telaAutocadastro(){
@@ -1001,7 +1003,7 @@ function escolherAtualizar(){
   <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="irAtualizar">Continuar</button></div>`);
 }
 function telaPessoas(){
-  return `<div class="toolbar"><h2 style="margin:0">Pessoas e fornecedores</h2><div class="spacer"></div><button class="btn" style="border-color:#e3c98a;color:#002620" data-act="linkAuto">🔗 Link para a pessoa se cadastrar</button><button class="btn pri" data-act="cadastrar">+ Cadastrar</button></div>
+  return `<div class="toolbar"><h2 style="margin:0">Pessoas e fornecedores</h2><div class="spacer"></div><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkAuto">🔗 Link para a pessoa se cadastrar</button><button class="btn pri" data-act="cadastrar">+ Cadastrar</button></div>
   ${painelAlteracoes()}
   <div class="panel"><table class="cards filtravel" data-key="pessoas"><thead><tr><th>Nome</th><th>Função</th><th>CPF / CNPJ</th><th>Dados bancários</th><th>Telefone</th><th></th></tr></thead><tbody>
   ${[...db.pessoas].sort((a,b)=>(a.ativo===false)-(b.ativo===false) || a.nome.localeCompare(b.nome)).map(p=>{ const inativo = p.ativo===false;
@@ -1207,7 +1209,7 @@ function verPedido(id){
   </dl>
   <h4 style="margin:16px 0 0">Histórico</h4>
   <div class="hist">${p.historico.map(x=>`<div>${h(x.acao)}<small>${h(user(x.quem).nome)} · ${fmt(x.quando)}</small></div>`).join('')}</div>
-  ${isAdmin()?`<div class="note" style="background:#fbf6ea;border-color:#efe0bb;color:#002620">Admin: alterar status manualmente
+  ${isAdmin()?`<div class="note" style="background:#f4efeb;border-color:#efbb3c;color:#002620">Admin: alterar status manualmente
     <select id="novoStatus" style="margin-left:6px">${ORDEM.map(s=>`<option value="${s}" ${s===p.status?'selected':''}>${STATUS[s].nome}</option>`).join('')}</select>
     <button class="btn sm" data-act="mudarStatus" data-id="${p.id}">Aplicar</button></div>`:''}
   ${isProd()&&p.status!=='aguardando'?'<div class="note">Este pedido já saiu de "Aguardando aprovação", então só o admin pode alterá-lo.</div>':''}
@@ -1247,7 +1249,7 @@ const baseNome = n => String(n||'').replace(/\b(19|20)\d{2}\b/g,'').replace(/\b\
 const linkify = t => h(t||'').replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/g, u => `<a href="${u.startsWith('www.')?'https://'+u:u}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--brand);word-break:break-all">${u}</a>`);
 // Links com nome do evento (lista de {nome, url}); mesma lista no cadastro, na lista de Eventos e nas Movimentações
 const urlOk = u => { u=(u||'').trim(); return !u ? '' : /^https?:\/\//i.test(u) ? u : 'https://'+u; };
-const linksChips = e => (e.links||[]).map(l=>`<a href="${h(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${h(l.url)}" style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border:1px solid #e3c98a;border-radius:999px;color:#002620;text-decoration:none;font-size:12px;background:#fbf6ea">🔗 ${h(l.nome)}</a>`).join('');
+const linksChips = e => (e.links||[]).map(l=>`<a href="${h(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${h(l.url)}" style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border:1px solid #efbb3c;border-radius:999px;color:#002620;text-decoration:none;font-size:12px;background:#f4efeb">🔗 ${h(l.nome)}</a>`).join('');
 const linksEditor = (id, ctx) => { const e = evento(id); return `<div>${(e.links||[]).map((l,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)"><a href="${h(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--brand);font-weight:500">🔗 ${h(l.nome)}</a><span class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${h(l.url)}</span><button class="btn sm bad" data-act="delLink" data-id="${id}:${i}" data-arg="${ctx}" title="Remover link">✕</button></div>`).join('') || '<div class="meta">Nenhum link ainda.</div>'}
   <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input id="lkNome_${ctx}" placeholder="Nome do link (ex.: Contrato do DJ)" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--line);border-radius:8px"><input id="lkUrl_${ctx}" placeholder="Cole o link (https://…)" style="flex:2;min-width:220px;padding:7px 10px;border:1px solid var(--line);border-radius:8px"><button class="btn pri" data-act="addLink" data-id="${id}" data-arg="${ctx}">+ Adicionar link</button></div></div>`; };
 // Anotações do evento: mesma lista (com data e autor) no cadastro, na lista de Eventos e nas Movimentações
@@ -1742,7 +1744,7 @@ function telaConciliacao(){
     <li>O app procura, para cada saída do banco, o pedido com <b>mesmo valor</b>, <b>data próxima</b> (até ${CONC_TOL_DIAS} dias) e <b>nome/CPF/CNPJ do favorecido</b> na descrição.</li>
     <li>Você confere as sugestões e confirma. Pedidos "Aprovado · a pagar" que aparecem no banco viram <b>Pago</b> automaticamente, com a data do banco.</li>
     <li>O que não bater, você concilia <b>manualmente</b> — escolhendo o lançamento, ou informando a data de pagamento sem extrato.</li></ol></div>`:''}
-  ${sug.length?`<div class="panel" style="margin-bottom:12px;border-color:#b9cdc7"><div class="toolbar" style="margin:0 0 6px"><b>✨ Sugestões automáticas (${sug.length})</b><div class="spacer"></div><button class="btn sm ok" data-act="concTodas">Confirmar todas</button></div>
+  ${sug.length?`<div class="panel" style="margin-bottom:12px;border-color:#00262033"><div class="toolbar" style="margin:0 0 6px"><b>✨ Sugestões automáticas (${sug.length})</b><div class="spacer"></div><button class="btn sm ok" data-act="concTodas">Confirmar todas</button></div>
     <table class="cards"><thead><tr><th>Data banco</th><th>Extrato</th><th class="right">Valor</th><th>Pedido</th><th>Favorecido</th><th class="right">Valor</th><th>Status</th><th>Por quê</th><th></th></tr></thead><tbody>
     ${sug.map(s=>`<tr>${tx(s.t)}${ped(s.p)}<td class="meta" style="white-space:normal">${s.motivo}</td><td><div class="btns" style="margin:0;flex-wrap:nowrap"><button class="btn sm ok" data-act="concConfirmar" data-id="${s.t.id}" data-arg="${s.p.id}">Confirmar</button><button class="btn sm" data-act="concRejeitar" data-id="${s.t.id}" data-arg="${s.p.id}">Não é este</button></div></td></tr>`).join('')}
     </tbody></table></div>`:''}
@@ -1825,7 +1827,7 @@ function compartilhar(aposCriar){
   const link = linkAprovacao();
   modal(`<h3>${aposCriar?'✅ Pedido enviado para aprovação!':'Link de aprovação para os sócios'}</h3>
   <p style="margin:0 0 12px;color:var(--muted)">Copie o link e cole no WhatsApp dos sócios. Ao abrir, o sócio vê a <b>lista completa de pagamentos aguardando aprovação</b> e aprova direto no app — basta um sócio aprovar.</p>
-  <input id="campoLink" readonly value="${h(link)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#faf7f3" onfocus="this.select()">
+  <input id="campoLink" readonly value="${h(link)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#f4efeb" onfocus="this.select()">
   <div class="actions"><button class="btn" data-act="fechar">${aposCriar?'Agora não':'Fechar'}</button><button class="btn pri" data-act="copiarLink">🔗 Copiar link</button></div>`);
 }
 function telaAprovacoes(){
@@ -1885,7 +1887,7 @@ function formPessoa(id){
   const p = id ? pessoa(id) : {nome:'',doc:'',funcao:'',pix:'',tel:'',banco:'',agencia:'',conta:'',tipoConta:'Corrente',pixTipo:''};
   const sel = (nome, ops, v) => `<select name="${nome}"><option value="">—</option>${ops.map(o=>`<option ${v===o?'selected':''}>${o}</option>`).join('')}</select>`;
   modal(`<h3>${id?'Editar cadastro — '+h(p.nome):'Novo cadastro'}</h3>
-  ${id?`<div class="note" style="margin:-4px 0 12px;background:#f6e6d3;border-color:#e8c9a3;color:#5b3a10">A alteração vale na hora e fica registrada no histórico com data, hora e o seu nome. <a href="#" data-act="verHist" data-id="${id}">Ver histórico</a></div>`:''}
+  ${id?`<div class="note" style="margin:-4px 0 12px;background:#c37f3626;border-color:#c37f3666;color:#702b16">A alteração vale na hora e fica registrada no histórico com data, hora e o seu nome. <a href="#" data-act="verHist" data-id="${id}">Ver histórico</a></div>`:''}
   <form class="form" id="fPessoa">
     <label class="full">Nome / Razão social *<input name="nome" required value="${h(p.nome)}"></label>
     <label>CPF ou CNPJ *<input name="doc" required value="${h(p.doc)}"></label>
@@ -2212,7 +2214,7 @@ function fluxoResumo(lista, todos){
     return {e:evento(id), ent:s('entrada'), sai:s('saida'), entR:s('entrada',true), saiR:s('saida',true)}; }).sort((a,b)=>(b.e.data||'').localeCompare(a.e.data||''));
   const tEnt = porEv.reduce((a,x)=>a+x.ent,0), tSai = porEv.reduce((a,x)=>a+x.sai,0);
   return `<div class="panel"><div class="toolbar" style="margin:0 0 4px"><b>Entradas × saídas mês a mês — ${anosSel.join(' + ')}</b><div class="spacer"></div>
-    <div class="legend"><span><span class="dot" style="background:var(--pago)"></span>Entradas</span><span><span class="dot" style="background:var(--recusado)"></span>Saídas</span><span><span class="dot" style="background:#a89f95;opacity:.4"></span>Mais claro = previsto</span></div></div>
+    <div class="legend"><span><span class="dot" style="background:var(--pago)"></span>Entradas</span><span><span class="dot" style="background:var(--recusado)"></span>Saídas</span><span><span class="dot" style="background:#0026208c;opacity:.4"></span>Mais claro = previsto</span></div></div>
     <div class="fc-chart">${meses.map(x=>`<div class="fc-mes ${FC.diario===x.a+'-'+x.mm?'sel':''}" data-act="fcMes" data-id="${x.a}-${x.mm}" title="${x.nome} — clique para ver o diário">
       <div class="fc-par">${col(x.entR,x.entP,'var(--pago)',`Entradas: ${brl(x.entR)} recebido + ${brl(x.entP)} previsto`)}${col(x.saiR,x.saiP,'var(--recusado)',`Saídas: ${brl(x.saiR)} pago + ${brl(x.saiP)} previsto`)}</div>
       <div class="lab">${x.nome}</div></div>`).join('')}</div>
@@ -2278,7 +2280,7 @@ function fluxoDiario(base){
       <button class="btn sm" data-act="fcMes" data-id="${ymOf(prev)}" title="Mês anterior">◀</button><b style="font-size:15px">Diário — ${MESES[+m-1]}/${a}</b><button class="btn sm" data-act="fcMes" data-id="${ymOf(prox)}" title="Próximo mês">▶</button>
       <div class="spacer"></div><span class="meta">Centro de custo:</span>${filtroFC('evento','Todos os centros de custo',[...db.eventos].sort((p,q)=>q.data.localeCompare(p.data)).map(e=>[e.id,e.nome+' · '+fmt(e.data)]))}
       <button class="btn sm" data-act="fcCsvDiario">⬇ Excel (CSV)</button></div>
-    ${FC.evento.length?`<div class="note" style="margin:0 0 8px;background:var(--brand-soft);border-color:#e3c98a;color:var(--brand)">Mostrando só <b>${FC.evento.map(id=>h(evento(id).nome)).join(', ')}</b>: entradas e saídas desse centro de custo em ${MESES[+m-1]}/${a}. O saldo inicial também considera só esse centro de custo.</div>`:''}
+    ${FC.evento.length?`<div class="note" style="margin:0 0 8px;background:var(--brand-soft);border-color:#efbb3c;color:var(--brand)">Mostrando só <b>${FC.evento.map(id=>h(evento(id).nome)).join(', ')}</b>: entradas e saídas desse centro de custo em ${MESES[+m-1]}/${a}. O saldo inicial também considera só esse centro de custo.</div>`:''}
     <div class="fc-plan"><table>
       <thead><tr><th class="fc-rot">Saldo inicial<br><b style="font-size:14px;color:${saldoIni<0?'var(--recusado)':'var(--text)'}">${fcSaldo(saldoIni)}</b></th>
         ${dias.map(d=>{ const dd=new Date(d+'T12:00:00'); return `<th class="right ${d===HOJE?'hj':''} ${[0,6].includes(dd.getDay())?'fds':''}">${DSEM[dd.getDay()]}<br><b>${fmt(d)}</b>${d===HOJE?'<br><span class="tag" style="background:var(--brand)">hoje</span>':''}</th>`; }).join('')}
@@ -2428,7 +2430,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '5.1';
+const APP_VERSAO = '5.2';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
