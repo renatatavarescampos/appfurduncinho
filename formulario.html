@@ -56,6 +56,24 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
 .opc small{display:block;color:var(--muted);font-size:12px}
 .lado{display:flex;gap:10px;margin-top:18px}.lado .btn{margin-top:0}
 @media (max-width:560px){ dl.res{grid-template-columns:1fr;gap:0 0} dl.res dd{margin-bottom:8px} }
+.escolha{display:flex;flex-direction:column;gap:12px}
+.escolha button{font:inherit;display:flex;align-items:center;gap:14px;text-align:left;background:#fff;border:1.5px solid var(--linha);border-radius:14px;padding:16px;cursor:pointer;color:var(--verde)}
+.escolha button:hover{border-color:var(--ouro);background:#efbb3c14}
+.escolha .ic{font-size:30px}
+.escolha b{font-size:16px;font-weight:600}
+.escolha small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.voltar{display:inline-block;font-size:13px;color:var(--cobre);text-decoration:none;margin-bottom:10px}
+.ajuda a{color:var(--cobre);font-weight:600;white-space:nowrap}
+.tab{overflow-x:auto;margin-top:16px;border:1px solid var(--linha);border-radius:10px}
+.tab table{border-collapse:collapse;width:100%;font-size:13px}
+.tab th{background:#f4efeb;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);padding:8px 10px}
+.tab td{padding:8px 10px;border-top:1px solid #c37f3626;vertical-align:top}
+.tab .r{text-align:right;white-space:nowrap}
+.tab tfoot td{font-weight:600;background:#f4efeb}
+.tab tr.ruim td{background:#ef44440f}
+.tab .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.tab .pb{color:#b91c1c;font-size:12px}.tab .av{color:var(--cobre);font-size:12px}
+.tg{background:#efbb3c40;border-radius:6px;padding:1px 6px;font-size:11px}
 .rodape{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
 @media (max-width:560px){ .form{grid-template-columns:1fr} h1{font-size:24px} }
 </style>
@@ -148,9 +166,9 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       + '<label><input type="radio" name="situacao" value="pago"><span><b style="color:var(--verde)">' + esc(emp) + ' já pagou</b><small>Só para registro e conferência, não precisa de aprovação.</small></span></label>'
       + '</div><label id="boxPago" style="display:none;margin-top:10px"><span>Data do pagamento <b>*</b></span><input type="date" id="dataPago" value="' + esc(d.get('vencimento')) + '"></label>'
       + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button><button class="btn" id="btConf" type="button">Confirmar e enviar</button></div><div class="msg" id="msg2"></div>';
-    fm.style.display = 'none'; document.querySelector('.passos').style.display = 'none'; document.querySelector('#cx > h1').style.display = 'none'; document.querySelector('#cx > .intro').style.display = 'none';
+    fm.style.display = 'none'; document.querySelector('.passos').style.display = 'none'; document.querySelector('#cx > h1').style.display = 'none'; document.querySelector('#cx > .intro').style.display = 'none'; document.getElementById('btInicio').style.display = 'none';
     p2.querySelectorAll('[name=situacao]').forEach(function(r){ r.onchange = function(){ document.getElementById('boxPago').style.display = p2.querySelector('[name=situacao]:checked').value === 'pago' ? '' : 'none'; }; });
-    document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; fm.style.display = ''; document.querySelector('.passos').style.display = ''; document.querySelector('#cx > h1').style.display = ''; document.querySelector('#cx > .intro').style.display = ''; window.scrollTo(0,0); };
+    document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; fm.style.display = ''; document.querySelector('.passos').style.display = ''; document.querySelector('#cx > h1').style.display = ''; document.querySelector('#cx > .intro').style.display = ''; document.getElementById('btInicio').style.display = ''; window.scrollTo(0,0); };
     document.getElementById('btConf').onclick = function(){ enviarPedido(fm, d); };
     window.scrollTo(0,0);
   }
@@ -178,11 +196,196 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
         bt.disabled = bv.disabled = false; bt.textContent = 'Confirmar e enviar';
         e2.textContent = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message; e2.style.display = 'block'; });
   }
-  function sucesso(nome, sit){
-    cx.innerHTML = '<div class="ok"><div class="ic">✅</div><h1>' + (F.tipo === 'cadastro' ? 'Cadastro enviado!' : sit === 'pago' ? 'Pagamento registrado!' : 'Pedido enviado!') + '</h1>'
-      + '<p class="intro">Obrigado, <b>' + esc(nome) + '</b>. ' + (F.tipo === 'cadastro' ? 'Seus dados foram recebidos pela equipe financeira.' : sit === 'pago' ? 'O registro foi enviado para a equipe financeira conferir.' : 'O pedido foi recebido e vai para aprovação da equipe financeira.') + '</p>'
+  function sucesso(nome, sit, qtd){
+    cx.innerHTML = '<div class="ok"><div class="ic">✅</div><h1>' + (F.tipo === 'cadastro' ? 'Cadastro enviado!' : qtd ? (qtd + (qtd > 1 ? (sit === 'pago' ? ' pagamentos registrados!' : ' pedidos enviados!') : (sit === 'pago' ? ' pagamento registrado!' : ' pedido enviado!'))) : sit === 'pago' ? 'Pagamento registrado!' : 'Pedido enviado!') + '</h1>'
+      + '<p class="intro">Obrigado, <b>' + esc(nome) + '</b>. ' + (F.tipo === 'cadastro' ? 'Seus dados foram recebidos pela equipe financeira.' : sit === 'pago' ? 'O registro foi enviado para a equipe financeira conferir.' : qtd > 1 ? 'Os pedidos foram recebidos e vão para aprovação da equipe financeira.' : 'O pedido foi recebido e vai para aprovação da equipe financeira.') + '</p>'
       + '<button class="btn sec" id="btOutro">' + (F.tipo === 'cadastro' ? 'Cadastrar outra pessoa' : 'Enviar outro') + '</button></div>';
     document.getElementById('btOutro').onclick = montar; window.scrollTo(0,0);
+  }
+  // ---------- tela inicial: manual ou importar ----------
+  function telaInicio(o){
+    cx.innerHTML = '<h1>Como você quer enviar?</h1><p class="intro">Escolha uma opção.</p><div class="escolha">'
+      + '<button type="button" id="opManual"><span class="ic">✍️</span><span><b>Lançamento manual</b><small>Preencher um pagamento por vez, com nota fiscal ou print se tiver.</small></span></button>'
+      + '<button type="button" id="opImport"><span class="ic">📥</span><span><b>Importar arquivo</b><small>Enviar uma planilha Excel com vários pagamentos de uma vez.</small></span></button></div>';
+    document.getElementById('opManual').onclick = function(){ telaPedido(o); window.scrollTo(0,0); };
+    document.getElementById('opImport').onclick = function(){ telaImportar(o); window.scrollTo(0,0); };
+  }
+  function voltarInicio(){ var a = document.getElementById('btInicio'); if (a) a.onclick = function(ev){ ev.preventDefault(); telaInicio(F.opcoes || {}); window.scrollTo(0,0); }; }
+
+  // ---------- importar planilha ----------
+  var XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', _xl = null;
+  function carregarXLSX(){
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (!_xl) _xl = new Promise(function(ok, falha){ var s = document.createElement('script'); s.src = XLSX_URL; s.onload = function(){ window.XLSX ? ok(window.XLSX) : falha(new Error('xlsx')); }; s.onerror = function(){ _xl = null; falha(new Error('xlsx')); }; document.head.appendChild(s); });
+    return _xl;
+  }
+  var COLS = [
+    {k:'favorecido', t:'Favorecido', re:/^(favorecido|nome|fornecedor|benefici|prestador|quem recebe)/},
+    {k:'doc',        t:'CPF/CNPJ',   re:/^(cpf|cnpj|documento|doc)/},
+    {k:'pix',        t:'Chave PIX',  re:/pix/},
+    {k:'valor',      t:'Valor',      re:/^valor/},
+    {k:'vencimento', t:'Vencimento', re:/^(vencimento|data|venc)/},
+    {k:'categoria',  t:'Categoria',  re:/^categoria/},
+    {k:'forma',      t:'Forma de pagamento', re:/^forma/},
+    {k:'descricao',  t:'Descrição',  re:/^(descri|observa|obs|servi|referente)/}];
+  function semAcento(s){ return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  function lerValor(v){
+    if (typeof v === 'number') return Math.round(v * 100) / 100;
+    var s = String(v == null ? '' : v).replace(/[R$\s]/g, '');
+    if (!s) return NaN;
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+    return Math.round(Number(s) * 100) / 100;
+  }
+  function lerData(v){
+    var p = function(n){ return String(n).padStart(2, '0'); };
+    if (v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + p(v.getMonth()+1) + '-' + p(v.getDate());
+    if (typeof v === 'number' && v > 20000 && v < 80000){ var d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 864e5); return d.getUTCFullYear() + '-' + p(d.getUTCMonth()+1) + '-' + p(d.getUTCDate()); }
+    var s = String(v == null ? '' : v).trim(), m;
+    if ((m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/))){ var a = +m[3]; if (a < 100) a += 2000; if (+m[2] < 1 || +m[2] > 12 || +m[1] < 1 || +m[1] > 31) return ''; var dt = new Date(a, +m[2]-1, +m[1]); if (dt.getMonth() !== +m[2]-1) return ''; return a + '-' + p(m[2]) + '-' + p(m[1]); }
+    if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return m[1] + '-' + m[2] + '-' + m[3];
+    return '';
+  }
+  function baixarModelo(o){
+    carregarXLSX().then(function(X){
+      var wb = X.utils.book_new();
+      var ws = X.utils.aoa_to_sheet([COLS.map(function(c){ return c.t; })]);
+      ws['!cols'] = [{wch:32},{wch:20},{wch:28},{wch:12},{wch:13},{wch:20},{wch:20},{wch:40}];
+      X.utils.book_append_sheet(wb, ws, 'Pagamentos');
+      var n = Math.max((o.favorecidos||[]).length, (o.categorias||[]).length, (o.formas||[]).length);
+      var lin = [['Como preencher'], ['Uma linha para cada pagamento. Obrigatórios: Favorecido, Valor e Vencimento (dd/mm/aaaa).'],
+        ['Se o favorecido não estiver na lista abaixo, preencha também CPF/CNPJ e Chave PIX.'], [''], ['Favorecidos cadastrados', 'Categorias', 'Formas de pagamento']];
+      for (var i = 0; i < n; i++) lin.push([((o.favorecidos||[])[i]||{}).nome || '', (o.categorias||[])[i] || '', (o.formas||[])[i] || '']);
+      var w2 = X.utils.aoa_to_sheet(lin); w2['!cols'] = [{wch:40},{wch:28},{wch:22}];
+      X.utils.book_append_sheet(wb, w2, 'Como preencher');
+      X.writeFile(wb, 'modelo-pagamentos.xlsx');
+    }, function(){ erro('Não consegui gerar o modelo agora. Verifique a internet e tente de novo.'); });
+  }
+  var PLAN = null, LOTE = {anexos:null, ok:0};
+  function telaImportar(o){
+    var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
+    ARQS = []; PLAN = null; LOTE = {anexos:null, ok:0};
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Importar planilha</h1><p class="intro">Envie uma planilha Excel com vários pagamentos. Na próxima tela você confere tudo antes de enviar.</p>'
+      + '<form id="fm" novalidate>'
+      + '<div class="grupo">Quem está pedindo</div><div class="form">'
+      + '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
+      + '<label><span>Seu WhatsApp ou e-mail <b>*</b></span><input name="s_contato" required maxlength="120"></label>'
+      + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label></div>'
+      + '<div class="grupo">Planilha</div>'
+      + '<div class="arq" id="planBox">📊 Toque para escolher a planilha<small>Excel (.xlsx, .xls) ou .csv · uma linha por pagamento</small></div>'
+      + '<input type="file" id="planIn" accept=".xlsx,.xls,.csv,.ods" style="display:none"><ul class="arqs" id="planLista"></ul>'
+      + '<p class="ajuda" style="margin-top:8px">Colunas: <b>Favorecido, Valor e Vencimento</b> (obrigatórias), CPF/CNPJ, Chave PIX, Categoria, Forma de pagamento e Descrição. <a href="#" id="btModelo">⬇ Baixar planilha modelo</a></p>'
+      + '<div class="grupo">Outros anexos (opcional)</div>'
+      + '<div class="arq" id="arqBox">📎 Notas fiscais ou prints<small>PDF ou foto · até 4 arquivos de 10 MB</small></div>'
+      + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul>'
+      + '<button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
+    voltarInicio();
+    document.getElementById('btModelo').onclick = function(ev){ ev.preventDefault(); baixarModelo(o); };
+    var pin = document.getElementById('planIn');
+    document.getElementById('planBox').onclick = function(){ pin.click(); };
+    pin.addEventListener('change', function(){
+      var f = pin.files[0]; pin.value = ''; if (!f) return;
+      document.getElementById('msg').style.display = 'none';
+      if (!/\.(xlsx|xls|csv|ods)$/i.test(f.name)) return erro('Escolha uma planilha Excel (.xlsx ou .xls) ou .csv.');
+      if (f.size > 10 * 1024 * 1024) return erro('A planilha passa de 10 MB.');
+      PLAN = f; LOTE = {anexos:null, ok:0};
+      document.getElementById('planLista').innerHTML = '<li>📊 <span>' + esc(f.name) + '</span><small>' + tam(f.size) + '</small><button type="button" title="Tirar">✕</button></li>';
+      document.querySelector('#planLista button').onclick = function(){ PLAN = null; document.getElementById('planLista').innerHTML = ''; };
+      carregarXLSX().catch(function(){});
+    });
+    var inp = document.getElementById('arqIn');
+    document.getElementById('arqBox').onclick = function(){ inp.click(); };
+    inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(function(f){ if (ARQS.length >= 4) return erro('No máximo 4 anexos além da planilha.'); addArq(f); }); inp.value = ''; listarArqs(); });
+    document.getElementById('fm').addEventListener('submit', function(evt){ evt.preventDefault(); lerPlanilha(evt.target, o); });
+  }
+  function lerPlanilha(fm, o){
+    document.getElementById('msg').style.display = 'none';
+    if (!fm.reportValidity()) return;
+    if (!PLAN) return erro('Escolha a planilha com os pagamentos.');
+    var bt = document.getElementById('btEnv'); bt.disabled = true; bt.textContent = 'Lendo a planilha…';
+    var fim = function(){ bt.disabled = false; bt.textContent = 'Continuar'; };
+    Promise.all([carregarXLSX(), PLAN.arrayBuffer()]).then(function(r){
+      var X = r[0], wb = X.read(r[1], {type:'array', cellDates:true});
+      var ws = wb.Sheets[wb.SheetNames[0]], linhas = X.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+      // acha a linha do cabeçalho (a primeira que tem "valor")
+      var hi = -1;
+      for (var i = 0; i < Math.min(linhas.length, 15); i++){ if (linhas[i].some(function(c){ return /^valor/.test(semAcento(c)); })){ hi = i; break; } }
+      if (hi < 0){ fim(); return erro('Não encontrei a coluna "Valor" na planilha. Use a planilha modelo ou confira os títulos das colunas.'); }
+      var mapa = {};
+      linhas[hi].forEach(function(c, j){ var n = semAcento(c); COLS.forEach(function(col){ if (mapa[col.k] == null && n && col.re.test(n)) mapa[col.k] = j; }); });
+      if (mapa.favorecido == null || mapa.vencimento == null){ fim(); return erro('A planilha precisa das colunas Favorecido, Valor e Vencimento.'); }
+      var favs = {}; (o.favorecidos||[]).forEach(function(p){ favs[semAcento(p.nome)] = p; });
+      var cats = {}; (o.categorias||[]).forEach(function(c){ cats[semAcento(c)] = c; });
+      var formas = {}; (o.formas||[]).forEach(function(c){ formas[semAcento(c)] = c; });
+      var itens = [];
+      for (var k = hi + 1; k < linhas.length; k++){
+        var L = linhas[k], g = function(c){ return mapa[c] == null ? '' : L[mapa[c]]; };
+        if (!L.some(function(c){ return String(c).trim() !== ''; })) continue;
+        var nome = String(g('favorecido')).trim().slice(0, 150), val = lerValor(g('valor')), venc = lerData(g('vencimento'));
+        var catT = String(g('categoria')).trim(), formaT = String(g('forma')).trim();
+        var it = {linha:k + 1, nome:nome, valor:val, vencimento:venc, descricao:String(g('descricao')).trim().slice(0, 500), problemas:[]};
+        var ja = favs[semAcento(nome)];
+        if (ja){ it.pessoaId = ja.id; it.nome = ja.nome; }
+        else if (nome){ var doc = String(g('doc')).replace(/\D/g, ''); it.novaPessoa = {nome:nome, doc:doc, pix:String(g('pix')).trim().slice(0, 120)}; if (doc && !docValido(doc)) it.problemas.push('CPF/CNPJ inválido'); }
+        if (catT){ if (cats[semAcento(catT)]) it.categoria = cats[semAcento(catT)]; else it.aviso = 'categoria "' + catT + '" não existe, vai sem categoria'; }
+        it.forma = formas[semAcento(formaT)] || (o.formas||['PIX'])[0];
+        if (!nome) it.problemas.push('sem favorecido');
+        if (!(val > 0)) it.problemas.push('valor inválido');
+        if (!venc) it.problemas.push('vencimento inválido');
+        itens.push(it);
+      }
+      fim();
+      if (!itens.length) return erro('A planilha não tem nenhum pagamento abaixo do cabeçalho.');
+      if (itens.length > 300) return erro('A planilha tem ' + itens.length + ' linhas. Envie no máximo 300 por vez.');
+      revisarLote(fm, itens, o);
+    }).catch(function(e){ fim(); console.warn(e); erro(/xlsx/.test(e && e.message) ? 'Não consegui abrir o leitor de planilhas. Verifique a internet e tente de novo.' : 'Não consegui ler esta planilha. Salve como .xlsx e tente de novo.'); });
+  }
+  function revisarLote(fm, itens, o){
+    var d = new FormData(fm), ruins = itens.filter(function(i){ return i.problemas.length; });
+    var total = itens.reduce(function(s, i){ return s + (i.valor > 0 ? i.valor : 0); }, 0), nv = {}; itens.forEach(function(i){ if (i.novaPessoa && i.nome) nv[semAcento(i.nome)] = 1; }); var novos = Object.keys(nv).length;
+    var emp = (o && o.empresa) || 'a empresa', p2 = document.getElementById('passo2');
+    var tab = '<div class="tab"><table><thead><tr><th>Favorecido</th><th class="r">Valor</th><th class="r">Vencimento</th></tr></thead><tbody>'
+      + itens.map(function(i){ return '<tr' + (i.problemas.length ? ' class="ruim"' : '') + '><td>' + esc(i.nome || '—') + (i.novaPessoa && i.nome ? ' <small class="tg">novo</small>' : '')
+        + '<div class="sub">' + (i.problemas.length ? '<span class="pb">Linha ' + i.linha + ': ⚠ ' + esc(i.problemas.join(', ')) + '</span>' : esc(i.categoria || 'sem categoria') + (i.descricao ? ' · ' + esc(i.descricao) : '') + (i.aviso ? '<br><span class="av">' + esc(i.aviso) + '</span>' : '')) + '</div>'
+        + '</td><td class="r">' + (i.valor > 0 ? brl(i.valor) : '—') + '</td><td class="r">' + (fmt(i.vencimento) || '—') + '</td></tr>'; }).join('')
+      + '</tbody><tfoot><tr><td>' + itens.length + (itens.length > 1 ? ' pagamentos' : ' pagamento') + '</td><td class="r">' + brl(total) + '</td><td></td></tr></tfoot></table></div>';
+    p2.innerHTML = '<div class="passos"><span class="on"></span><span class="on"></span></div><h1>Confira os dados</h1><p class="intro">Veja se está tudo certo antes de enviar.</p><dl class="res">'
+      + '<dt>Quem está pedindo</dt><dd>' + esc(d.get('s_nome')) + ' · ' + esc(d.get('s_contato')) + '</dd>'
+      + '<dt>Evento</dt><dd>' + esc(txtSel(fm, 'eventoId')) + '</dd>'
+      + '<dt>Planilha</dt><dd>📊 ' + esc(PLAN.name) + '</dd>'
+      + (ARQS.length ? '<dt>Outros anexos</dt><dd>' + ARQS.map(function(f){ return '📄 ' + esc(f.name); }).join('<br>') + '</dd>' : '')
+      + (novos ? '<dt>Favorecidos novos</dt><dd>' + novos + ' (não estão no cadastro, a equipe vai completar)</dd>' : '')
+      + '</dl>' + tab
+      + (ruins.length ? '<div class="msg" style="display:block">' + ruins.length + (ruins.length > 1 ? ' linhas têm' : ' linha tem') + ' problema (em vermelho). Corrija na planilha e escolha o arquivo de novo.</div>'
+        + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button></div>'
+      : '<div class="grupo" style="margin-top:20px">Estes pagamentos…</div><div class="opc">'
+        + '<label><input type="radio" name="situacao" value="solicitacao" checked><span><b style="color:var(--verde)">São solicitações de pagamento</b><small>Ainda não foram pagos. Vão para aprovação da equipe antes de serem pagos.</small></span></label>'
+        + '<label><input type="radio" name="situacao" value="pago"><span><b style="color:var(--verde)">' + esc(emp) + ' já pagou</b><small>Só para registro e conferência, não precisam de aprovação.</small></span></label>'
+        + '</div><label id="boxPago" style="display:none;margin-top:10px"><span>Data do pagamento <b>*</b></span><input type="date" id="dataPago" value="' + hoje() + '"></label>'
+        + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button><button class="btn" id="btConf" type="button">Confirmar e enviar ' + itens.length + '</button></div><div class="msg" id="msg2"></div>');
+    var esconde = function(on){ ['#fm', '#cx > .passos', '#cx > h1', '#cx > .intro', '#btInicio'].forEach(function(s){ var e = document.querySelector(s); if (e) e.style.display = on ? 'none' : ''; }); };
+    esconde(true);
+    p2.querySelectorAll('[name=situacao]').forEach(function(r){ r.onchange = function(){ document.getElementById('boxPago').style.display = p2.querySelector('[name=situacao]:checked').value === 'pago' ? '' : 'none'; }; });
+    document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; esconde(false); window.scrollTo(0,0); };
+    if (!ruins.length) document.getElementById('btConf').onclick = function(){ enviarLote(d, itens); };
+    window.scrollTo(0,0);
+  }
+  function enviarLote(d, itens){
+    var e2 = document.getElementById('msg2'); e2.style.display = 'none';
+    var sit = document.querySelector('[name=situacao]:checked').value, pagoEm = document.getElementById('dataPago').value;
+    if (sit === 'pago' && !pagoEm){ e2.textContent = 'Informe a data do pagamento.'; e2.style.display = 'block'; return; }
+    var bt = document.getElementById('btConf'), bv = document.getElementById('btVolta'); bt.disabled = bv.disabled = true; bt.textContent = 'Enviando arquivos…';
+    var base = {solicitante:{nome:String(d.get('s_nome')).trim(), contato:String(d.get('s_contato')).trim()}, eventoId:d.get('eventoId'), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : '', importado:PLAN.name};
+    var lista = itens.map(function(i){ var x = {valor:i.valor, vencimento:i.vencimento, forma:i.forma, categoria:i.categoria || '', descricao:i.descricao}; if (i.pessoaId) x.pessoaId = i.pessoaId; else x.novaPessoa = i.novaPessoa; return x; });
+    var sobe = LOTE.anexos ? Promise.resolve(LOTE.anexos) : (ARQS.unshift(PLAN), subirArquivos().then(function(a){ ARQS.shift(); return a; }, function(e){ ARQS.shift(); throw e; }));
+    sobe.then(function(anexos){
+      LOTE.anexos = anexos; bt.textContent = 'Enviando…'; base.anexos = anexos;
+      // em partes de 60 linhas, para não passar do tamanho de cada envio
+      var partes = []; for (var i = 0; i < lista.length; i += 60) partes.push(lista.slice(i, i + 60));
+      return partes.reduce(function(pr, parte, n){ return pr.then(function(){ if (n < LOTE.ok) return; var c = JSON.parse(JSON.stringify(base)); c.itens = parte; c.parte = (n + 1) + '/' + partes.length; return rpc('enviar_formulario', {p_token: TOKEN, p_conteudo: c}).then(function(){ LOTE.ok = n + 1; }); }); }, Promise.resolve());
+    }).then(function(){ ARQS = []; PLAN = null; LOTE = {anexos:null, ok:0}; sucesso(base.solicitante.nome, sit, lista.length); }, function(e){
+      bt.disabled = bv.disabled = false; bt.textContent = 'Confirmar e enviar ' + itens.length;
+      e2.textContent = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message; e2.style.display = 'block'; });
   }
   function telaPedido(o){
     var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
@@ -190,7 +393,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     var cat = (o.categorias||[]).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
     var fr = (o.formas||['PIX','Transferência','Boleto','Dinheiro']).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
     ARQS = [];
-    cx.innerHTML = '<div class="passos"><span class="on"></span><span></span></div><h1>Novo pagamento</h1><p class="intro">Preencha os dados abaixo. Na próxima tela você confere tudo antes de enviar.</p>'
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Novo pagamento</h1><p class="intro">Preencha os dados abaixo. Na próxima tela você confere tudo antes de enviar.</p>'
       + '<form id="fm" novalidate>'
       + '<div class="grupo">Quem está pedindo</div><div class="form">'
       + '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
@@ -210,7 +413,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       + '</div><button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
     var sel = document.getElementById('selFav'), box = document.getElementById('boxNovo');
     function novoOn(){ var on = sel.value === '__novo__'; box.style.display = on ? '' : 'none'; box.querySelectorAll('[required]').forEach(function(i){ i.disabled = !on; }); box.querySelectorAll('input,select').forEach(function(i){ i.disabled = !on; }); }
-    sel.addEventListener('change', novoOn); novoOn();
+    sel.addEventListener('change', novoOn); novoOn(); voltarInicio();
     var inp = document.getElementById('arqIn');
     document.getElementById('arqBox').onclick = function(){ inp.click(); };
     inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(addArq); inp.value = ''; listarArqs(); });
@@ -258,7 +461,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     document.getElementById('hTitulo').textContent = o.empresa || 'Equipe financeira';
     document.getElementById('hSub').textContent = F.tipo === 'cadastro' ? 'Cadastro de fornecedores e prestadores' : 'Pagamentos';
     document.title = (F.tipo === 'cadastro' ? 'Cadastro' : 'Pedido de pagamento') + (o.empresa ? ' · ' + o.empresa : '');
-    if (F.tipo === 'cadastro') telaCadastro(); else telaPedido(o);
+    if (F.tipo === 'cadastro') telaCadastro(); else telaInicio(o);
   }
   if (!TOKEN){ invalido('Link incompleto', 'Peça um novo link para quem te enviou.'); return; }
   rpc('abrir_formulario', {p_token: TOKEN}).then(function(j){

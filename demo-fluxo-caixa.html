@@ -1931,7 +1931,7 @@ async function puxarEnvios(){
       const pessoaDe = np0 => {
         if (!np0) return null;
         const d = k => String(np0[k] ?? '').trim().slice(0, 200), dig = d('doc').replace(/\D/g,'');
-        const ja = dig && db.pessoas.find(p => (p.doc||'').replace(/\D/g,'') === dig);
+        const ja = (dig && db.pessoas.find(p => (p.doc||'').replace(/\D/g,'') === dig)) || (!dig && d('nome') && db.pessoas.find(p => (p.nome||'').trim().toLowerCase() === d('nome').toLowerCase()));
         if (ja) return ja;
         const novo = {id:uid('p'), nome:d('nome')||'Sem nome', doc:formatarDoc(dig), funcao:d('funcao'), tel:d('tel'), email:d('email'), banco:d('banco'), agencia:d('agencia'), conta:d('conta'),
           tipoConta:d('tipoConta'), pixTipo:tipoPix(d('pix')), pix:d('pix'), origem:'autocadastro', convidadoPor:me.id, cadastradoEm:agoraSeg()};
@@ -1940,6 +1940,10 @@ async function puxarEnvios(){
         nc++; return novo;
       };
       if (r.tipo === 'cadastro'){ pessoaDe(c.pessoa || c); return; }
+      // planilha importada: um envio com várias linhas vira um pedido por linha
+      const lista = Array.isArray(c.itens) ? c.itens.slice(0, 300).map(it=>({...c, ...(it||{}), itens:undefined})) : [c];
+      lista.forEach(c=>{
+      const t = k => String(c[k] ?? '').trim().slice(0, 500);
       const pes = (c.pessoaId && db.pessoas.find(p=>p.id===c.pessoaId)) || pessoaDe(c.novaPessoa);
       const valor = Math.max(0, Math.round(Number(c.valor)*100)/100) || 0;
       const jaPago = c.situacao === 'pago', pagoEm = /^\d{4}-\d{2}-\d{2}$/.test(t('pagoEm')) ? t('pagoEm') : HOJE;
@@ -1949,8 +1953,9 @@ async function puxarEnvios(){
         categoria:t('categoria'), valor, vencimento: /^\d{4}-\d{2}-\d{2}$/.test(t('vencimento')) ? t('vencimento') : HOJE, forma: FORMAS.includes(t('forma')) ? t('forma') : FORMAS[0],
         descricao:t('descricao'), link:urlOk(t('link')), centroCusto:'', extras:{}, status: jaPago ? 'pago' : 'aguardando', ...(jaPago?{pagoEm}:{}), criadoPor:me.id, criadoEm:HOJE,
         solicitante:{nome:solNome, contato:solCont}, anexos,
-        historico:[{quando:agora(), quem:me.id, acao:`Recebido pelo formulário por link — enviado por ${solNome}${solCont?' ('+solCont+')':''}` + (jaPago ? ` · informado como já pago em ${fmt(pagoEm)}` : ' · solicitação de pagamento')}]};
+        historico:[{quando:agora(), quem:me.id, acao:`Recebido pelo formulário por link — enviado por ${solNome}${solCont?' ('+solCont+')':''}` + (c.importado ? ` · importado da planilha ${String(c.importado).slice(0,80)}` : '') + (jaPago ? ` · informado como já pago em ${fmt(pagoEm)}` : ' · solicitação de pagamento')}]};
       db.pedidos.push(p); np++;
+      });
     });
     save(); render();
     const partes = []; if (np) partes.push(np + (np>1?' pedidos chegaram':' pedido chegou') + ' pelo link'); if (nc) partes.push(nc + (nc>1?' cadastros novos':' cadastro novo'));
