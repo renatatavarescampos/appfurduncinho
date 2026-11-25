@@ -33,6 +33,8 @@
     S.setItem = function(k, v){ var r = ps.apply(this, arguments); if (this === LS) pai.mudou((window.__P||'') + k, v); return r; };
     S.removeItem = function(k){ var r = pr.apply(this, arguments); if (this === LS) pai.mudou((window.__P||'') + k, null); return r; };
     window.NUVEM = pai.info();
+    // acesso direto ao banco (formulário por link), usando a sessão da Central
+    window.NUVEM_API = { api: pai.api, base: pai.base, dadosId: function(){ return pai.dados(window.__P || ''); } };
     return;
   }
 
@@ -349,10 +351,15 @@
   }
 
   // o app aberto dentro da Central usa estas funções para salvar
+  var CHAVE_APP = 'demo-pagamentos-eventos-v5';
   window.__nuvem = {
     mudou: mudou,
-    info: function(){ return window.NUVEM || null; }
+    info: function(){ return window.NUVEM || null; },
+    api: function(m, c, b, e){ return api(m, c, b, e); },
+    dados: function(prefixo){ return dadosId((prefixo || '') + CHAVE_APP); },
+    base: function(){ return URL_SB; }
   };
+  window.NUVEM_API = { api: window.__nuvem.api, base: window.__nuvem.base, dadosId: function(){ return dadosId(PREF + CHAVE_APP); } };
   window.NUVEM = null;
   iniciar();
 })();
