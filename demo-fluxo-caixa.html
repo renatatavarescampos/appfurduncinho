@@ -211,7 +211,7 @@ tr.click:hover td{background:#f4efeb}
 .sel-col{width:36px;text-align:center!important;padding-left:4px!important;padding-right:4px!important}
 .sel-col input{width:17px;height:17px;accent-color:#002620;cursor:pointer;vertical-align:middle}
 tr.sel-on td{background:#efbb3c33!important}
-.tag[style*="--aguardando"]{color:#002620}
+.tag{color:#fff!important}
 .dica-rola{display:none;font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 @media (max-width:700px){.dica-rola{display:block}}
 /* cabeçalho compacto */
@@ -564,7 +564,7 @@ const LISTA_COLS = [
   {id:'forma',    nome:'Forma',           td:p=>h(p.forma)},
   {id:'desc',     nome:'Descrição',       td:p=>h(p.descricao||'')},
   {id:'prod',     nome:'Produtor',        td:p=>h(user(p.criadoPor).nome)},
-  {id:'status',   nome:'Status',          td:p=>`<span class="tag" style="background:${STATUS[p.status].cor}">${STATUS[p.status].nome}</span>${p.conc?' <span title="Conciliado com o banco em '+fmt(p.conc.data)+'">🏦✓</span>':''}`, v:p=>STATUS[p.status].nome+(atrasadoPag(p)?' · Atrasado':'')},
+  {id:'status',   nome:'Status',          td:p=>`<span class="tag" style="background:${atrasadoPag(p)?'var(--recusado)':STATUS[p.status].cor}">${atrasadoPag(p)?'⏰ Atrasado · '+(p.status==='aguardando'?'aguardando aprovação':'a pagar'):STATUS[p.status].nome}</span>${p.conc?' <span title="Conciliado com o banco em '+fmt(p.conc.data)+'">🏦✓</span>':''}`, v:p=>STATUS[p.status].nome+(atrasadoPag(p)?' · Atrasado':'')},
   {id:'banco',    nome:'Dados bancários', td:p=>`<div style="white-space:normal;min-width:200px">${bancoHTML(pessoa(p.pessoaId))}</div>`, v:p=>pessoa(p.pessoaId).banco||''},
   {id:'bancoConc',nome:'Banco',           td:p=>bancoPed(p)?h(bancoPed(p)):'<span class="meta">—</span>', v:p=>bancoPed(p)||'—'},
   {id:'pagoEm',   nome:'Pago em',         td:p=>p.status==='pago'&&dataPagamento(p)?fmt(String(dataPagamento(p)).slice(0,10)):'—'},
@@ -1191,7 +1191,7 @@ function fechar(){ document.getElementById('ov')?.remove(); }
 function verPedido(id){
   const p = db.pedidos.find(x=>x.id===id); if(!p||!podeVer(p)) return;
   const pe = pessoa(p.pessoaId);
-  modal(`<h3>${p.id} · <span class="tag" style="background:${STATUS[p.status].cor}">${STATUS[p.status].nome}</span></h3>
+  modal(`<h3>${p.id} · <span class="tag" style="background:${atrasadoPag(p)?'var(--recusado)':STATUS[p.status].cor}">${atrasadoPag(p)?'⏰ Atrasado · '+(p.status==='aguardando'?'aguardando aprovação':'a pagar'):STATUS[p.status].nome}</span></h3>
   <dl class="det">
     <dt>Evento</dt><dd>${h(evento(p.eventoId).nome)}</dd>
     <dt>Favorecido</dt><dd>${h(pe.nome)} (${h(pe.funcao)})</dd>
@@ -1729,7 +1729,7 @@ function telaConciliacao(){
   const conc = db.pedidos.filter(p=>p.conc).sort((a,b)=>(b.conc.quando||'').localeCompare(a.conc.quando||''));
   const saidas = db.extrato.filter(t=>t.valor<0), ign = db.extrato.filter(t=>t.ignorado);
   const tx = t => `<td>${fmt(t.data)}</td><td style="white-space:normal;min-width:180px">${h(t.desc||'—')}</td><td class="right" style="color:var(--recusado);font-weight:600">${brl(t.valor)}</td>`;
-  const ped = p => `<td><b>${p.id}</b></td><td style="white-space:normal">${h(pessoa(p.pessoaId).nome)}<br><span class="meta">${h(evento(p.eventoId).nome)}</span></td><td class="right"><b>${brl(p.valor)}</b></td><td data-v="${STATUS[p.status].nome}"><span class="tag" style="background:${STATUS[p.status].cor}">${STATUS[p.status].nome}</span><br><span class="meta">venc. ${fmt(p.vencimento)}</span></td>`;
+  const ped = p => `<td><b>${p.id}</b></td><td style="white-space:normal">${h(pessoa(p.pessoaId).nome)}<br><span class="meta">${h(evento(p.eventoId).nome)}</span></td><td class="right"><b>${brl(p.valor)}</b></td><td data-v="${STATUS[p.status].nome}"><span class="tag" style="background:${atrasadoPag(p)?'var(--recusado)':STATUS[p.status].cor}">${atrasadoPag(p)?'⏰ Atrasado · '+(p.status==='aguardando'?'aguardando aprovação':'a pagar'):STATUS[p.status].nome}</span><br><span class="meta">venc. ${fmt(p.vencimento)}</span></td>`;
   return `<div class="toolbar"><h2 style="margin:0">🏦 Conciliação bancária</h2><div class="spacer"></div>
     <label class="btn pri" style="cursor:pointer">📥 Importar extrato (OFX, CSV ou Excel)<input type="file" id="arqExtrato" accept=".ofx,.csv,.txt,.xlsx" multiple hidden></label>
     <button class="btn" data-act="extratoExemplo" title="Só na demonstração">🧪 Extrato de exemplo</button></div>
@@ -2430,7 +2430,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '5.2';
+const APP_VERSAO = '5.3';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
