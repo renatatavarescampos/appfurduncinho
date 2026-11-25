@@ -497,7 +497,7 @@ label.cb{position:relative}
       + '<div class="grupo">Mensagem</div>'
       + '<label><span>Cole aqui o texto <b>*</b></span><textarea name="texto" id="txZap" required maxlength="8000" style="min-height:180px" placeholder="Exemplo:\nDJ Marcos - R$ 1.500,00 - 10/12\nGráfica Nova R$ 480 vence 15/12 pix grafica@nova.com"></textarea></label>'
       + '<p class="ajuda" style="margin-top:8px">Um pagamento por linha, com <b>nome, valor e data</b>. Se a mensagem fala de um pagamento só, pode colar do jeito que está.</p>'
-      + '<label style="margin-top:12px">Vencimento para quem não tiver data no texto<input type="date" name="vencPadrao" min="' + hoje().slice(0,4) + '-01-01"></label>'
+      + '<label style="margin-top:12px"><span>Vencimento para quem não tiver data no texto <b>*</b></span><input type="date" name="vencPadrao" required min="' + hoje().slice(0,4) + '-01-01"></label>'
       + '<div class="grupo">Anexos (opcional)</div>'
       + '<div class="arq" id="arqBox">📎 Notas fiscais ou prints<small>PDF ou foto · até 5 arquivos de 10 MB</small></div>'
       + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul>'
