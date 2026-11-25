@@ -116,6 +116,18 @@ tr.click:hover td{background:#f4efeb}
 .perms{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:4px 12px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
 .perms label{flex-direction:row!important;align-items:center;gap:6px;color:var(--text)!important;font-size:12px!important}
 .perms .grp{grid-column:1/-1;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-top:4px}
+.bk-intro{margin:-6px 0 12px;color:var(--muted);font-size:13px}
+.bk-grupo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 6px}
+.bk-grupo .lnk{background:none;border:none;padding:0;color:#c37f36;font:inherit;text-transform:none;letter-spacing:0;font-weight:600;cursor:pointer}
+.bk-lista{display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow:auto}
+.bk-item{display:flex;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:#fff}
+.bk-item:has(input:checked){border-color:#002620;background:#efbb3c14}
+.bk-item input{margin-top:3px;width:16px;height:16px;accent-color:#002620;flex:none}
+.bk-item span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.bk-item small{color:var(--muted);font-size:12px}
+.bk-aviso{margin-top:12px;font-size:12px;background:#efbb3c26;border:1px solid #efbb3c80;border-radius:10px;padding:8px 10px}
+.bk-rodape{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--muted)}
+.bk-rodape .btn:disabled{opacity:.5;cursor:not-allowed}
 /* modal */
 .overlay{position:fixed;inset:0;background:#0006;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:10}
 .modal{background:var(--card);border-radius:14px;width:100%;max-width:600px;padding:20px}
@@ -300,8 +312,8 @@ function render(){
       <div class="menu">
         <button class="btn sm" onclick="toggleMenu(event)">⋯ Backup</button>
         <div class="menu-pop" id="menuPop">
-          <button onclick="exportar()">⬇ Exportar dados (arquivo)</button>
-          <button onclick="document.getElementById('imp').click()">⬆ Importar dados</button>
+          <button onclick="abrirBackup()">⬇ Exportar backup…</button>
+          <button onclick="document.getElementById('imp').click()">⬆ Restaurar backup…</button>
         </div>
       </div>
     </div>
@@ -718,27 +730,136 @@ function excluirPessoa(id){
 function toggleMenu(e){ e.stopPropagation(); document.getElementById('menuPop').classList.toggle('on'); }
 document.addEventListener('click', ()=>document.getElementById('menuPop')?.classList.remove('on'));
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ if(document.getElementById('modal').innerHTML) fechar(); } });
-function exportar(){
-  const blob = new Blob([JSON.stringify(db,null,2)], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'central-clientes-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 1000); toast('Arquivo de backup baixado');
+/* Backup: o arquivo pode ter o cadastro da Central e os dados do app de cada cliente.
+   Os dados de cada cliente são guardados sem o prefixo do navegador, para voltarem no lugar certo. */
+const APP_CHAVE = /^demo-pagamentos-eventos-v\d+$/;
+function chavesDoCliente(c){
+  const out = {};
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i); if(!k) continue;
+    if(c.dadosProprios){ const pre='cli_'+c.id+'::'; if(k.indexOf(pre)===0) out[k.slice(pre.length)] = localStorage.getItem(k); }
+    else if(APP_CHAVE.test(k)) out[k] = localStorage.getItem(k);
+  }
+  return out;
 }
+function resumoDados(d){
+  let n=0, t=0;
+  Object.values(d).forEach(v=>{ t += String(v).length; try{ const o=JSON.parse(v); n += (o.pedidos||[]).length; }catch(e){} });
+  return {lanc:n, tam:t};
+}
+function linhaBk(id, titulo, sub, marcado){
+  return `<label class="bk-item"><input type="checkbox" class="bk-ck" value="${esc(id)}" ${marcado?'checked':''} onchange="bkConta()">
+    <span><b>${esc(titulo)}</b><small>${sub}</small></span></label>`;
+}
+function abrirBackup(){
+  document.getElementById('menuPop')?.classList.remove('on');
+  const itens = db.clientes.map(c=>{
+    const d = chavesDoCliente(c), r = resumoDados(d), vazio = !Object.keys(d).length;
+    const sub = vazio ? 'Ainda sem dados (o app nunca foi aberto)' : `${r.lanc} pedido(s) de pagamento, eventos, equipe e extrato · ${kb(r.tam)}`;
+    return linhaBk(c.id, c.nome, sub, !vazio);
+  }).join('');
+  document.getElementById('modal').innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)fechar()">
+    <div class="modal">
+      <h3>Exportar backup</h3>
+      <p class="bk-intro">Escolha o que vai no arquivo. Ele fica salvo no seu computador e pode ser restaurado depois pelo botão Backup.</p>
+      <div class="bk-grupo">Central</div>
+      ${linhaBk('_central','Cadastro da Central', `${db.clientes.length} cliente(s) e ${db.pessoas.length} pessoa(s) com acesso`, true)}
+      <div class="bk-grupo">Dados dos apps <button type="button" class="lnk" onclick="bkTodos(true)">marcar todos</button> · <button type="button" class="lnk" onclick="bkTodos(false)">desmarcar</button></div>
+      <div class="bk-lista">${itens}</div>
+      <div class="bk-rodape">
+        <span id="bkConta"></span>
+        <div class="spacer"></div>
+        <button class="btn" onclick="fechar()">Cancelar</button>
+        <button class="btn pri" id="bkGo" onclick="exportarBackup()">⬇ Baixar arquivo</button>
+      </div>
+    </div>
+  </div>`;
+  bkConta();
+}
+function bkSel(){ return [...document.querySelectorAll('.bk-ck')].filter(x=>x.checked).map(x=>x.value); }
+function bkTodos(v){ document.querySelectorAll('.bk-lista .bk-ck').forEach(x=>x.checked=v); bkConta(); }
+function bkConta(){
+  const n = bkSel().length, el = document.getElementById('bkConta'), go = document.getElementById('bkGo');
+  if(el) el.textContent = n ? n+' item(ns) selecionado(s)' : 'Nada selecionado';
+  if(go) go.disabled = !n;
+}
+function baixarJSON(obj, nome){
+  const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+function nomeArq(s){ return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase() || 'cliente'; }
+function exportarBackup(){
+  const sel = bkSel(); if(!sel.length) return;
+  const bk = {tipo:'backup-central', versao:2, criadoEm:new Date().toISOString(), clientesDados:{}};
+  if(sel.includes('_central')) bk.central = JSON.parse(JSON.stringify(db));
+  sel.filter(x=>x!=='_central').forEach(id=>{ const c = achar(id); if(c) bk.clientesDados[id] = {nome:c.nome, dados:chavesDoCliente(c)}; });
+  const ids = Object.keys(bk.clientesDados), dia = new Date().toISOString().slice(0,10);
+  const nome = (!bk.central && ids.length===1) ? 'backup-'+nomeArq(bk.clientesDados[ids[0]].nome)+'-'+dia+'.json'
+             : (bk.central && !ids.length) ? 'backup-central-'+dia+'.json' : 'backup-completo-'+dia+'.json';
+  baixarJSON(bk, nome); fechar(); toast('Backup baixado: '+nome);
+}
+/* Restaurar */
+let bkArquivo = null;
 function importar(inp){
   const f = inp.files[0]; if(!f) return;
   const r = new FileReader();
   r.onload = () => {
-    try{
-      const d = JSON.parse(r.result);
-      if(!d || !Array.isArray(d.clientes)) throw 0;
-      let n=0, m=0;
-      d.clientes.forEach(c=>{ if(c && c.nome){ const ex = c.id && achar(c.id); if(ex) Object.assign(ex,c); else db.clientes.push({...c, id:c.id||uid()}); n++; } });
-      (d.pessoas||[]).forEach(p=>{ if(p && p.email){ const ex = (p.id && pessoa(p.id)) || db.pessoas.find(x=>x.email.toLowerCase()===String(p.email).toLowerCase()); if(ex) Object.assign(ex,p,{id:ex.id}); else db.pessoas.push({acessos:{}, ...p, id:p.id||uid()}); m++; } });
-      save(); load(); render(); toast(`${n} cliente(s) e ${m} pessoa(s) importados`);
-    }catch(e){ toast('Arquivo inválido. Use um backup exportado por este painel.'); }
     inp.value='';
+    let d; try{ d = JSON.parse(r.result); }catch(e){ return toast('Arquivo inválido. Use um backup exportado por este painel.'); }
+    if(d && d.tipo==='backup-central') return abrirRestaurar(d, f.name);
+    if(d && Array.isArray(d.clientes)) return abrirRestaurar({tipo:'backup-central', versao:1, central:d, clientesDados:{}}, f.name);  // backup antigo, só a Central
+    toast('Arquivo inválido. Use um backup exportado por este painel.');
   };
   r.readAsText(f);
+}
+function abrirRestaurar(bk, nomeArquivo){
+  bkArquivo = bk;
+  const quando = bk.criadoEm ? ' de '+dataBR(bk.criadoEm) : '';
+  const c0 = bk.central ? linhaBk('_central','Cadastro da Central', `${(bk.central.clientes||[]).length} cliente(s) e ${(bk.central.pessoas||[]).length} pessoa(s). Junta com o que já existe; não apaga ninguém.`, true) : '';
+  const nomesCentral = {}; (bk.central?.clientes||[]).forEach(c=>nomesCentral[c.id]=c.nome);
+  const itens = Object.entries(bk.clientesDados||{}).map(([id,v])=>{
+    const r = resumoDados(v.dados||{}), existe = !!achar(id) || !!nomesCentral[id];
+    const sub = existe ? `${r.lanc} pedido(s) · substitui os dados atuais deste cliente` : 'Este cliente não existe mais na Central. Marque também o Cadastro da Central para recriá-lo.';
+    return linhaBk(id, v.nome || nomesCentral[id] || 'Cliente', sub, existe);
+  }).join('');
+  document.getElementById('modal').innerHTML = `
+  <div class="overlay" onclick="if(event.target===this)fechar()">
+    <div class="modal">
+      <h3>Restaurar backup</h3>
+      <p class="bk-intro">Arquivo <b>${esc(nomeArquivo)}</b>${esc(quando)}. Escolha o que quer trazer de volta.</p>
+      ${c0?'<div class="bk-grupo">Central</div>'+c0:''}
+      ${itens?'<div class="bk-grupo">Dados dos apps</div><div class="bk-lista">'+itens+'</div>':''}
+      <div class="bk-aviso">⚠ Os dados dos apps marcados <b>substituem</b> os dados atuais desses clientes, para todos que têm acesso. Se tiver dúvida, exporte um backup de agora antes.</div>
+      <div class="bk-rodape">
+        <span id="bkConta"></span>
+        <div class="spacer"></div>
+        <button class="btn" onclick="fechar()">Cancelar</button>
+        <button class="btn pri" id="bkGo" onclick="restaurarBackup()">⬆ Restaurar selecionados</button>
+      </div>
+    </div>
+  </div>`;
+  bkConta();
+}
+function restaurarBackup(){
+  const bk = bkArquivo, sel = bkSel(); if(!bk || !sel.length) return;
+  let n=0, m=0, a=0;
+  if(sel.includes('_central') && bk.central){
+    const d = bk.central;
+    (d.clientes||[]).forEach(c=>{ if(c && c.nome){ const ex = c.id && achar(c.id); if(ex) Object.assign(ex,c); else db.clientes.push({...c, id:c.id||uid()}); n++; } });
+    (d.pessoas||[]).forEach(p=>{ if(p && p.email){ const ex = (p.id && pessoa(p.id)) || db.pessoas.find(x=>x.email.toLowerCase()===String(p.email).toLowerCase()); if(ex) Object.assign(ex,p,{id:ex.id}); else db.pessoas.push({acessos:{}, ...p, id:p.id||uid()}); m++; } });
+  }
+  sel.filter(x=>x!=='_central').forEach(id=>{
+    const c = achar(id), v = (bk.clientesDados||{})[id]; if(!c || !v) return;
+    const pre = c.dadosProprios ? 'cli_'+id+'::' : '';
+    Object.entries(v.dados||{}).forEach(([k,val])=>{ try{ localStorage.setItem(pre+k, val); }catch(e){} });
+    delete c.limpar;   // não apagar os dados restaurados ao abrir o app
+    a++;
+  });
+  save(); load(); fechar(); render(); bkArquivo = null;
+  const partes = []; if(n||m) partes.push(`${n} cliente(s) e ${m} pessoa(s)`); if(a) partes.push(`dados de ${a} app(s)`);
+  toast('Restaurado: '+(partes.join(' e ')||'nada'));
 }
 
 load(); render();
