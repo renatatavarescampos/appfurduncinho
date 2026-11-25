@@ -71,6 +71,9 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
 .tab .r{text-align:right;white-space:nowrap}
 .tab tfoot td{font-weight:600;background:#f4efeb}
 .tab tr.ruim td{background:#ef44440f}
+.tcad{font-size:14px;margin-bottom:10px}
+.cadn.comErro{border-color:var(--erro);background:#ef44440a}
+.erroCad{display:none;color:#b91c1c;font-size:12.5px}
 .tab .pixc{font-size:12.5px;overflow-wrap:anywhere;min-width:96px}
 .tab .pixc .nw{white-space:nowrap}
 .tab .sub{font-size:12px;color:var(--muted);margin-top:2px}
@@ -331,7 +334,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
         var it = {linha:k + 1, nome:nome, valor:val, vencimento:venc, descricao:String(g('descricao')).trim().slice(0, 500), problemas:[]};
         var ja = favs[semAcento(nome)];
         if (ja){ it.pessoaId = ja.id; it.nome = ja.nome; }
-        else if (nome){ var doc = String(g('doc')).replace(/\D/g, ''); it.novaPessoa = {nome:nome, doc:doc, pix:String(g('pix')).trim().slice(0, 120)}; if (doc && !docValido(doc)) it.problemas.push('CPF/CNPJ inválido'); }
+        else if (nome){ var doc = String(g('doc')).replace(/\D/g, ''); it.novaPessoa = {nome:nome, doc:doc, pix:String(g('pix')).trim().slice(0, 120)}; }
         if (catT){ if (cats[semAcento(catT)]) it.categoria = cats[semAcento(catT)]; else it.aviso = 'categoria "' + catT + '" não existe, vai sem categoria'; }
         it.forma = formas[semAcento(formaT)] || (o.formas||['PIX'])[0];
         if (!nome) it.problemas.push('sem favorecido');
@@ -387,7 +390,6 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
           .replace(/[-–—:;,*_|•]+/g, ' ').replace(/\s+/g, ' ').trim();
         it.nome = resto.slice(0, 80);
         if (it.nome) it.novaPessoa = {nome:it.nome, doc:doc, pix:pix.slice(0, 120)};
-        if (doc && !docValido(doc)) it.problemas.push('CPF/CNPJ inválido');
       }
       var nc = f ? n.split(f.n).join(' ') : semAcento(b.replace(it.nome || '\u0000', ' '));
       var c = cats.filter(function(x){ return x.n && nc.indexOf(x.n) >= 0; })[0]; if (c) it.categoria = c.c;
@@ -431,6 +433,9 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
   }
   function revisarLote(fm, itens, o, modo){
     var d = new FormData(fm), ruins = itens.filter(function(i){ return i.problemas.length; });
+    // o mesmo favorecido novo em várias linhas: junta o que veio em cada uma (CPF, PIX)
+    var junta = {}; itens.forEach(function(i){ if (!i.novaPessoa) return; var k = semAcento(i.nome), j = junta[k] = junta[k] || {}; ['doc','pix'].forEach(function(c){ if (i.novaPessoa[c] && !j[c]) j[c] = i.novaPessoa[c]; }); });
+    itens.forEach(function(i){ if (!i.novaPessoa) return; var j = junta[semAcento(i.nome)]; ['doc','pix'].forEach(function(c){ if (!i.novaPessoa[c] && j[c]) i.novaPessoa[c] = j[c]; }); });
     var total = itens.reduce(function(s, i){ return s + (i.valor > 0 ? i.valor : 0); }, 0), nv = {}; itens.forEach(function(i){ if (i.novaPessoa && i.nome) nv[semAcento(i.nome)] = 1; }); var novos = Object.keys(nv).length;
     var emp = (o && o.empresa) || 'a empresa', p2 = document.getElementById('passo2');
     var pixHtml = function(k){ return esc(k).replace(/@/g, '<wbr>@').replace(/(•+\S+)/g, '<span class="nw">$1</span>'); };
@@ -439,18 +444,18 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     var tab = '<div class="tab"><table><thead><tr><th>Favorecido</th><th>PIX</th><th class="r">Valor / venc.</th></tr></thead><tbody>'
       + itens.map(function(i){ return '<tr' + (i.problemas.length ? ' class="ruim"' : '') + '><td>' + esc(i.nome || '—') + (i.novaPessoa && i.nome ? ' <small class="tg">novo</small>' : '')
         + '<div class="sub">' + (i.problemas.length ? '<span class="pb">' + (modo === 'texto' ? '' : 'Linha ' + i.linha + ': ') + '⚠ ' + esc(i.problemas.join(', ')) + '</span>' : esc(i.categoria || 'sem categoria') + (i.descricao && modo !== 'texto' ? ' · ' + esc(i.descricao) : '') + (i.aviso ? '<br><span class="av">' + esc(i.aviso) + '</span>' : '')) + '</div>'
-        + '</td><td class="pixc">' + pixDe(i) + '</td><td class="r"><b>' + (i.valor > 0 ? brl(i.valor) : '—') + '</b><div class="sub">' + (fmt(i.vencimento) || '—') + '</div></td></tr>'; }).join('')
+        + '</td><td class="pixc"' + (i.novaPessoa ? ' data-nk="' + esc(semAcento(i.nome)) + '"' : '') + '>' + pixDe(i) + '</td><td class="r"><b>' + (i.valor > 0 ? brl(i.valor) : '—') + '</b><div class="sub">' + (fmt(i.vencimento) || '—') + '</div></td></tr>'; }).join('')
       + '</tbody><tfoot><tr><td colspan="2">' + itens.length + (itens.length > 1 ? ' pagamentos' : ' pagamento') + '</td><td class="r">' + brl(total) + '</td></tr></tfoot></table></div>';
     p2.innerHTML = '<div class="passos"><span class="on"></span><span class="on"></span></div><h1>Confira os dados</h1><p class="intro">Veja se está tudo certo antes de enviar.</p><dl class="res">'
       + '<dt>Quem está pedindo</dt><dd>' + esc(d.get('s_nome')) + ' · ' + esc(d.get('s_contato')) + '</dd>'
       + '<dt>Evento</dt><dd>' + esc(txtSel(fm, 'eventoId')) + '</dd>'
       + (modo === 'texto' ? '' : '<dt>Planilha</dt><dd>📊 ' + esc(PLAN.name) + '</dd>')
       + (ARQS.length ? '<dt>' + (modo === 'texto' ? 'Anexos' : 'Outros anexos') + '</dt><dd>' + ARQS.map(function(f){ return '📄 ' + esc(f.name); }).join('<br>') + '</dd>' : '')
-      + (novos ? '<dt>Favorecidos novos</dt><dd>' + novos + ' (não estão no cadastro, a equipe vai completar)</dd>' : '')
+      + (novos ? '<dt>Favorecidos novos</dt><dd>' + novos + ' (cadastre abaixo)</dd>' : '')
       + '</dl>' + tab
       + (ruins.length ? '<div class="msg" style="display:block">' + ruins.length + (ruins.length > 1 ? ' linhas têm' : ' linha tem') + ' problema (em vermelho). ' + (modo === 'texto' ? 'Clique em Corrigir e ajuste o texto: cada pagamento precisa de nome, valor e data.' : 'Corrija na planilha e escolha o arquivo de novo.') + '</div>'
         + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button></div>'
-      : '<div class="grupo" style="margin-top:20px">Estes pagamentos…</div><div class="opc">'
+      : caixasNovos(itens) + '<div class="grupo" style="margin-top:20px">Estes pagamentos…</div><div class="opc">'
         + '<label><input type="radio" name="situacao" value="solicitacao" checked><span><b style="color:var(--verde)">São solicitações de pagamento</b><small>Ainda não foram pagos. Vão para aprovação da equipe antes de serem pagos.</small></span></label>'
         + '<label><input type="radio" name="situacao" value="pago"><span><b style="color:var(--verde)">' + esc(emp) + ' já pagou</b><small>Só para registro e conferência, não precisam de aprovação.</small></span></label>'
         + '</div><label id="boxPago" style="display:none;margin-top:10px"><span>Data do pagamento <b>*</b></span><input type="date" id="dataPago" value="' + hoje() + '"></label>'
@@ -459,8 +464,51 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     esconde(true);
     p2.querySelectorAll('[name=situacao]').forEach(function(r){ r.onchange = function(){ document.getElementById('boxPago').style.display = p2.querySelector('[name=situacao]:checked').value === 'pago' ? '' : 'none'; }; });
     document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; esconde(false); window.scrollTo(0,0); };
-    if (!ruins.length) document.getElementById('btConf').onclick = function(){ enviarLote(d, itens, modo); };
+    p2.querySelectorAll('.cadn [data-c=pix]').forEach(function(inp){ inp.addEventListener('input', function(){ var k = inp.closest('.cadn').dataset.k;
+      p2.querySelectorAll('.pixc[data-nk]').forEach(function(td){ if (td.dataset.nk === k) td.innerHTML = inp.value.trim() ? esc(inp.value.trim()).replace(/@/g, '<wbr>@') : '<span class="av">não informado</span>'; }); }); });
+    var lg = document.getElementById('lgpdLote'); if (lg) lg.onchange = function(){ document.getElementById('msg2').style.display = 'none'; };
+    if (!ruins.length) document.getElementById('btConf').onclick = function(){ if (lerNovos(itens)) enviarLote(d, itens, modo); };
     window.scrollTo(0,0);
+  }
+  // um bloco de cadastro para cada favorecido que não está na lista
+  function caixasNovos(itens){
+    var vistos = {}, html = '';
+    itens.forEach(function(i){
+      if (!i.novaPessoa || !i.nome) return; var k = semAcento(i.nome); if (vistos[k]) return; vistos[k] = 1;
+      var np = i.novaPessoa, v = function(x){ return esc(np[x] || ''); };
+      html += '<div class="novo cadn" data-k="' + esc(k) + '"><div class="tcad">➕ Cadastro de <b>' + esc(i.nome) + '</b></div><div class="form">'
+        + '<label><span>CPF ou CNPJ <b>*</b></span><input data-c="doc" inputmode="numeric" maxlength="20" value="' + v('doc') + '"></label>'
+        + '<label>Função ou serviço<input data-c="funcao" maxlength="80" placeholder="Ex.: DJ, gráfica" value="' + v('funcao') + '"></label>'
+        + '<label>Telefone / WhatsApp<input data-c="tel" inputmode="tel" maxlength="30" value="' + v('tel') + '"></label>'
+        + '<label>E-mail<input data-c="email" type="email" maxlength="120" value="' + v('email') + '"></label>'
+        + '<label class="full">Chave PIX<input data-c="pix" maxlength="120" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" value="' + v('pix') + '"></label>'
+        + '<p class="ajuda full">Sem PIX? Preencha os dados da conta:</p>'
+        + '<label>Banco<input data-c="banco" maxlength="60" value="' + v('banco') + '"></label>'
+        + '<label>Tipo de conta<select data-c="tipoConta"><option value="">—</option><option>Corrente</option><option>Poupança</option><option>Corrente PJ</option><option>Pagamento</option></select></label>'
+        + '<label>Agência<input data-c="agencia" inputmode="numeric" maxlength="10" value="' + v('agencia') + '"></label>'
+        + '<label>Conta (com dígito)<input data-c="conta" maxlength="20" value="' + v('conta') + '"></label>'
+        + '<div class="full erroCad"></div></div></div>';
+    });
+    if (!html) return '';
+    return '<div class="grupo" style="margin-top:20px">Cadastro dos favorecidos novos</div><p class="ajuda" style="margin:0 0 10px">Estes favorecidos ainda não estão cadastrados. Preencha os dados de cada um para o pagamento.</p>'
+      + '<div style="display:flex;flex-direction:column;gap:12px">' + html + '</div>'
+      + '<label class="chk" style="margin-top:12px"><input type="checkbox" id="lgpdLote"> Autorizo o uso destes dados exclusivamente para cadastro e pagamentos, conforme a Lei Geral de Proteção de Dados (LGPD).</label>';
+  }
+  function lerNovos(itens){
+    var e2 = document.getElementById('msg2'), caixas = document.querySelectorAll('.cadn'), ok = true, primeiro = null;
+    e2.style.display = 'none';
+    caixas.forEach(function(cx1){
+      var g = function(c){ var e = cx1.querySelector('[data-c=' + c + ']'); return e ? String(e.value).trim() : ''; }, msg = '';
+      if (!docValido(g('doc'))) msg = 'CPF ou CNPJ inválido. Confira os números.';
+      else if (!g('pix') && !(g('banco') && g('agencia') && g('conta'))) msg = 'Informe a chave PIX ou os dados completos da conta (banco, agência e conta).';
+      var er = cx1.querySelector('.erroCad'); er.textContent = msg; er.style.display = msg ? 'block' : 'none'; cx1.classList.toggle('comErro', !!msg);
+      if (msg){ ok = false; primeiro = primeiro || cx1; return; }
+      var np = {doc:g('doc').replace(/\D/g, ''), funcao:g('funcao'), tel:g('tel'), email:g('email'), pix:g('pix'), banco:g('banco'), tipoConta:g('tipoConta'), agencia:g('agencia'), conta:g('conta')};
+      itens.forEach(function(i){ if (i.novaPessoa && semAcento(i.nome) === cx1.dataset.k){ np.nome = i.nome; i.novaPessoa = JSON.parse(JSON.stringify(np)); } });
+    });
+    if (!ok){ e2.textContent = 'Complete o cadastro dos favorecidos novos (em vermelho).'; e2.style.display = 'block'; primeiro.scrollIntoView({behavior:'smooth', block:'center'}); return false; }
+    if (caixas.length && !document.getElementById('lgpdLote').checked){ e2.textContent = 'Marque a autorização de uso dos dados (LGPD) no fim do cadastro.'; e2.style.display = 'block'; return false; }
+    return true;
   }
   function enviarLote(d, itens, modo){
     var e2 = document.getElementById('msg2'); e2.style.display = 'none';
