@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Formulário</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--verde:#002620;--creme:#f4efeb;--ouro:#efbb3c;--cobre:#c37f36;--terra:#702b16;--linha:#c37f3640;--muted:#002620b3;--erro:#ef4444}
+*{box-sizing:border-box}
+body{margin:0;background:var(--creme);color:var(--verde);font-family:Poppins,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px}
+header{background:var(--verde);color:var(--creme);padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--ouro)}
+header img{height:30px}
+header .t{font-family:"Cormorant Garamond",Georgia,serif;font-size:22px;font-weight:600;line-height:1.1}
+header .s{font-size:12px;opacity:.8}
+main{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+.cx{background:#fff;border:1px solid var(--linha);border-radius:16px;padding:22px 20px;box-shadow:0 10px 30px #0026200f}
+h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:28px;margin:0 0 4px}
+.intro{color:var(--muted);margin:0 0 18px;font-size:13px}
+.grupo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--cobre);margin:20px 0 8px;padding-top:14px;border-top:1px dashed var(--linha)}
+.grupo:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form .full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+label b{color:var(--terra);font-weight:600}
+input,select,textarea{font:inherit;font-size:14px;color:var(--verde);background:#fff;border:1px solid var(--linha);border-radius:10px;padding:10px 12px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid #efbb3c88;border-color:var(--ouro)}
+textarea{min-height:76px;resize:vertical}
+.chk{flex-direction:row;align-items:flex-start;gap:8px;color:var(--verde)}
+.chk input{width:auto;margin-top:3px;accent-color:var(--verde)}
+.novo{background:#efbb3c14;border:1px solid #efbb3c66;border-radius:12px;padding:14px}
+.ajuda{font-size:12px;color:var(--muted);margin:-4px 0 0}
+.btn{font:inherit;font-weight:600;border:0;border-radius:10px;padding:13px 16px;cursor:pointer;background:var(--verde);color:var(--creme);width:100%;font-size:15px;margin-top:18px}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn.sec{background:#fff;color:var(--verde);border:1px solid var(--linha);font-weight:500}
+.msg{display:none;margin-top:12px;padding:10px 12px;border-radius:10px;font-size:13px;background:#ef44441a;color:#b91c1c;border:1px solid #ef444455}
+.ok{text-align:center}
+.ok .ic{font-size:46px}
+.passos{display:flex;gap:6px;margin:0 0 16px}
+.passos span{flex:1;height:4px;border-radius:4px;background:#c37f3633}
+.passos span.on{background:var(--ouro)}
+.arq{border:1.5px dashed var(--cobre);border-radius:12px;padding:14px;text-align:center;background:#f4efeb80;cursor:pointer;color:var(--verde)}
+.arq small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.arqs{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.arqs li{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--linha);border-radius:8px;padding:6px 10px;font-size:13px}
+.arqs li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arqs button{border:0;background:none;color:var(--erro);cursor:pointer;font-size:16px}
+dl.res{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:0;font-size:13px}
+dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:break-word}
+.opc{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.opc label{flex-direction:row;align-items:flex-start;gap:10px;border:1px solid var(--linha);border-radius:12px;padding:12px;color:var(--verde);cursor:pointer;font-size:14px}
+.opc label:has(input:checked){border-color:var(--verde);background:#efbb3c1f}
+.opc input{width:auto;margin-top:4px;accent-color:var(--verde)}
+.opc small{display:block;color:var(--muted);font-size:12px}
+.lado{display:flex;gap:10px;margin-top:18px}.lado .btn{margin-top:0}
+@media (max-width:560px){ dl.res{grid-template-columns:1fr;gap:0 0} dl.res dd{margin-bottom:8px} }
+.escolha{display:flex;flex-direction:column;gap:12px}
+.escolha button{font:inherit;display:flex;align-items:center;gap:14px;text-align:left;background:#fff;border:1.5px solid var(--linha);border-radius:14px;padding:16px;cursor:pointer;color:var(--verde)}
+.escolha button:hover{border-color:var(--ouro);background:#efbb3c14}
+.escolha .ic{font-size:30px}
+.escolha b{font-size:16px;font-weight:600}
+.escolha small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.voltar{display:inline-block;font-size:13px;color:var(--cobre);text-decoration:none;margin-bottom:10px}
+.ajuda a{color:var(--cobre);font-weight:600;white-space:nowrap}
+.tab{overflow-x:auto;margin-top:16px;border:1px solid var(--linha);border-radius:10px}
+.tab table{border-collapse:collapse;width:100%;font-size:13px}
+.tab th{background:#f4efeb;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);padding:8px 10px}
+.tab td{padding:8px 10px;border-top:1px solid #c37f3626;vertical-align:top}
+.tab .r{text-align:right;white-space:nowrap}
+.tab tfoot td{font-weight:600;background:#f4efeb}
+.tab tr.ruim td{background:#ef44440f}
+.tcad{font-size:14px;margin-bottom:10px}
+.lkcad{color:var(--cobre);font-weight:600;font-size:12.5px;text-decoration:underline;display:inline-block;margin-top:2px}
+.lkcad.feito{color:#15803d;text-decoration:none}
+.lkcad.falta{color:#b91c1c}
+#passo2.soCad > :not(.cadWrap){display:none !important}
+#passo2 .cadn{background:none;border:0;padding:0}
+.cadn.comErro{border-color:var(--erro);background:#ef44440a}
+.erroCad{display:none;color:#b91c1c;font-size:12.5px}
+.tab .pixc{font-size:12.5px;overflow-wrap:anywhere;min-width:96px}
+.tab .pixc .nw{white-space:nowrap}
+.tab .sub{font-size:12px;color:var(--muted);margin-top:2px}
+.tab .pb{color:#b91c1c;font-size:12px}.tab .av{color:var(--cobre);font-size:12px}
+.tg{background:#efbb3c40;border-radius:6px;padding:1px 6px;font-size:11px}
+.rodape{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
+@media (max-width:560px){ .form{grid-template-columns:1fr} h1{font-size:24px} }
+</style>
+</head>
+<body>
+<header><img alt="" src="data:image/png;base64,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"><div><div class="t" id="hTitulo">Formulário</div><div class="s" id="hSub"></div></div></header>
+<main><div class="cx" id="cx"><p class="intro">Carregando…</p></div>
+<div class="rodape">🔒 Os dados enviados vão direto para a equipe financeira. Este link não dá acesso a nenhuma outra informação.</div></main>
+<script>
+(function(){
+  'use strict';
+  var URL_SB = 'https://xhnsrbmqgibpcwblaijy.supabase.co';
+  var CHAVE = 'sb_publishable_NomC0jWE6QJiNsZk2D8lKg_Tl5YX0VI';
+  var TOKEN = new URLSearchParams(location.search).get('f') || '';
+  var cx = document.getElementById('cx'), F = null;
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function rpc(nome, corpo){
+    return fetch(URL_SB + '/rest/v1/rpc/' + nome, {method:'POST', headers:{'apikey':CHAVE, 'Content-Type':'application/json'}, body:JSON.stringify(corpo)})
+      .then(function(r){ return r.text().then(function(t){ var j = null; try{ j = t ? JSON.parse(t) : null; }catch(e){}
+        if (!r.ok) throw new Error((j && (j.message || j.msg || j.error)) || ('Erro ' + r.status)); return j; }); });
+  }
+  function fmt(d){ return d ? d.split('-').reverse().join('/') : ''; }
+  function hoje(){ var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+  function docValido(d){
+    d = (d||'').replace(/\D/g,'');
+    if (d.length === 11){ if (/^(\d)\1+$/.test(d)) return false;
+      var s = 0, i, r; for (i=0;i<9;i++) s += +d[i]*(10-i); r = (s*10)%11%10; if (r !== +d[9]) return false;
+      s = 0; for (i=0;i<10;i++) s += +d[i]*(11-i); r = (s*10)%11%10; return r === +d[10]; }
+    if (d.length === 14){ if (/^(\d)\1+$/.test(d)) return false;
+      var dv = function(n){ var w = n===12 ? [5,4,3,2,9,8,7,6,5,4,3,2] : [6,5,4,3,2,9,8,7,6,5,4,3,2], s = 0; for (var i=0;i<n;i++) s += +d[i]*w[i]; var r = s%11; return r<2 ? 0 : 11-r; };
+      return dv(12) === +d[12] && dv(13) === +d[13]; }
+    return false;
+  }
+  function invalido(t, m){ cx.innerHTML = '<div class="ok"><div class="ic">⚠️</div><h1>' + t + '</h1><p class="intro">' + m + '</p></div>'; }
+
+  var CAMPOS_PESSOA =
+      '<label class="full"><span>Nome completo ou razão social <b>*</b></span><input name="p_nome" required maxlength="150"></label>'
+    + '<label><span>CPF ou CNPJ <b>*</b></span><input name="p_doc" required inputmode="numeric" maxlength="20"></label>'
+    + '<label>Função ou serviço<input name="p_funcao" maxlength="80" placeholder="Ex.: DJ, segurança, gráfica"></label>'
+    + '<label>Telefone / WhatsApp<input name="p_tel" inputmode="tel" maxlength="30"></label>'
+    + '<label>E-mail<input name="p_email" type="email" maxlength="120"></label>'
+    + '<label class="full">Chave PIX<input name="p_pix" maxlength="120" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"></label>'
+    + '<p class="ajuda full">Sem PIX? Preencha os dados da conta:</p>'
+    + '<label>Banco<input name="p_banco" maxlength="60" placeholder="Ex.: Itaú, Nubank…"></label>'
+    + '<label>Tipo de conta<select name="p_tipoConta"><option value="">—</option><option>Corrente</option><option>Poupança</option><option>Corrente PJ</option><option>Pagamento</option></select></label>'
+    + '<label>Agência<input name="p_agencia" inputmode="numeric" maxlength="10"></label>'
+    + '<label>Conta (com dígito)<input name="p_conta" maxlength="20"></label>'
+    + '<label class="full chk"><input type="checkbox" name="p_lgpd" required> Autorizo o uso destes dados exclusivamente para cadastro e pagamentos, conforme a Lei Geral de Proteção de Dados (LGPD).</label>';
+
+  var ARQS = [], TIPOS_OK = /\.(pdf|png|jpe?g|webp|heic|heif|gif|csv|xlsx?|ods)$/i;
+  function addArq(f){
+    if (ARQS.length >= 5) return erro('Envie no máximo 5 arquivos.');
+    if (!TIPOS_OK.test(f.name)) return erro('O arquivo "' + f.name + '" não é PDF, imagem ou planilha.');
+    if (f.size > 10 * 1024 * 1024) return erro('O arquivo "' + f.name + '" passa de 10 MB.');
+    document.getElementById('msg').style.display = 'none'; ARQS.push(f);
+  }
+  function tam(n){ return n > 1048576 ? (n/1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n/1024)) + ' KB'; }
+  function listarArqs(){
+    var ul = document.getElementById('arqLista'); if (!ul) return;
+    ul.innerHTML = ARQS.map(function(f, i){ return '<li>📄 <span>' + esc(f.name) + '</span><small>' + tam(f.size) + '</small><button type="button" data-i="' + i + '" title="Tirar">✕</button></li>'; }).join('');
+    ul.querySelectorAll('button').forEach(function(b){ b.onclick = function(){ ARQS.splice(+b.dataset.i, 1); listarArqs(); }; });
+  }
+  function brl(v){ return Number(v||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'}); }
+  function txtSel(fm, nome){ var s = fm.querySelector('[name=' + nome + ']'); return s && s.selectedIndex > 0 ? s.options[s.selectedIndex].text : ''; }
+  // passo 2: confirma os dados e escolhe se já foi pago ou se é uma solicitação
+  function revisar(ev){
+    ev.preventDefault();
+    var fm = ev.target; document.getElementById('msg').style.display = 'none';
+    if (!fm.reportValidity()) return;
+    var d = new FormData(fm);
+    if (!(Number(d.get('valor')) > 0)) return erro('Informe um valor maior que zero.');
+    var nova = d.get('pessoaId') === '__novo__';
+    if (nova){ var np = pessoaDoForm(d); if (typeof np === 'string') return erro(np); }
+    var emp = (F.opcoes && F.opcoes.empresa) || 'a empresa';
+    var linha = function(t, v){ return v ? '<dt>' + t + '</dt><dd>' + v + '</dd>' : ''; };
+    var p2 = document.getElementById('passo2');
+    p2.innerHTML = '<div class="passos"><span class="on"></span><span class="on"></span></div><h1>Confira os dados</h1><p class="intro">Veja se está tudo certo antes de enviar.</p><dl class="res">'
+      + linha('Quem está pedindo', esc(d.get('s_nome')) + ' · ' + esc(d.get('s_contato')))
+      + linha('Evento', esc(txtSel(fm, 'eventoId')))
+      + linha('Favorecido', nova ? esc(d.get('p_nome')) + ' <small>(cadastro novo)</small>' : esc(txtSel(fm, 'pessoaId')))
+      + linha('PIX', nova ? (esc(d.get('p_pix')) || (d.get('p_banco') ? esc(d.get('p_banco')) + ' · ag. ' + esc(d.get('p_agencia')) + ' · conta ' + esc(d.get('p_conta')) : '')) : (function(){ var f = (F.opcoes.favorecidos||[]).filter(function(x){ return x.id === d.get('pessoaId'); })[0]; return f && f.pix ? esc(f.pix) : '<span style="color:var(--cobre)">sem PIX no cadastro</span>'; })())
+      + linha('Categoria', esc(txtSel(fm, 'categoria')) || '<span style="color:var(--muted)">não informada</span>')
+      + linha('Valor', '<b>' + brl(d.get('valor')) + '</b>')
+      + linha('Vencimento', fmt(d.get('vencimento')))
+      + linha('Forma', esc(d.get('forma')))
+      + linha('Descrição', esc(String(d.get('descricao')||'').trim()))
+      + linha('Link', esc(String(d.get('link')||'').trim()))
+      + linha('Anexos', ARQS.length ? ARQS.map(function(f){ return '📄 ' + esc(f.name); }).join('<br>') : '<span style="color:var(--muted)">nenhum</span>')
+      + '</dl><div class="grupo" style="margin-top:20px">Este pagamento…</div><div class="opc">'
+      + '<label><input type="radio" name="situacao" value="solicitacao" checked><span><b style="color:var(--verde)">É uma solicitação de pagamento</b><small>Ainda não foi pago. Vai para aprovação da equipe antes de ser pago.</small></span></label>'
+      + '<label><input type="radio" name="situacao" value="pago"><span><b style="color:var(--verde)">' + esc(emp) + ' já pagou</b><small>Só para registro e conferência, não precisa de aprovação.</small></span></label>'
+      + '</div><label id="boxPago" style="display:none;margin-top:10px"><span>Data do pagamento <b>*</b></span><input type="date" id="dataPago" value="' + esc(d.get('vencimento')) + '"></label>'
+      + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button><button class="btn" id="btConf" type="button">Confirmar e enviar</button></div><div class="msg" id="msg2"></div>';
+    fm.style.display = 'none'; document.querySelector('.passos').style.display = 'none'; document.querySelector('#cx > h1').style.display = 'none'; document.querySelector('#cx > .intro').style.display = 'none'; document.getElementById('btInicio').style.display = 'none';
+    p2.querySelectorAll('[name=situacao]').forEach(function(r){ r.onchange = function(){ document.getElementById('boxPago').style.display = p2.querySelector('[name=situacao]:checked').value === 'pago' ? '' : 'none'; }; });
+    document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; fm.style.display = ''; document.querySelector('.passos').style.display = ''; document.querySelector('#cx > h1').style.display = ''; document.querySelector('#cx > .intro').style.display = ''; document.getElementById('btInicio').style.display = ''; window.scrollTo(0,0); };
+    document.getElementById('btConf').onclick = function(){ enviarPedido(fm, d); };
+    window.scrollTo(0,0);
+  }
+  function subirArquivos(){
+    var pasta = F.pasta + '/' + TOKEN + '/';
+    return ARQS.reduce(function(pr, f){ return pr.then(function(lista){
+      var nome = f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
+      var caminho = pasta + Date.now().toString(36) + Math.random().toString(36).slice(2,6) + '-' + nome;
+      return fetch(URL_SB + '/storage/v1/object/anexos/' + caminho.split('/').map(encodeURIComponent).join('/'), {method:'POST', headers:{'apikey':CHAVE, 'Content-Type': f.type || 'application/octet-stream', 'x-upsert':'false'}, body:f})
+        .then(function(r){ if (!r.ok) return r.text().then(function(t){ throw new Error('Não consegui enviar o arquivo "' + f.name + '". ' + (/mime|type/i.test(t) ? 'Tipo de arquivo não aceito.' : /size|large/i.test(t) ? 'Arquivo grande demais.' : 'Tente de novo.')); });
+          lista.push({nome:f.name, caminho:caminho, tipo:f.type||'', tamanho:f.size}); return lista; });
+    }); }, Promise.resolve([]));
+  }
+  function enviarPedido(fm, d){
+    var e2 = document.getElementById('msg2'); e2.style.display = 'none';
+    var sit = document.querySelector('[name=situacao]:checked').value, pagoEm = document.getElementById('dataPago').value;
+    if (sit === 'pago' && !pagoEm){ e2.textContent = 'Informe a data do pagamento.'; e2.style.display = 'block'; return; }
+    var conteudo = {solicitante:{nome:String(d.get('s_nome')).trim(), contato:String(d.get('s_contato')).trim()},
+      eventoId:d.get('eventoId'), categoria:d.get('categoria')||'', valor:Number(d.get('valor')), vencimento:d.get('vencimento'), forma:d.get('forma'),
+      descricao:String(d.get('descricao')||'').trim(), link:String(d.get('link')||'').trim(), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : ''};
+    if (d.get('pessoaId') === '__novo__') conteudo.novaPessoa = pessoaDoForm(d); else conteudo.pessoaId = d.get('pessoaId');
+    var bt = document.getElementById('btConf'), bv = document.getElementById('btVolta'); bt.disabled = bv.disabled = true; bt.textContent = ARQS.length ? 'Enviando arquivos…' : 'Enviando…';
+    subirArquivos().then(function(anexos){ conteudo.anexos = anexos; bt.textContent = 'Enviando…'; return rpc('enviar_formulario', {p_token: TOKEN, p_conteudo: conteudo}); })
+      .then(function(){ ARQS = []; sucesso(conteudo.solicitante.nome, sit); }, function(e){
+        bt.disabled = bv.disabled = false; bt.textContent = 'Confirmar e enviar';
+        e2.textContent = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message; e2.style.display = 'block'; });
+  }
+  function sucesso(nome, sit, qtd){
+    cx.innerHTML = '<div class="ok"><div class="ic">✅</div><h1>' + (F.tipo === 'cadastro' ? 'Cadastro enviado!' : qtd ? (qtd + (qtd > 1 ? (sit === 'pago' ? ' pagamentos registrados!' : ' pedidos enviados!') : (sit === 'pago' ? ' pagamento registrado!' : ' pedido enviado!'))) : sit === 'pago' ? 'Pagamento registrado!' : 'Pedido enviado!') + '</h1>'
+      + '<p class="intro">Obrigado, <b>' + esc(nome) + '</b>. ' + (F.tipo === 'cadastro' ? 'Seus dados foram recebidos pela equipe financeira.' : sit === 'pago' ? 'O registro foi enviado para a equipe financeira conferir.' : qtd > 1 ? 'Os pedidos foram recebidos e vão para aprovação da equipe financeira.' : 'O pedido foi recebido e vai para aprovação da equipe financeira.') + '</p>'
+      + '<button class="btn sec" id="btOutro">' + (F.tipo === 'cadastro' ? 'Cadastrar outra pessoa' : 'Enviar outro') + '</button></div>';
+    document.getElementById('btOutro').onclick = montar; window.scrollTo(0,0);
+  }
+  // ---------- tela inicial: manual ou importar ----------
+  function telaInicio(o){
+    cx.innerHTML = '<h1>Como você quer enviar?</h1><p class="intro">Escolha uma opção.</p><div class="escolha">'
+      + '<button type="button" id="opManual"><span class="ic">✍️</span><span><b>Lançamento manual</b><small>Preencher um pagamento por vez, com nota fiscal ou print se tiver.</small></span></button>'
+      + '<button type="button" id="opZap"><span class="ic">💬</span><span><b>Colar mensagem do WhatsApp</b><small>Copiar o texto da conversa e colar aqui. A gente monta os pagamentos para você conferir.</small></span></button>'
+      + '<button type="button" id="opImport"><span class="ic">📥</span><span><b>Importar arquivo</b><small>Enviar uma planilha Excel com vários pagamentos de uma vez.</small></span></button></div>';
+    document.getElementById('opManual').onclick = function(){ telaPedido(o); window.scrollTo(0,0); };
+    document.getElementById('opZap').onclick = function(){ telaColar(o); window.scrollTo(0,0); };
+    document.getElementById('opImport').onclick = function(){ telaImportar(o); window.scrollTo(0,0); };
+  }
+  function voltarInicio(){ var a = document.getElementById('btInicio'); if (a) a.onclick = function(ev){ ev.preventDefault(); telaInicio(F.opcoes || {}); window.scrollTo(0,0); }; }
+
+  // ---------- importar planilha ----------
+  var XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', _xl = null;
+  function carregarXLSX(){
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (!_xl) _xl = new Promise(function(ok, falha){ var s = document.createElement('script'); s.src = XLSX_URL; s.onload = function(){ window.XLSX ? ok(window.XLSX) : falha(new Error('xlsx')); }; s.onerror = function(){ _xl = null; falha(new Error('xlsx')); }; document.head.appendChild(s); });
+    return _xl;
+  }
+  var COLS = [
+    {k:'favorecido', t:'Favorecido', re:/^(favorecido|nome|fornecedor|benefici|prestador|quem recebe)/},
+    {k:'doc',        t:'CPF/CNPJ',   re:/^(cpf|cnpj|documento|doc)/},
+    {k:'pix',        t:'Chave PIX',  re:/pix/},
+    {k:'valor',      t:'Valor',      re:/^valor/},
+    {k:'vencimento', t:'Vencimento', re:/^(vencimento|data|venc)/},
+    {k:'categoria',  t:'Categoria',  re:/^categoria/},
+    {k:'forma',      t:'Forma de pagamento', re:/^forma/},
+    {k:'descricao',  t:'Descrição',  re:/^(descri|observa|obs|servi|referente)/}];
+  function semAcento(s){ return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  function lerValor(v){
+    if (typeof v === 'number') return Math.round(v * 100) / 100;
+    var s = String(v == null ? '' : v).replace(/[R$\s]/g, '');
+    if (!s) return NaN;
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+    else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+    return Math.round(Number(s) * 100) / 100;
+  }
+  function lerData(v){
+    var p = function(n){ return String(n).padStart(2, '0'); };
+    if (v instanceof Date && !isNaN(v)) return v.getFullYear() + '-' + p(v.getMonth()+1) + '-' + p(v.getDate());
+    if (typeof v === 'number' && v > 20000 && v < 80000){ var d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 864e5); return d.getUTCFullYear() + '-' + p(d.getUTCMonth()+1) + '-' + p(d.getUTCDate()); }
+    var s = String(v == null ? '' : v).trim(), m;
+    if ((m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/))){ var a = +m[3]; if (a < 100) a += 2000; if (+m[2] < 1 || +m[2] > 12 || +m[1] < 1 || +m[1] > 31) return ''; var dt = new Date(a, +m[2]-1, +m[1]); if (dt.getMonth() !== +m[2]-1) return ''; return a + '-' + p(m[2]) + '-' + p(m[1]); }
+    if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return m[1] + '-' + m[2] + '-' + m[3];
+    return '';
+  }
+  function baixarModelo(o){
+    carregarXLSX().then(function(X){
+      var wb = X.utils.book_new();
+      var ws = X.utils.aoa_to_sheet([COLS.map(function(c){ return c.t; })]);
+      ws['!cols'] = [{wch:32},{wch:20},{wch:28},{wch:12},{wch:13},{wch:20},{wch:20},{wch:40}];
+      X.utils.book_append_sheet(wb, ws, 'Pagamentos');
+      var n = Math.max((o.favorecidos||[]).length, (o.categorias||[]).length, (o.formas||[]).length);
+      var lin = [['Como preencher'], ['Uma linha para cada pagamento. Obrigatórios: Favorecido, Valor e Vencimento (dd/mm/aaaa).'],
+        ['Se o favorecido não estiver na lista abaixo, preencha também CPF/CNPJ e Chave PIX.'], [''], ['Favorecidos cadastrados', 'Categorias', 'Formas de pagamento']];
+      for (var i = 0; i < n; i++) lin.push([((o.favorecidos||[])[i]||{}).nome || '', (o.categorias||[])[i] || '', (o.formas||[])[i] || '']);
+      var w2 = X.utils.aoa_to_sheet(lin); w2['!cols'] = [{wch:40},{wch:28},{wch:22}];
+      X.utils.book_append_sheet(wb, w2, 'Como preencher');
+      X.writeFile(wb, 'modelo-pagamentos.xlsx');
+    }, function(){ erro('Não consegui gerar o modelo agora. Verifique a internet e tente de novo.'); });
+  }
+  var PLAN = null, LOTE = {anexos:null, ok:0};
+  function telaImportar(o){
+    var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
+    ARQS = []; PLAN = null; LOTE = {anexos:null, ok:0};
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Importar planilha</h1><p class="intro">Envie uma planilha Excel com vários pagamentos. Na próxima tela você confere tudo antes de enviar.</p>'
+      + '<form id="fm" novalidate>'
+      + '<div class="grupo">Quem está pedindo</div><div class="form">'
+      + '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
+      + '<label><span>Seu WhatsApp ou e-mail <b>*</b></span><input name="s_contato" required maxlength="120"></label>'
+      + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label></div>'
+      + '<div class="grupo">Planilha</div>'
+      + '<div class="arq" id="planBox">📊 Toque para escolher a planilha<small>Excel (.xlsx, .xls) ou .csv · uma linha por pagamento</small></div>'
+      + '<input type="file" id="planIn" accept=".xlsx,.xls,.csv,.ods" style="display:none"><ul class="arqs" id="planLista"></ul>'
+      + '<p class="ajuda" style="margin-top:8px">Colunas: <b>Favorecido, Valor e Vencimento</b> (obrigatórias), CPF/CNPJ, Chave PIX, Categoria, Forma de pagamento e Descrição. <a href="#" id="btModelo">⬇ Baixar planilha modelo</a></p>'
+      + '<div class="grupo">Outros anexos (opcional)</div>'
+      + '<div class="arq" id="arqBox">📎 Notas fiscais ou prints<small>PDF ou foto · até 4 arquivos de 10 MB</small></div>'
+      + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul>'
+      + '<button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
+    voltarInicio();
+    document.getElementById('btModelo').onclick = function(ev){ ev.preventDefault(); baixarModelo(o); };
+    var pin = document.getElementById('planIn');
+    document.getElementById('planBox').onclick = function(){ pin.click(); };
+    pin.addEventListener('change', function(){
+      var f = pin.files[0]; pin.value = ''; if (!f) return;
+      document.getElementById('msg').style.display = 'none';
+      if (!/\.(xlsx|xls|csv|ods)$/i.test(f.name)) return erro('Escolha uma planilha Excel (.xlsx ou .xls) ou .csv.');
+      if (f.size > 10 * 1024 * 1024) return erro('A planilha passa de 10 MB.');
+      PLAN = f; LOTE = {anexos:null, ok:0};
+      document.getElementById('planLista').innerHTML = '<li>📊 <span>' + esc(f.name) + '</span><small>' + tam(f.size) + '</small><button type="button" title="Tirar">✕</button></li>';
+      document.querySelector('#planLista button').onclick = function(){ PLAN = null; document.getElementById('planLista').innerHTML = ''; };
+      carregarXLSX().catch(function(){});
+    });
+    var inp = document.getElementById('arqIn');
+    document.getElementById('arqBox').onclick = function(){ inp.click(); };
+    inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(function(f){ if (ARQS.length >= 4) return erro('No máximo 4 anexos além da planilha.'); addArq(f); }); inp.value = ''; listarArqs(); });
+    document.getElementById('fm').addEventListener('submit', function(evt){ evt.preventDefault(); lerPlanilha(evt.target, o); });
+  }
+  function lerPlanilha(fm, o){
+    document.getElementById('msg').style.display = 'none';
+    if (!fm.reportValidity()) return;
+    if (!PLAN) return erro('Escolha a planilha com os pagamentos.');
+    var bt = document.getElementById('btEnv'); bt.disabled = true; bt.textContent = 'Lendo a planilha…';
+    var fim = function(){ bt.disabled = false; bt.textContent = 'Continuar'; };
+    Promise.all([carregarXLSX(), PLAN.arrayBuffer()]).then(function(r){
+      var X = r[0], wb = X.read(r[1], {type:'array', cellDates:true});
+      var ws = wb.Sheets[wb.SheetNames[0]], linhas = X.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+      // acha a linha do cabeçalho (a primeira que tem "valor")
+      var hi = -1;
+      for (var i = 0; i < Math.min(linhas.length, 15); i++){ if (linhas[i].some(function(c){ return /^valor/.test(semAcento(c)); })){ hi = i; break; } }
+      if (hi < 0){ fim(); return erro('Não encontrei a coluna "Valor" na planilha. Use a planilha modelo ou confira os títulos das colunas.'); }
+      var mapa = {};
+      linhas[hi].forEach(function(c, j){ var n = semAcento(c); COLS.forEach(function(col){ if (mapa[col.k] == null && n && col.re.test(n)) mapa[col.k] = j; }); });
+      if (mapa.favorecido == null || mapa.vencimento == null){ fim(); return erro('A planilha precisa das colunas Favorecido, Valor e Vencimento.'); }
+      var favs = {}; (o.favorecidos||[]).forEach(function(p){ favs[semAcento(p.nome)] = p; });
+      var cats = {}; (o.categorias||[]).forEach(function(c){ cats[semAcento(c)] = c; });
+      var formas = {}; (o.formas||[]).forEach(function(c){ formas[semAcento(c)] = c; });
+      var itens = [];
+      for (var k = hi + 1; k < linhas.length; k++){
+        var L = linhas[k], g = function(c){ return mapa[c] == null ? '' : L[mapa[c]]; };
+        if (!L.some(function(c){ return String(c).trim() !== ''; })) continue;
+        var nome = String(g('favorecido')).trim().slice(0, 150), val = lerValor(g('valor')), venc = lerData(g('vencimento'));
+        var catT = String(g('categoria')).trim(), formaT = String(g('forma')).trim();
+        var it = {linha:k + 1, nome:nome, valor:val, vencimento:venc, descricao:String(g('descricao')).trim().slice(0, 500), problemas:[]};
+        var ja = favs[semAcento(nome)];
+        if (ja){ it.pessoaId = ja.id; it.nome = ja.nome; }
+        else if (nome){ var doc = String(g('doc')).replace(/\D/g, ''); it.novaPessoa = {nome:nome, doc:doc, pix:String(g('pix')).trim().slice(0, 120)}; }
+        if (catT){ if (cats[semAcento(catT)]) it.categoria = cats[semAcento(catT)]; else it.aviso = 'categoria "' + catT + '" não existe, vai sem categoria'; }
+        it.forma = formas[semAcento(formaT)] || (o.formas||['PIX'])[0];
+        if (!nome) it.problemas.push('sem favorecido');
+        if (!(val > 0)) it.problemas.push('valor inválido');
+        if (!venc) it.problemas.push('vencimento inválido');
+        itens.push(it);
+      }
+      fim();
+      if (!itens.length) return erro('A planilha não tem nenhum pagamento abaixo do cabeçalho.');
+      if (itens.length > 300) return erro('A planilha tem ' + itens.length + ' linhas. Envie no máximo 300 por vez.');
+      revisarLote(fm, itens, o);
+    }).catch(function(e){ fim(); console.warn(e); erro(/xlsx/.test(e && e.message) ? 'Não consegui abrir o leitor de planilhas. Verifique a internet e tente de novo.' : 'Não consegui ler esta planilha. Salve como .xlsx e tente de novo.'); });
+  }
+  // ---------- colar mensagem do WhatsApp ----------
+  var RE_VALOR = /(?:R\$\s*)(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)|(\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2})|(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+)\s*(?:reais|mil)\b/i;
+  var RE_DATA = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/;
+  var RE_DOC = /\b(\d{3}\.?\d{3}\.?\d{3}-?\d{2}|\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})\b/;
+  var RE_EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
+  function semPrefixoZap(l){ return l.replace(/^\s*\[[^\]]{4,30}\]\s*[^:]{1,40}:\s*/, '').replace(/^\s*\d{1,2}\/\d{1,2}\/\d{2,4},?\s+\d{1,2}:\d{2}\s*-\s*[^:]{1,40}:\s*/, ''); }
+  function valorTexto(l){
+    var m = l.match(RE_VALOR);
+    if (!m){ var f = l.replace(/\d{8,}/g, ' ').match(/(?:^|[\s(])(\d{1,3}(?:\.\d{3})+|\d{2,6})(?=[\s),;!]|\.(?:\s|$)|$)/); if (!f) return null; return {v:lerValor(f[1]), txt:f[1]}; }
+    var bruto = m[1] || m[2] || m[3], v = lerValor(bruto);
+    if (m[3] && /mil\b/i.test(m[0])) v = v * 1000;
+    return {v:v, txt:m[0]};
+  }
+  function dataTexto(l){
+    var m = l.match(RE_DATA); if (!m) return null;
+    var a = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : null, h = hoje();
+    if (!a){ a = +h.slice(0,4); var tent = a + '-' + String(m[2]).padStart(2,'0') + '-' + String(m[1]).padStart(2,'0'); if (tent < h.slice(0,7) + '-01') a++; }
+    var d = lerData(m[1] + '/' + m[2] + '/' + a); return d ? {d:d, txt:m[0]} : {d:'', txt:m[0], ruim:true};
+  }
+  function lerTextoZap(texto, o){
+    var favs = (o.favorecidos||[]).map(function(p){ return {p:p, n:semAcento(p.nome)}; }).sort(function(a,b){ return b.n.length - a.n.length; });
+    var cats = (o.categorias||[]).map(function(c){ return {c:c, n:semAcento(c)}; });
+    var linhas = texto.split(/\r?\n/).map(semPrefixoZap).filter(function(l){ return l.trim(); });
+    var comValor = linhas.filter(function(l){ return valorTexto(l.replace(RE_DOC, '').replace(RE_DATA, '')); });
+    // um valor só no texto todo = um pagamento descrito em várias linhas; senão, uma linha por pagamento
+    var blocos = comValor.length <= 1 ? [linhas.join('\n')] : comValor;
+    return blocos.map(function(b, i){
+      var limpo = b.replace(RE_DOC, ' ').replace(RE_EMAIL, ' ');
+      var dt = dataTexto(limpo.replace(RE_VALOR, ' ')), sv = limpo.replace(dt ? dt.txt : '\u0000', ' ');
+      var vl = valorTexto(sv), n = semAcento(b), doc = (b.match(RE_DOC)||[''])[0].replace(/\D/g,''), em = (b.match(RE_EMAIL)||[''])[0];
+      var pix = (b.match(/pix\s*[:\-]?\s*([^\s,;]+)/i)||[])[1] || em || '';
+      var it = {linha:i + 1, valor: vl ? vl.v : NaN, vencimento: dt ? dt.d : '', descricao: b.replace(/\s+/g, ' ').trim().slice(0, 500), problemas:[]};
+      var f = favs.filter(function(x){ return x.n && n.indexOf(x.n) >= 0; })[0];
+      if (f){ it.pessoaId = f.p.id; it.nome = f.p.nome; }
+      else {
+        var resto = sv.replace(vl ? vl.txt : '\u0000', ' ').split('\n')[0]
+          .replace(/(^|[^\wÀ-ÿ])(oi|ol[aá]|bom dia|boa tarde|boa noite|segue[m]?|preciso|precisamos|que|paguem|pague|pagar|pagamento|pgto|pix|chave|valor|vencimento|venc|vence|dia|para|pra|por favor|favor|ao|a|o|os|as|de|do|da|cpf|cnpj|boleto|transfer[eê]ncia|ted|reais|r\$)(?![\wÀ-ÿ])\.?:?/gi, ' ')
+          .replace(/(^|[^\wÀ-ÿ])(oi|ol[aá]|que|o|a|de|do|da)(?![\wÀ-ÿ])/gi, ' ')
+          .replace(/[!?]+/g, ' ')
+          .replace(/[-–—:;,*_|•]+/g, ' ').replace(/\s+/g, ' ').trim();
+        it.nome = resto.slice(0, 80);
+        if (it.nome) it.novaPessoa = {nome:it.nome, doc:doc, pix:pix.slice(0, 120)};
+      }
+      var nc = f ? n.split(f.n).join(' ') : semAcento(b.replace(it.nome || '\u0000', ' '));
+      var c = cats.filter(function(x){ return x.n && nc.indexOf(x.n) >= 0; })[0]; if (c) it.categoria = c.c;
+      it.forma = /boleto/i.test(b) ? 'Boleto' : /transfer|ted\b|doc\b/i.test(b) ? 'Transferência' : (o.formas||['PIX'])[0];
+      if ((o.formas||[]).indexOf(it.forma) < 0) it.forma = (o.formas||['PIX'])[0];
+      if (!it.nome) it.problemas.push('não achei o favorecido');
+      if (!(it.valor > 0)) it.problemas.push('não achei o valor');
+      if (!it.vencimento) it.problemas.push(dt && dt.ruim ? 'data inválida' : 'sem data de vencimento');
+      return it;
+    });
+  }
+  function telaColar(o){
+    var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
+    ARQS = []; PLAN = null; LOTE = {anexos:null, ok:0};
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Colar mensagem</h1><p class="intro">Copie a mensagem do WhatsApp e cole abaixo. Na próxima tela você confere o que foi entendido antes de enviar.</p>'
+      + '<form id="fm" novalidate>'
+      + '<div class="grupo">Quem está pedindo</div><div class="form">'
+      + '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
+      + '<label><span>Seu WhatsApp ou e-mail <b>*</b></span><input name="s_contato" required maxlength="120"></label>'
+      + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label></div>'
+      + '<div class="grupo">Mensagem</div>'
+      + '<label><span>Cole aqui o texto <b>*</b></span><textarea name="texto" id="txZap" required maxlength="8000" style="min-height:180px" placeholder="Exemplo:\nDJ Marcos - R$ 1.500,00 - 10/12\nGráfica Nova R$ 480 vence 15/12 pix grafica@nova.com"></textarea></label>'
+      + '<p class="ajuda" style="margin-top:8px">Um pagamento por linha, com <b>nome, valor e data</b>. Se a mensagem fala de um pagamento só, pode colar do jeito que está.</p>'
+      + '<label style="margin-top:12px">Vencimento para quem não tiver data no texto<input type="date" name="vencPadrao" min="' + hoje().slice(0,4) + '-01-01"></label>'
+      + '<div class="grupo">Anexos (opcional)</div>'
+      + '<div class="arq" id="arqBox">📎 Notas fiscais ou prints<small>PDF ou foto · até 5 arquivos de 10 MB</small></div>'
+      + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul>'
+      + '<button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
+    voltarInicio();
+    var inp = document.getElementById('arqIn');
+    document.getElementById('arqBox').onclick = function(){ inp.click(); };
+    inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(addArq); inp.value = ''; listarArqs(); });
+    document.getElementById('fm').addEventListener('submit', function(evt){
+      evt.preventDefault(); var fm = evt.target; document.getElementById('msg').style.display = 'none';
+      if (!fm.reportValidity()) return;
+      var itens = lerTextoZap(String(fm.texto.value), o), vp = fm.vencPadrao.value;
+      if (vp) itens.forEach(function(i){ if (!i.vencimento){ i.vencimento = vp; i.problemas = i.problemas.filter(function(p){ return p !== 'sem data de vencimento'; }); } });
+      if (itens.length > 100) return erro('O texto tem ' + itens.length + ' pagamentos. Para muitos pagamentos, use a opção de importar planilha.');
+      revisarLote(fm, itens, o, 'texto');
+    });
+  }
+  function revisarLote(fm, itens, o, modo){
+    var d = new FormData(fm), ruins = itens.filter(function(i){ return i.problemas.length; });
+    // o mesmo favorecido novo em várias linhas: junta o que veio em cada uma (CPF, PIX)
+    var junta = {}; itens.forEach(function(i){ if (!i.novaPessoa) return; var k = semAcento(i.nome), j = junta[k] = junta[k] || {}; ['doc','pix'].forEach(function(c){ if (i.novaPessoa[c] && !j[c]) j[c] = i.novaPessoa[c]; }); });
+    itens.forEach(function(i){ if (!i.novaPessoa) return; var j = junta[semAcento(i.nome)]; ['doc','pix'].forEach(function(c){ if (!i.novaPessoa[c] && j[c]) i.novaPessoa[c] = j[c]; }); });
+    var total = itens.reduce(function(s, i){ return s + (i.valor > 0 ? i.valor : 0); }, 0), nv = {}; itens.forEach(function(i){ if (i.novaPessoa && i.nome) nv[semAcento(i.nome)] = 1; }); var novos = Object.keys(nv).length;
+    var emp = (o && o.empresa) || 'a empresa', p2 = document.getElementById('passo2');
+    var pixHtml = function(k){ return esc(k).replace(/@/g, '<wbr>@').replace(/(•+\S+)/g, '<span class="nw">$1</span>'); };
+    var pixDe = function(i){ if (i.pessoaId){ var f = (o.favorecidos||[]).filter(function(x){ return x.id === i.pessoaId; })[0]; return f && f.pix ? pixHtml(f.pix) : '<span class="av">sem PIX no cadastro</span>'; }
+      return '<span class="pv">' + (i.novaPessoa && i.novaPessoa.pix ? pixHtml(i.novaPessoa.pix) : '<span class="av">não informado</span>') + '</span>'
+        + (i.novaPessoa && i.nome ? '<br><a href="#" class="lkcad" data-k="' + esc(semAcento(i.nome)) + '">Cadastrar favorecido</a>' : ''); };
+    var tab = '<div class="tab"><table><thead><tr><th>Favorecido</th><th>PIX</th><th class="r">Valor / venc.</th></tr></thead><tbody>'
+      + itens.map(function(i){ return '<tr' + (i.problemas.length ? ' class="ruim"' : '') + '><td>' + esc(i.nome || '—') + (i.novaPessoa && i.nome ? ' <small class="tg">novo</small>' : '')
+        + '<div class="sub">' + (i.problemas.length ? '<span class="pb">' + (modo === 'texto' ? '' : 'Linha ' + i.linha + ': ') + '⚠ ' + esc(i.problemas.join(', ')) + '</span>' : esc(i.categoria || 'sem categoria') + (i.descricao && modo !== 'texto' ? ' · ' + esc(i.descricao) : '') + (i.aviso ? '<br><span class="av">' + esc(i.aviso) + '</span>' : '')) + '</div>'
+        + '</td><td class="pixc"' + (i.novaPessoa ? ' data-nk="' + esc(semAcento(i.nome)) + '"' : '') + '>' + pixDe(i) + '</td><td class="r"><b>' + (i.valor > 0 ? brl(i.valor) : '—') + '</b><div class="sub">' + (fmt(i.vencimento) || '—') + '</div></td></tr>'; }).join('')
+      + '</tbody><tfoot><tr><td colspan="2">' + itens.length + (itens.length > 1 ? ' pagamentos' : ' pagamento') + '</td><td class="r">' + brl(total) + '</td></tr></tfoot></table></div>';
+    p2.innerHTML = '<div class="passos"><span class="on"></span><span class="on"></span></div><h1>Confira os dados</h1><p class="intro">Veja se está tudo certo antes de enviar.</p><dl class="res">'
+      + '<dt>Quem está pedindo</dt><dd>' + esc(d.get('s_nome')) + ' · ' + esc(d.get('s_contato')) + '</dd>'
+      + '<dt>Evento</dt><dd>' + esc(txtSel(fm, 'eventoId')) + '</dd>'
+      + (modo === 'texto' ? '' : '<dt>Planilha</dt><dd>📊 ' + esc(PLAN.name) + '</dd>')
+      + (ARQS.length ? '<dt>' + (modo === 'texto' ? 'Anexos' : 'Outros anexos') + '</dt><dd>' + ARQS.map(function(f){ return '📄 ' + esc(f.name); }).join('<br>') + '</dd>' : '')
+      + (novos ? '<dt>Favorecidos novos</dt><dd>' + novos + ' (clique em "Cadastrar favorecido" na tabela)</dd>' : '')
+      + '</dl>' + tab
+      + (ruins.length ? '<div class="msg" style="display:block">' + ruins.length + (ruins.length > 1 ? ' linhas têm' : ' linha tem') + ' problema (em vermelho). ' + (modo === 'texto' ? 'Clique em Corrigir e ajuste o texto: cada pagamento precisa de nome, valor e data.' : 'Corrija na planilha e escolha o arquivo de novo.') + '</div>'
+        + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button></div>'
+      : caixasNovos(itens) + '<div class="grupo" style="margin-top:20px">Estes pagamentos…</div><div class="opc">'
+        + '<label><input type="radio" name="situacao" value="solicitacao" checked><span><b style="color:var(--verde)">São solicitações de pagamento</b><small>Ainda não foram pagos. Vão para aprovação da equipe antes de serem pagos.</small></span></label>'
+        + '<label><input type="radio" name="situacao" value="pago"><span><b style="color:var(--verde)">' + esc(emp) + ' já pagou</b><small>Só para registro e conferência, não precisam de aprovação.</small></span></label>'
+        + '</div><label id="boxPago" style="display:none;margin-top:10px"><span>Data do pagamento <b>*</b></span><input type="date" id="dataPago" value="' + hoje() + '"></label>'
+        + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button><button class="btn" id="btConf" type="button">Confirmar e enviar ' + itens.length + '</button></div><div class="msg" id="msg2"></div>');
+    var esconde = function(on){ ['#fm', '#cx > .passos', '#cx > h1', '#cx > .intro', '#btInicio'].forEach(function(s){ var e = document.querySelector(s); if (e) e.style.display = on ? 'none' : ''; }); };
+    esconde(true);
+    p2.querySelectorAll('[name=situacao]').forEach(function(r){ r.onchange = function(){ document.getElementById('boxPago').style.display = p2.querySelector('[name=situacao]:checked').value === 'pago' ? '' : 'none'; }; });
+    document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; esconde(false); window.scrollTo(0,0); };
+    p2.querySelectorAll('.cadn [data-c=pix]').forEach(function(inp){ inp.addEventListener('input', function(){ var k = inp.closest('.cadn').dataset.k;
+      p2.querySelectorAll('.pixc[data-nk]').forEach(function(td){ if (td.dataset.nk === k) td.querySelector('.pv').innerHTML = inp.value.trim() ? esc(inp.value.trim()).replace(/@/g, '<wbr>@') : '<span class="av">não informado</span>'; }); }); });
+    var caixa = function(k){ return [].filter.call(p2.querySelectorAll('.cadn'), function(c){ return c.dataset.k === k; })[0]; };
+    // clicar em "Cadastrar favorecido" mostra só o cadastro; ao salvar, volta para a conferência
+    var posConf = 0;
+    var abreCad = function(c){ posConf = window.scrollY; p2.classList.add('soCad'); p2.querySelectorAll('.cadn').forEach(function(o){ o.style.display = o === c ? '' : 'none'; }); window.scrollTo(0,0); var f = c.querySelector('[data-c=doc]'); if (f && !f.value) f.focus({preventScroll:true}); };
+    var fechaCad = function(){ p2.classList.remove('soCad'); p2.querySelectorAll('.cadn').forEach(function(o){ o.style.display = 'none'; }); window.scrollTo(0, posConf); };
+    p2.querySelectorAll('.lkcad').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); var c = caixa(a.dataset.k); if (c) abreCad(c); }; });
+    p2.querySelectorAll('.cadn .btSair').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); fechaCad(); }; });
+    p2.querySelectorAll('.cadn .btPronto').forEach(function(b){ b.onclick = function(){ var c = b.closest('.cadn'); if (!validaCaixa(c)) return;
+      p2.querySelectorAll('.lkcad').forEach(function(a){ if (a.dataset.k === c.dataset.k){ a.textContent = '✓ Cadastrado (editar)'; a.classList.add('feito'); a.classList.remove('falta'); } });
+      var e2 = document.getElementById('msg2'); if (e2) e2.style.display = 'none'; fechaCad(); }; });
+    var lg = document.getElementById('lgpdLote'); if (lg) lg.onchange = function(){ document.getElementById('msg2').style.display = 'none'; };
+    if (!ruins.length) document.getElementById('btConf').onclick = function(){ if (lerNovos(itens)) enviarLote(d, itens, modo); };
+    window.scrollTo(0,0);
+  }
+  // um bloco de cadastro para cada favorecido que não está na lista
+  function caixasNovos(itens){
+    var vistos = {}, html = '';
+    itens.forEach(function(i){
+      if (!i.novaPessoa || !i.nome) return; var k = semAcento(i.nome); if (vistos[k]) return; vistos[k] = 1;
+      var np = i.novaPessoa, v = function(x){ return esc(np[x] || ''); };
+      html += '<div class="novo cadn" data-k="' + esc(k) + '" style="display:none"><a href="#" class="voltar btSair">← Voltar para a conferência</a><h1 style="margin-bottom:2px">Cadastrar favorecido</h1><p class="intro">' + esc(i.nome) + '</p><div class="form">'
+        + '<label><span>CPF ou CNPJ <b>*</b></span><input data-c="doc" inputmode="numeric" maxlength="20" value="' + v('doc') + '"></label>'
+        + '<label>Função ou serviço<input data-c="funcao" maxlength="80" placeholder="Ex.: DJ, gráfica" value="' + v('funcao') + '"></label>'
+        + '<label>Telefone / WhatsApp<input data-c="tel" inputmode="tel" maxlength="30" value="' + v('tel') + '"></label>'
+        + '<label>E-mail<input data-c="email" type="email" maxlength="120" value="' + v('email') + '"></label>'
+        + '<label class="full">Chave PIX<input data-c="pix" maxlength="120" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória" value="' + v('pix') + '"></label>'
+        + '<p class="ajuda full">Sem PIX? Preencha os dados da conta:</p>'
+        + '<label>Banco<input data-c="banco" maxlength="60" value="' + v('banco') + '"></label>'
+        + '<label>Tipo de conta<select data-c="tipoConta"><option value="">—</option><option>Corrente</option><option>Poupança</option><option>Corrente PJ</option><option>Pagamento</option></select></label>'
+        + '<label>Agência<input data-c="agencia" inputmode="numeric" maxlength="10" value="' + v('agencia') + '"></label>'
+        + '<label>Conta (com dígito)<input data-c="conta" maxlength="20" value="' + v('conta') + '"></label>'
+        + '<div class="full erroCad"></div><button type="button" class="btn btPronto full" style="margin-top:4px">Salvar cadastro</button></div></div>';
+    });
+    if (!html) return '';
+    return '<div class="cadWrap">' + html + '</div>'
+      + '<label class="chk" style="margin-top:12px"><input type="checkbox" id="lgpdLote"> Autorizo o uso destes dados exclusivamente para cadastro e pagamentos, conforme a Lei Geral de Proteção de Dados (LGPD).</label>';
+  }
+  function validaCaixa(cx1){
+    var g = function(c){ var e = cx1.querySelector('[data-c=' + c + ']'); return e ? String(e.value).trim() : ''; }, msg = '';
+    if (!docValido(g('doc'))) msg = 'CPF ou CNPJ inválido. Confira os números.';
+    else if (!g('pix') && !(g('banco') && g('agencia') && g('conta'))) msg = 'Informe a chave PIX ou os dados completos da conta (banco, agência e conta).';
+    var er = cx1.querySelector('.erroCad'); er.textContent = msg; er.style.display = msg ? 'block' : 'none'; cx1.classList.toggle('comErro', !!msg);
+    return !msg;
+  }
+  function lerNovos(itens){
+    var e2 = document.getElementById('msg2'), caixas = document.querySelectorAll('.cadn'), ok = true, primeiro = null;
+    caixas.forEach(function(c){ c.querySelector('.erroCad').style.display = 'none'; });
+    e2.style.display = 'none';
+    caixas.forEach(function(cx1){
+      var g = function(c){ var e = cx1.querySelector('[data-c=' + c + ']'); return e ? String(e.value).trim() : ''; };
+      if (!validaCaixa(cx1)){ ok = false; primeiro = primeiro || cx1; cx1.querySelector('.erroCad').style.display = 'none'; return; }
+      var np = {doc:g('doc').replace(/\D/g, ''), funcao:g('funcao'), tel:g('tel'), email:g('email'), pix:g('pix'), banco:g('banco'), tipoConta:g('tipoConta'), agencia:g('agencia'), conta:g('conta')};
+      itens.forEach(function(i){ if (i.novaPessoa && semAcento(i.nome) === cx1.dataset.k){ np.nome = i.nome; i.novaPessoa = JSON.parse(JSON.stringify(np)); } });
+    });
+    if (!ok){ var faltam = [].map.call(document.querySelectorAll('.cadn.comErro'), function(c){ return c.dataset.k; });
+      document.querySelectorAll('.lkcad').forEach(function(a){ if (faltam.indexOf(a.dataset.k) >= 0) a.classList.add('falta'); });
+      e2.textContent = faltam.length > 1 ? 'Faltam ' + faltam.length + ' cadastros. Clique em "Cadastrar favorecido" nas linhas em vermelho.' : 'Falta 1 cadastro. Clique em "Cadastrar favorecido" na linha em vermelho.'; e2.style.display = 'block'; return false; }
+    if (caixas.length && !document.getElementById('lgpdLote').checked){ e2.textContent = 'Marque a autorização de uso dos dados (LGPD) no fim do cadastro.'; e2.style.display = 'block'; return false; }
+    return true;
+  }
+  function enviarLote(d, itens, modo){
+    var e2 = document.getElementById('msg2'); e2.style.display = 'none';
+    var sit = document.querySelector('[name=situacao]:checked').value, pagoEm = document.getElementById('dataPago').value;
+    if (sit === 'pago' && !pagoEm){ e2.textContent = 'Informe a data do pagamento.'; e2.style.display = 'block'; return; }
+    var bt = document.getElementById('btConf'), bv = document.getElementById('btVolta'); bt.disabled = bv.disabled = true; bt.textContent = 'Enviando arquivos…';
+    var base = {solicitante:{nome:String(d.get('s_nome')).trim(), contato:String(d.get('s_contato')).trim()}, eventoId:d.get('eventoId'), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : ''};
+    if (modo === 'texto') base.colado = true; else base.importado = PLAN.name;
+    var lista = itens.map(function(i){ var x = {valor:i.valor, vencimento:i.vencimento, forma:i.forma, categoria:i.categoria || '', descricao:i.descricao}; if (i.pessoaId) x.pessoaId = i.pessoaId; else x.novaPessoa = i.novaPessoa; return x; });
+    var sobe = LOTE.anexos ? Promise.resolve(LOTE.anexos) : !PLAN ? subirArquivos() : (ARQS.unshift(PLAN), subirArquivos().then(function(a){ ARQS.shift(); return a; }, function(e){ ARQS.shift(); throw e; }));
+    sobe.then(function(anexos){
+      LOTE.anexos = anexos; bt.textContent = 'Enviando…'; base.anexos = anexos;
+      // em partes de 60 linhas, para não passar do tamanho de cada envio
+      var partes = []; for (var i = 0; i < lista.length; i += 60) partes.push(lista.slice(i, i + 60));
+      return partes.reduce(function(pr, parte, n){ return pr.then(function(){ if (n < LOTE.ok) return; var c = JSON.parse(JSON.stringify(base)); c.itens = parte; c.parte = (n + 1) + '/' + partes.length; return rpc('enviar_formulario', {p_token: TOKEN, p_conteudo: c}).then(function(){ LOTE.ok = n + 1; }); }); }, Promise.resolve());
+    }).then(function(){ ARQS = []; PLAN = null; LOTE = {anexos:null, ok:0}; sucesso(base.solicitante.nome, sit, lista.length); }, function(e){
+      bt.disabled = bv.disabled = false; bt.textContent = 'Confirmar e enviar ' + itens.length;
+      e2.textContent = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message; e2.style.display = 'block'; });
+  }
+  function telaPedido(o){
+    var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
+    var fav = (o.favorecidos||[]).map(function(p){ return '<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>'; }).join('');
+    var cat = (o.categorias||[]).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
+    var fr = (o.formas||['PIX','Transferência','Boleto','Dinheiro']).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
+    ARQS = [];
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Novo pagamento</h1><p class="intro">Preencha os dados abaixo. Na próxima tela você confere tudo antes de enviar.</p>'
+      + '<form id="fm" novalidate>'
+      + '<div class="grupo">Quem está pedindo</div><div class="form">'
+      + '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
+      + '<label><span>Seu WhatsApp ou e-mail <b>*</b></span><input name="s_contato" required maxlength="120"></label></div>'
+      + '<div class="grupo">Pagamento</div><div class="form">'
+      + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label>'
+      + '<label class="full"><span>Favorecido (quem vai receber) <b>*</b></span><select name="pessoaId" id="selFav" required><option value="">Selecione…</option>' + fav + '<option value="__novo__">➕ Não está na lista: cadastrar agora</option></select></label>'
+      + '<div class="full novo" id="boxNovo" style="display:none"><div class="form">' + CAMPOS_PESSOA + '</div></div>'
+      + '<label>Categoria<select name="categoria"><option value="">Não sei / deixar para a equipe</option>' + cat + '</select></label>'
+      + '<label><span>Valor (R$) <b>*</b></span><input name="valor" type="number" step="0.01" min="0.01" required inputmode="decimal"></label>'
+      + '<label><span>Vencimento <b>*</b></span><input name="vencimento" type="date" required min="' + hoje().slice(0,4) + '-01-01"></label>'
+      + '<label>Forma de pagamento<select name="forma">' + fr + '</select></label>'
+      + '<label class="full">Descrição<textarea name="descricao" maxlength="500" placeholder="O que está sendo pago"></textarea></label>'
+      + '<label class="full">Link (opcional)<input name="link" maxlength="400" placeholder="Se o documento estiver no Google Drive, Dropbox…"></label>'
+      + '<div class="full"><label>Anexos: nota fiscal, planilha Excel ou print da conversa</label><div class="arq" id="arqBox">📎 Toque para escolher arquivos<small>PDF, foto/print ou planilha Excel (.xlsx, .xls, .csv) · até 5 arquivos de 10 MB</small></div>'
+      + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,.csv,.xls,.xlsx,.ods,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul></div>'
+      + '</div><button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
+    var sel = document.getElementById('selFav'), box = document.getElementById('boxNovo');
+    function novoOn(){ var on = sel.value === '__novo__'; box.style.display = on ? '' : 'none'; box.querySelectorAll('[required]').forEach(function(i){ i.disabled = !on; }); box.querySelectorAll('input,select').forEach(function(i){ i.disabled = !on; }); }
+    sel.addEventListener('change', novoOn); novoOn(); voltarInicio();
+    var inp = document.getElementById('arqIn');
+    document.getElementById('arqBox').onclick = function(){ inp.click(); };
+    inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(addArq); inp.value = ''; listarArqs(); });
+    document.getElementById('fm').addEventListener('submit', revisar);
+  }
+  function telaCadastro(){
+    cx.innerHTML = '<h1>Cadastro para pagamentos</h1><p class="intro">Preencha seus dados pessoais e bancários. Eles serão usados só para os seus pagamentos.</p>'
+      + '<form id="fm" novalidate><div class="form">' + CAMPOS_PESSOA + '</div><button class="btn" id="btEnv" type="submit">Enviar cadastro</button><div class="msg" id="msg"></div></form>';
+    document.getElementById('fm').addEventListener('submit', enviar);
+  }
+  function erro(m){ var e = document.getElementById('msg'); e.textContent = m; e.style.display = 'block'; }
+  function pessoaDoForm(d){
+    var g = function(k){ return String(d.get('p_' + k) || '').trim(); };
+    if (!docValido(g('doc'))) return 'CPF ou CNPJ inválido. Confira os números.';
+    if (!g('pix') && !(g('banco') && g('agencia') && g('conta'))) return 'Informe a chave PIX ou os dados completos da conta (banco, agência e conta).';
+    return {nome:g('nome'), doc:g('doc').replace(/\D/g,''), funcao:g('funcao'), tel:g('tel'), email:g('email'), pix:g('pix'), banco:g('banco'), tipoConta:g('tipoConta'), agencia:g('agencia'), conta:g('conta')};
+  }
+  function enviar(ev){
+    ev.preventDefault();
+    var fm = ev.target; document.getElementById('msg').style.display = 'none';
+    if (!fm.reportValidity()) return;
+    var d = new FormData(fm), conteudo;
+    if (F.tipo === 'cadastro'){
+      var p = pessoaDoForm(d); if (typeof p === 'string') return erro(p);
+      conteudo = {pessoa: p};
+    } else {
+      var valor = Number(d.get('valor'));
+      if (!(valor > 0)) return erro('Informe um valor maior que zero.');
+      conteudo = {solicitante:{nome:String(d.get('s_nome')).trim(), contato:String(d.get('s_contato')).trim()},
+        eventoId:d.get('eventoId'), categoria:d.get('categoria'), valor:valor, vencimento:d.get('vencimento'), forma:d.get('forma'),
+        descricao:String(d.get('descricao')||'').trim(), link:String(d.get('link')||'').trim()};
+      if (d.get('pessoaId') === '__novo__'){ var np = pessoaDoForm(d); if (typeof np === 'string') return erro(np); conteudo.novaPessoa = np; }
+      else conteudo.pessoaId = d.get('pessoaId');
+    }
+    var bt = document.getElementById('btEnv'); bt.disabled = true; bt.textContent = 'Enviando…';
+    rpc('enviar_formulario', {p_token: TOKEN, p_conteudo: conteudo}).then(function(){
+      sucesso(conteudo.pessoa.nome);
+    }, function(e){
+      bt.disabled = false; bt.textContent = F.tipo === 'cadastro' ? 'Enviar cadastro' : 'Enviar pedido';
+      erro(/Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message);
+    });
+  }
+  function montar(){
+    var o = F.opcoes || {};
+    document.getElementById('hTitulo').textContent = o.empresa || 'Equipe financeira';
+    document.getElementById('hSub').textContent = F.tipo === 'cadastro' ? 'Cadastro de fornecedores e prestadores' : 'Pagamentos';
+    document.title = (F.tipo === 'cadastro' ? 'Cadastro' : 'Pedido de pagamento') + (o.empresa ? ' · ' + o.empresa : '');
+    if (F.tipo === 'cadastro') telaCadastro(); else telaInicio(o);
+  }
+  if (!TOKEN){ invalido('Link incompleto', 'Peça um novo link para quem te enviou.'); return; }
+  rpc('abrir_formulario', {p_token: TOKEN}).then(function(j){
+    if (!j){ invalido('Link inválido ou desativado', 'Peça um novo link para quem te enviou.'); return; }
+    F = j; montar();
+  }, function(){ invalido('Não foi possível abrir', 'Verifique a internet e recarregue a página.'); });
+})();
+</script>
+</body>
+</html>

@@ -394,7 +394,7 @@ function seed(){
   return {users,eventos,pessoas,categorias,pedidos,seq:n,zigMap:{...ZIG_PADRAO},alteracoes,extrato:[],recebimentos:seedRecebimentos(eventos,pedidos)};
 }
 function load(){ try{ db = JSON.parse(localStorage.getItem(KEY)); }catch(e){ db=null; } if(!db) db = seed(); if(!db.zigMap) db.zigMap = {...ZIG_PADRAO}; if(!db.alteracoes) db.alteracoes = []; if(!db.extrato) db.extrato = []; if(!db.recebimentos) db.recebimentos = seedRecebimentos(db.eventos,db.pedidos); if(db.colsLista && !db.migBanco){ const i=db.colsLista.indexOf('status'); if(!db.colsLista.includes('bancoConc')) db.colsLista.splice(i>=0?i+1:db.colsLista.length,0,'bancoConc'); } db.migBanco = true; if(db.colsLista && !db.colsLista.includes('valor')){ const i=db.colsLista.indexOf('cc'); db.colsLista.splice(i>=0?i:db.colsLista.length,0,'valor'); } db.eventos.forEach(e=>{ if(e.infos){ (e.notas=e.notas||[]).push({id:'n'+Math.random().toString(36).slice(2,8), texto:e.infos, quem:(db.users.find(u=>u.perfil==='admin')||db.users[0]).id, quando:new Date().toISOString().slice(0,19)}); delete e.infos; } }); }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} if (typeof atualizarOpcoesForm==='function') atualizarOpcoesForm(); }
 
 // ================= PERMISSÕES =================
 // Estas regras serão aplicadas também no banco de dados na versão real.
@@ -424,6 +424,7 @@ function render(){
   // com login real: a pessoa do cliente entra direto no perfil cadastrado com o e-mail dela
   if (!me && window.NUVEM && !window.NUVEM.gestora){ const meus = usuariosDoLogin(); if (meus.length === 1){ me = meus[0]; view = 'dashboard'; } }
   if (!me){ app.innerHTML = demoBar() + telaLogin(); return; }
+  if (!render._puxou && NAPI() && isAdmin()){ render._puxou = true; setTimeout(puxarEnvios, 300); }
   const abas = [['dashboard','Dashboard'],['lista', isProd()?'Meus pedidos':'Contas a pagar']];
   if (!isProd()) abas.splice(2,0,['aprovacoes','Aprovações ('+db.pedidos.filter(p=>p.status==='aguardando').length+')']);
   if (isAdmin()) abas.splice(2,0,['receber','Contas a receber'],['conciliacao','Conciliação']);
@@ -498,7 +499,7 @@ const CARD_CAMPOS = [
   {id:'cat',    nome:'Categoria',        txt:p=>h(p.categoria)},
   {id:'venc',   nome:'Vencimento',       txt:p=>'vence '+fmt(p.vencimento)},
   {id:'num',    nome:'Nº do pedido',     txt:p=>p.id},
-  {id:'prod',   nome:'Produtor',         txt:p=>'por '+h(user(p.criadoPor).nome)},
+  {id:'prod',   nome:'Produtor',         txt:p=>'por '+(p.solicitante?h(p.solicitante.nome)+' (link)':h(user(p.criadoPor).nome))},
   {id:'dataEv', nome:'Data do evento',   txt:p=>evento(p.eventoId).data?'evento '+fmt(evento(p.eventoId).data):''},
   {id:'cc',     nome:'Centro de custo',  txt:p=>ccDe(p)?'CC: '+h(ccDe(p)):''},
   {id:'forma',  nome:'Forma de pagamento', txt:p=>h(p.forma)},
@@ -580,7 +581,7 @@ const LISTA_COLS = [
   {id:'cat',      nome:'Categoria',       td:p=>h(p.categoria)},
   {id:'forma',    nome:'Forma',           td:p=>h(p.forma)},
   {id:'desc',     nome:'Descrição',       td:p=>h(p.descricao||'')},
-  {id:'prod',     nome:'Produtor',        td:p=>h(user(p.criadoPor).nome)},
+  {id:'prod',     nome:'Produtor',        td:p=>p.solicitante?`${h(p.solicitante.nome)} <span class="meta">(link)</span>`:h(user(p.criadoPor).nome), v:p=>p.solicitante?p.solicitante.nome+' (link)':user(p.criadoPor).nome},
   {id:'status',   nome:'Status',          td:p=>`<span class="tag" style="background:${atrasadoPag(p)?'var(--recusado)':STATUS[p.status].cor}">${atrasadoPag(p)?'⏰ Atrasado · '+(p.status==='aguardando'?'aguardando aprovação':'a pagar'):STATUS[p.status].nome}</span>${p.conc?' <span title="Conciliado com o banco em '+fmt(p.conc.data)+'">🏦✓</span>':''}`, v:p=>STATUS[p.status].nome+(atrasadoPag(p)?' · Atrasado':'')},
   {id:'banco',    nome:'Dados bancários', td:p=>`<div style="white-space:normal;min-width:200px">${bancoHTML(pessoa(p.pessoaId))}</div>`, v:p=>pessoa(p.pessoaId).banco||''},
   {id:'bancoConc',nome:'Banco',           td:p=>bancoPed(p)?h(bancoPed(p)):'<span class="meta">—</span>', v:p=>bancoPed(p)||'—'},
@@ -652,7 +653,7 @@ function telaLista(){
   const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0), iv = cols.findIndex(c=>c.id==='valor');
   [...SEL].forEach(id=>{ if(!db.pedidos.some(p=>p.id===id)) SEL.delete(id); });
   return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
-    ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
+    ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkForm" title="Link para quem não tem acesso ao sistema enviar um pedido">🔗 Link do formulário</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
   <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}<th>Pagamento</th></tr></thead>
   <tbody>${lista.map(p=>`<tr class="click${inativo(p)?' inativo':''}" data-act="ver" data-id="${p.id}" data-valor="${inativo(p) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
@@ -1227,6 +1228,8 @@ function verPedido(id){
     <dt>Descrição</dt><dd>${h(p.descricao)||'—'}</dd>
     <dt>Link</dt><dd>${p.link?`<a href="${h(p.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--brand);word-break:break-all">🔗 ${h(p.link)}</a>`:(p.anexo?'<span class="meta">📎 '+h(p.anexo)+'</span>':'—')}</dd>
     ${p.conc?`<dt>Conciliação</dt><dd>🏦 ${p.conc.tipo==='sem-extrato'?'Manual, sem extrato':'Com o extrato'} · pago no banco em <b>${fmt(p.conc.data)}</b>${p.conc.banco?' · <b>'+h(p.conc.banco)+'</b>':''}${p.conc.desc?'<br><span class="meta">'+h(p.conc.desc)+'</span>':''}${p.conc.obs?'<br><span class="meta">Obs.: '+h(p.conc.obs)+'</span>':''}</dd>`:''}
+    ${(p.anexos||[]).length?`<dt>Anexos</dt><dd style="display:flex;flex-wrap:wrap;gap:6px">${p.anexos.map((a,i)=>`<button class="btn sm" data-act="abrirAnexo" data-id="${p.id}|${i}" title="Abrir o arquivo">📎 ${h(a.nome)}</button>`).join('')}</dd>`:''}
+    ${p.solicitante?`<dt>Enviado por</dt><dd>${h(p.solicitante.nome)}${p.solicitante.contato?' · '+h(p.solicitante.contato):''} <span class="meta">(pelo link do formulário)</span></dd>`:''}
     <dt>Criado por</dt><dd>${h(user(p.criadoPor).nome)} em ${fmt(p.criadoEm)}</dd>
   </dl>
   <h4 style="margin:16px 0 0">Histórico</h4>
@@ -1842,6 +1845,135 @@ function extratoExemplo(retornar){
   toast('Extrato de exemplo baixado — agora clique em "Importar extrato" e escolha o arquivo');
 }
 
+// ================= FORMULÁRIO POR LINK (pessoas sem login) =================
+// O link abre formulario.html, que fala só com duas funções do banco: abrir o formulário e enviar.
+// O que chega fica numa "caixa de entrada" na nuvem; o app de quem é admin puxa e transforma em pedido aguardando aprovação.
+const NAPI = () => window.NUVEM_API || null;
+const FORM_TIPOS = {
+  pedido:  {titulo:'🔗 Link do formulário de pedido', msg:'Olá! Para enviar um pedido de pagamento, preencha por este link:'},
+  cadastro:{titulo:'🔗 Link para a pessoa se cadastrar', msg:'Olá! Para receber seus pagamentos, faça seu cadastro (dados pessoais e bancários) por este link:'},
+};
+function baseSite(){
+  let href = location.href;
+  try{ if (!/^https?:/.test(href)) href = window.top.location.href; }catch(e){}
+  return href.split(/[?#]/)[0].replace(/[^\/]*$/, '');
+}
+const linkForm = token => baseSite() + 'formulario.html?f=' + encodeURIComponent(token);
+function novoToken(){ const a = new Uint8Array(18); crypto.getRandomValues(a); return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function nomeEmpresa(){
+  try{ const P = window.parent; if (P !== window && P.nomeClienteAberto) return P.nomeClienteAberto() || ''; }catch(e){}
+  return (window.NUVEM && window.NUVEM.clienteNome) || '';
+}
+// PIX parcialmente escondido: quem tem o link confere se é a chave certa sem ver a chave inteira
+function pixMascarado(p){
+  const k = String(p.pix||'').trim();
+  if (!k) return p.banco && p.conta ? `Conta ${p.banco} ••••${String(p.conta).replace(/\D/g,'').slice(-3)}` : '';
+  if (k.includes('@')){ const [u, d] = k.split('@'); return u.slice(0, Math.min(3, Math.max(1, u.length-1))) + '•••@' + d; }
+  const dig = k.replace(/\D/g,'');
+  if (dig.length >= 8 && dig.length === k.replace(/[\s().\/-]/g,'').length) return (tipoPix(k) || 'Chave') + ' ••••' + dig.slice(-4);
+  return k.slice(0, 4) + '•••' + k.slice(-4);
+}
+function opcoesForm(tipo){
+  const base = {empresa: nomeEmpresa()};
+  if (tipo !== 'pedido') return base;
+  const desde = addDias(HOJE, -120);
+  return {...base,
+    eventos: [...db.eventos].filter(e=>!e.data || e.data >= desde).sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(e=>({id:e.id, nome:e.nome, data:e.data||''})),
+    favorecidos: db.pessoas.filter(p=>p.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(p=>({id:p.id, nome:p.nome, pix:pixMascarado(p)})),
+    categorias: [...db.categorias], formas: [...FORMAS]};
+}
+// cria (ou atualiza as opções de) o link deste cliente no banco
+async function garantirForm(tipo, novo){
+  const N = NAPI(); if (!N) throw new Error('sem nuvem');
+  db.formLinks = db.formLinks || {};
+  if (novo || !db.formLinks[tipo]){
+    if (db.formLinks[tipo]) await N.api('DELETE', '/rest/v1/formularios?token=eq.' + encodeURIComponent(db.formLinks[tipo]), null, {'Prefer':'return=minimal'});
+    else await N.api('DELETE', '/rest/v1/formularios?dados_id=eq.' + encodeURIComponent(N.dadosId()) + '&tipo=eq.' + tipo, null, {'Prefer':'return=minimal'});
+    db.formLinks[tipo] = novoToken(); save();
+  }
+  await N.api('POST', '/rest/v1/formularios?on_conflict=token', [{token:db.formLinks[tipo], dados_id:N.dadosId(), tipo, opcoes:opcoesForm(tipo), ativo:true, atualizado_em:new Date().toISOString()}], {'Prefer':'resolution=merge-duplicates,return=minimal'});
+  return db.formLinks[tipo];
+}
+// mantém as listas do formulário (eventos, favorecidos, categorias) em dia depois de cada alteração
+let _tmOpc = null;
+function atualizarOpcoesForm(){
+  if (!NAPI() || !me || !isAdmin() || !db.formLinks) return;
+  clearTimeout(_tmOpc);
+  _tmOpc = setTimeout(()=>{ Object.keys(db.formLinks).forEach(t=>{ garantirForm(t).catch(e=>console.warn('[form] opções', e)); }); }, 4000);
+}
+async function modalLinkForm(tipo, novo){
+  const T = FORM_TIPOS[tipo];
+  if (!NAPI()){
+    if (tipo === 'cadastro') return modalLinkAuto();
+    return modal(`<h3>${T.titulo}</h3><p style="color:var(--muted)">O formulário por link funciona quando o app está com login na nuvem (no endereço publicado). Nesta demonstração ele não está disponível.</p><div class="actions"><button class="btn pri" data-act="fechar">Ok</button></div>`, 520);
+  }
+  modal(`<h3>${T.titulo}</h3><p class="meta">Preparando o link…</p>`, 600);
+  let token;
+  try{ token = await garantirForm(tipo, novo); }
+  catch(e){ console.warn('[form]', e); return modal(`<h3>${T.titulo}</h3><p style="color:var(--muted)">Não consegui criar o link agora. ${/formularios|relation|function|schema/i.test(String(e.message))?'O banco ainda não tem a parte do formulário: rode o arquivo <b>formulario-externo.sql</b> no Supabase (SQL Editor).':'Verifique a internet e tente de novo.'}</p><div class="actions"><button class="btn pri" data-act="fechar">Ok</button></div>`, 520); }
+  const link = linkForm(token), msg = T.msg + ' ' + link;
+  const texto = tipo === 'pedido'
+    ? `Envie para quem <b>não tem acesso ao sistema</b> (produtor, fornecedor, artista). A pessoa preenche sem login, pode anexar nota fiscal, planilha ou print, confere os dados e diz se é uma <b>solicitação de pagamento</b> (chega em <b>Aprovações</b> como <span class="tag" style="background:var(--aguardando)">Aguardando aprovação</span>) ou se <b>já foi pago</b> (entra como pago, só para registro).`
+    : `Envie para o fornecedor, artista ou prestador. Ele mesmo preenche os dados pessoais e bancários, <b>sem precisar de login</b>. O cadastro entra em Pessoas, marcado como <span class="tag" style="background:var(--brand)">autocadastro</span>.`;
+  modal(`<h3>${T.titulo}</h3>
+  <p style="margin:0 0 12px;color:var(--muted)">${texto}</p>
+  <input id="campoLink" readonly value="${h(link)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#f4efeb" onfocus="this.select()">
+  <div class="note" style="background:#00262012;border-color:#00262033;color:#002620">🔒 Quem tem o link só consegue <b>enviar</b>. Não vê pedidos, valores, contas nem dados de ninguém${tipo==='pedido'?' (vê apenas os nomes dos eventos, favorecidos e categorias para escolher)':''}. Se o link vazar, clique em <b>Gerar link novo</b> e o antigo para de funcionar.</div>
+  <div class="actions"><button class="btn" data-act="formLinkNovo" data-id="${tipo}">↻ Gerar link novo</button><div class="spacer"></div><button class="btn" data-act="fechar">Fechar</button>
+    <a class="btn" target="_blank" rel="noopener" href="${h(link)}" style="text-decoration:none;color:#002620">👀 Abrir</a>
+    <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}" style="text-decoration:none;color:#002620;border-color:#00262033">WhatsApp</a>
+    <button class="btn pri" data-act="copiarLinkForm">🔗 Copiar link</button></div>`, 620);
+}
+// puxa o que chegou pelos links e transforma em pedidos / cadastros
+let _puxando = false;
+async function puxarEnvios(){
+  const N = NAPI(); if (!N || !me || !isAdmin() || _puxando) return;
+  _puxando = true;
+  try{
+    // apagar devolvendo as linhas = cada envio só é puxado uma vez, mesmo com duas pessoas com o app aberto
+    const rows = await N.api('DELETE', '/rest/v1/envios?dados_id=eq.' + encodeURIComponent(N.dadosId()) + '&select=*', null, {'Prefer':'return=representation'}) || [];
+    if (!rows.length) return;
+    let np = 0, nc = 0;
+    rows.sort((a,b)=>String(a.criado_em).localeCompare(String(b.criado_em))).forEach(r=>{
+      const c = r.conteudo || {}, t = k => String(c[k] ?? '').trim().slice(0, 500);
+      const sol = c.solicitante || {}, solNome = String(sol.nome||'').trim().slice(0,120) || 'Sem nome', solCont = String(sol.contato||'').trim().slice(0,120);
+      const pessoaDe = np0 => {
+        if (!np0) return null;
+        const d = k => String(np0[k] ?? '').trim().slice(0, 200), dig = d('doc').replace(/\D/g,'');
+        const ja = (dig && db.pessoas.find(p => (p.doc||'').replace(/\D/g,'') === dig)) || (!dig && d('nome') && db.pessoas.find(p => (p.nome||'').trim().toLowerCase() === d('nome').toLowerCase()));
+        if (ja) return ja;
+        const novo = {id:uid('p'), nome:d('nome')||'Sem nome', doc:formatarDoc(dig), funcao:d('funcao'), tel:d('tel'), email:d('email'), banco:d('banco'), agencia:d('agencia'), conta:d('conta'),
+          tipoConta:d('tipoConta'), pixTipo:tipoPix(d('pix')), pix:d('pix'), origem:'autocadastro', convidadoPor:me.id, cadastradoEm:agoraSeg()};
+        db.pessoas.push(novo);
+        db.alteracoes.push({id:uid('a'), pessoaId:novo.id, tipo:'autocadastro', campos:[], antes:{}, depois:{}, quem:'externo', convite:me.id, quando:agoraSeg()});
+        nc++; return novo;
+      };
+      if (r.tipo === 'cadastro'){ pessoaDe(c.pessoa || c); return; }
+      // planilha importada: um envio com várias linhas vira um pedido por linha
+      const lista = Array.isArray(c.itens) ? c.itens.slice(0, 300).map(it=>({...c, ...(it||{}), itens:undefined})) : [c];
+      lista.forEach(c=>{
+      const t = k => String(c[k] ?? '').trim().slice(0, 500);
+      const pes = (c.pessoaId && db.pessoas.find(p=>p.id===c.pessoaId)) || pessoaDe(c.novaPessoa);
+      const valor = Math.max(0, Math.round(Number(c.valor)*100)/100) || 0;
+      const jaPago = c.situacao === 'pago', pagoEm = /^\d{4}-\d{2}-\d{2}$/.test(t('pagoEm')) ? t('pagoEm') : HOJE;
+      const anexos = (Array.isArray(c.anexos) ? c.anexos : []).slice(0, 5).filter(a=>a && typeof a.caminho==='string' && a.caminho.indexOf(N.dadosId()+'/')===0)
+        .map(a=>({nome:String(a.nome||'arquivo').slice(0,120), caminho:a.caminho, tipo:String(a.tipo||'').slice(0,80), tamanho:+a.tamanho||0}));
+      const p = {id:'PG-'+String(db.seq++).padStart(4,'0'), eventoId: db.eventos.some(e=>e.id===c.eventoId) ? c.eventoId : '', pessoaId: pes ? pes.id : '',
+        categoria:t('categoria'), valor, vencimento: /^\d{4}-\d{2}-\d{2}$/.test(t('vencimento')) ? t('vencimento') : HOJE, forma: FORMAS.includes(t('forma')) ? t('forma') : FORMAS[0],
+        descricao:t('descricao'), link:urlOk(t('link')), centroCusto:'', extras:{}, status: jaPago ? 'pago' : 'aguardando', ...(jaPago?{pagoEm}:{}), criadoPor:me.id, criadoEm:HOJE,
+        solicitante:{nome:solNome, contato:solCont}, anexos,
+        historico:[{quando:agora(), quem:me.id, acao:`Recebido pelo formulário por link — enviado por ${solNome}${solCont?' ('+solCont+')':''}` + (c.importado ? ` · importado da planilha ${String(c.importado).slice(0,80)}` : '') + (c.colado ? ' · colado de uma mensagem do WhatsApp' : '') + (jaPago ? ` · informado como já pago em ${fmt(pagoEm)}` : ' · solicitação de pagamento')}]};
+      db.pedidos.push(p); np++;
+      });
+    });
+    save(); render();
+    const partes = []; if (np) partes.push(np + (np>1?' pedidos chegaram':' pedido chegou') + ' pelo link'); if (nc) partes.push(nc + (nc>1?' cadastros novos':' cadastro novo'));
+    if (partes.length) toast('📥 ' + partes.join(' e '));
+  }catch(e){ console.warn('[form] envios', e); }
+  finally{ _puxando = false; }
+}
+setInterval(()=>{ if (document.visibilityState === 'visible') puxarEnvios(); }, 60000);
+
 // ================= LINK DE APROVAÇÃO =================
 // Um único link fixo: quem abre (e entra como sócio) vê a lista completa de pedidos aguardando aprovação.
 const linkAprovacao = () => location.href.split(/[?#]/)[0] + '?aprovar=1';
@@ -2059,7 +2191,17 @@ const acoes = {
   escolherAtualizar: () => escolherAtualizar(),
   irAtualizar: () => { const d=lerForm('fEscolha'); if(d) formPessoa(d.pid); },
   verHist: id => verHistorico(id),
-  linkAuto: () => modalLinkAuto(),
+  linkAuto: () => modalLinkForm('cadastro'),
+  linkForm: () => modalLinkForm('pedido'),
+  abrirAnexo: ref => { const [pid, i] = String(ref).split('|'); const p = db.pedidos.find(x=>x.id===pid), a = p && (p.anexos||[])[+i]; const N = NAPI(); if (!a) return;
+    if (!N) return toast('Os anexos só abrem com o app conectado à nuvem.');
+    const w = window.open('', '_blank');
+    N.api('POST', '/storage/v1/object/sign/anexos/' + a.caminho.split('/').map(encodeURIComponent).join('/'), {expiresIn: 600})
+      .then(j => { const u = j && (j.signedURL || j.signedUrl); if (!u) throw new Error('sem link'); const full = /^https?:/.test(u) ? u : N.base() + '/storage/v1' + u; if (w) w.location = full; else location.href = full; })
+      .catch(e => { if (w) w.close(); console.warn('[anexo]', e); toast('Não consegui abrir o anexo. Tente de novo.'); }); },
+  formLinkNovo: tipo => modalLinkForm(tipo, true),
+  copiarLinkForm: () => { const c=document.getElementById('campoLink'); const l=c.value;
+    (navigator.clipboard?.writeText(l) || Promise.reject()).then(()=>toast('Link copiado! Agora é só colar no WhatsApp ou e-mail.'), ()=>{ c.focus(); c.select(); toast('Selecione o link e copie com Ctrl+C.'); }); },
   copiarLinkAuto: () => { const c=document.getElementById('campoLink'); const l=c.value;
     (navigator.clipboard?.writeText(l) || Promise.reject()).then(()=>toast('Link copiado! Agora é só colar no WhatsApp ou e-mail.'), ()=>{ c.focus(); c.select(); toast('Selecione o link e copie com Ctrl+C.'); }); },
   enviarAuto: () => enviarAutocadastro(),
@@ -2465,7 +2607,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '6.2';
+const APP_VERSAO = '6.3';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
