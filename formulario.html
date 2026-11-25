@@ -72,6 +72,11 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
 .tab tfoot td{font-weight:600;background:#f4efeb}
 .tab tr.ruim td{background:#ef44440f}
 .tcad{font-size:14px;margin-bottom:10px}
+.lkcad{color:var(--cobre);font-weight:600;font-size:12.5px;text-decoration:underline;display:inline-block;margin-top:2px}
+.lkcad.feito{color:#15803d;text-decoration:none}
+.lkcad.falta{color:#b91c1c}
+#passo2.soCad > :not(.cadWrap){display:none !important}
+#passo2 .cadn{background:none;border:0;padding:0}
 .cadn.comErro{border-color:var(--erro);background:#ef44440a}
 .erroCad{display:none;color:#b91c1c;font-size:12.5px}
 .tab .pixc{font-size:12.5px;overflow-wrap:anywhere;min-width:96px}
@@ -440,7 +445,8 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     var emp = (o && o.empresa) || 'a empresa', p2 = document.getElementById('passo2');
     var pixHtml = function(k){ return esc(k).replace(/@/g, '<wbr>@').replace(/(•+\S+)/g, '<span class="nw">$1</span>'); };
     var pixDe = function(i){ if (i.pessoaId){ var f = (o.favorecidos||[]).filter(function(x){ return x.id === i.pessoaId; })[0]; return f && f.pix ? pixHtml(f.pix) : '<span class="av">sem PIX no cadastro</span>'; }
-      return i.novaPessoa && i.novaPessoa.pix ? pixHtml(i.novaPessoa.pix) : '<span class="av">não informado</span>'; };
+      return '<span class="pv">' + (i.novaPessoa && i.novaPessoa.pix ? pixHtml(i.novaPessoa.pix) : '<span class="av">não informado</span>') + '</span>'
+        + (i.novaPessoa && i.nome ? '<br><a href="#" class="lkcad" data-k="' + esc(semAcento(i.nome)) + '">Cadastrar favorecido</a>' : ''); };
     var tab = '<div class="tab"><table><thead><tr><th>Favorecido</th><th>PIX</th><th class="r">Valor / venc.</th></tr></thead><tbody>'
       + itens.map(function(i){ return '<tr' + (i.problemas.length ? ' class="ruim"' : '') + '><td>' + esc(i.nome || '—') + (i.novaPessoa && i.nome ? ' <small class="tg">novo</small>' : '')
         + '<div class="sub">' + (i.problemas.length ? '<span class="pb">' + (modo === 'texto' ? '' : 'Linha ' + i.linha + ': ') + '⚠ ' + esc(i.problemas.join(', ')) + '</span>' : esc(i.categoria || 'sem categoria') + (i.descricao && modo !== 'texto' ? ' · ' + esc(i.descricao) : '') + (i.aviso ? '<br><span class="av">' + esc(i.aviso) + '</span>' : '')) + '</div>'
@@ -451,7 +457,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       + '<dt>Evento</dt><dd>' + esc(txtSel(fm, 'eventoId')) + '</dd>'
       + (modo === 'texto' ? '' : '<dt>Planilha</dt><dd>📊 ' + esc(PLAN.name) + '</dd>')
       + (ARQS.length ? '<dt>' + (modo === 'texto' ? 'Anexos' : 'Outros anexos') + '</dt><dd>' + ARQS.map(function(f){ return '📄 ' + esc(f.name); }).join('<br>') + '</dd>' : '')
-      + (novos ? '<dt>Favorecidos novos</dt><dd>' + novos + ' (cadastre abaixo)</dd>' : '')
+      + (novos ? '<dt>Favorecidos novos</dt><dd>' + novos + ' (clique em "Cadastrar favorecido" na tabela)</dd>' : '')
       + '</dl>' + tab
       + (ruins.length ? '<div class="msg" style="display:block">' + ruins.length + (ruins.length > 1 ? ' linhas têm' : ' linha tem') + ' problema (em vermelho). ' + (modo === 'texto' ? 'Clique em Corrigir e ajuste o texto: cada pagamento precisa de nome, valor e data.' : 'Corrija na planilha e escolha o arquivo de novo.') + '</div>'
         + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button></div>'
@@ -465,7 +471,17 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     p2.querySelectorAll('[name=situacao]').forEach(function(r){ r.onchange = function(){ document.getElementById('boxPago').style.display = p2.querySelector('[name=situacao]:checked').value === 'pago' ? '' : 'none'; }; });
     document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; esconde(false); window.scrollTo(0,0); };
     p2.querySelectorAll('.cadn [data-c=pix]').forEach(function(inp){ inp.addEventListener('input', function(){ var k = inp.closest('.cadn').dataset.k;
-      p2.querySelectorAll('.pixc[data-nk]').forEach(function(td){ if (td.dataset.nk === k) td.innerHTML = inp.value.trim() ? esc(inp.value.trim()).replace(/@/g, '<wbr>@') : '<span class="av">não informado</span>'; }); }); });
+      p2.querySelectorAll('.pixc[data-nk]').forEach(function(td){ if (td.dataset.nk === k) td.querySelector('.pv').innerHTML = inp.value.trim() ? esc(inp.value.trim()).replace(/@/g, '<wbr>@') : '<span class="av">não informado</span>'; }); }); });
+    var caixa = function(k){ return [].filter.call(p2.querySelectorAll('.cadn'), function(c){ return c.dataset.k === k; })[0]; };
+    // clicar em "Cadastrar favorecido" mostra só o cadastro; ao salvar, volta para a conferência
+    var posConf = 0;
+    var abreCad = function(c){ posConf = window.scrollY; p2.classList.add('soCad'); p2.querySelectorAll('.cadn').forEach(function(o){ o.style.display = o === c ? '' : 'none'; }); window.scrollTo(0,0); var f = c.querySelector('[data-c=doc]'); if (f && !f.value) f.focus({preventScroll:true}); };
+    var fechaCad = function(){ p2.classList.remove('soCad'); p2.querySelectorAll('.cadn').forEach(function(o){ o.style.display = 'none'; }); window.scrollTo(0, posConf); };
+    p2.querySelectorAll('.lkcad').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); var c = caixa(a.dataset.k); if (c) abreCad(c); }; });
+    p2.querySelectorAll('.cadn .btSair').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); fechaCad(); }; });
+    p2.querySelectorAll('.cadn .btPronto').forEach(function(b){ b.onclick = function(){ var c = b.closest('.cadn'); if (!validaCaixa(c)) return;
+      p2.querySelectorAll('.lkcad').forEach(function(a){ if (a.dataset.k === c.dataset.k){ a.textContent = '✓ Cadastrado (editar)'; a.classList.add('feito'); a.classList.remove('falta'); } });
+      var e2 = document.getElementById('msg2'); if (e2) e2.style.display = 'none'; fechaCad(); }; });
     var lg = document.getElementById('lgpdLote'); if (lg) lg.onchange = function(){ document.getElementById('msg2').style.display = 'none'; };
     if (!ruins.length) document.getElementById('btConf').onclick = function(){ if (lerNovos(itens)) enviarLote(d, itens, modo); };
     window.scrollTo(0,0);
@@ -476,7 +492,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     itens.forEach(function(i){
       if (!i.novaPessoa || !i.nome) return; var k = semAcento(i.nome); if (vistos[k]) return; vistos[k] = 1;
       var np = i.novaPessoa, v = function(x){ return esc(np[x] || ''); };
-      html += '<div class="novo cadn" data-k="' + esc(k) + '"><div class="tcad">➕ Cadastro de <b>' + esc(i.nome) + '</b></div><div class="form">'
+      html += '<div class="novo cadn" data-k="' + esc(k) + '" style="display:none"><a href="#" class="voltar btSair">← Voltar para a conferência</a><h1 style="margin-bottom:2px">Cadastrar favorecido</h1><p class="intro">' + esc(i.nome) + '</p><div class="form">'
         + '<label><span>CPF ou CNPJ <b>*</b></span><input data-c="doc" inputmode="numeric" maxlength="20" value="' + v('doc') + '"></label>'
         + '<label>Função ou serviço<input data-c="funcao" maxlength="80" placeholder="Ex.: DJ, gráfica" value="' + v('funcao') + '"></label>'
         + '<label>Telefone / WhatsApp<input data-c="tel" inputmode="tel" maxlength="30" value="' + v('tel') + '"></label>'
@@ -487,26 +503,32 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
         + '<label>Tipo de conta<select data-c="tipoConta"><option value="">—</option><option>Corrente</option><option>Poupança</option><option>Corrente PJ</option><option>Pagamento</option></select></label>'
         + '<label>Agência<input data-c="agencia" inputmode="numeric" maxlength="10" value="' + v('agencia') + '"></label>'
         + '<label>Conta (com dígito)<input data-c="conta" maxlength="20" value="' + v('conta') + '"></label>'
-        + '<div class="full erroCad"></div></div></div>';
+        + '<div class="full erroCad"></div><button type="button" class="btn btPronto full" style="margin-top:4px">Salvar cadastro</button></div></div>';
     });
     if (!html) return '';
-    return '<div class="grupo" style="margin-top:20px">Cadastro dos favorecidos novos</div><p class="ajuda" style="margin:0 0 10px">Estes favorecidos ainda não estão cadastrados. Preencha os dados de cada um para o pagamento.</p>'
-      + '<div style="display:flex;flex-direction:column;gap:12px">' + html + '</div>'
+    return '<div class="cadWrap">' + html + '</div>'
       + '<label class="chk" style="margin-top:12px"><input type="checkbox" id="lgpdLote"> Autorizo o uso destes dados exclusivamente para cadastro e pagamentos, conforme a Lei Geral de Proteção de Dados (LGPD).</label>';
+  }
+  function validaCaixa(cx1){
+    var g = function(c){ var e = cx1.querySelector('[data-c=' + c + ']'); return e ? String(e.value).trim() : ''; }, msg = '';
+    if (!docValido(g('doc'))) msg = 'CPF ou CNPJ inválido. Confira os números.';
+    else if (!g('pix') && !(g('banco') && g('agencia') && g('conta'))) msg = 'Informe a chave PIX ou os dados completos da conta (banco, agência e conta).';
+    var er = cx1.querySelector('.erroCad'); er.textContent = msg; er.style.display = msg ? 'block' : 'none'; cx1.classList.toggle('comErro', !!msg);
+    return !msg;
   }
   function lerNovos(itens){
     var e2 = document.getElementById('msg2'), caixas = document.querySelectorAll('.cadn'), ok = true, primeiro = null;
+    caixas.forEach(function(c){ c.querySelector('.erroCad').style.display = 'none'; });
     e2.style.display = 'none';
     caixas.forEach(function(cx1){
-      var g = function(c){ var e = cx1.querySelector('[data-c=' + c + ']'); return e ? String(e.value).trim() : ''; }, msg = '';
-      if (!docValido(g('doc'))) msg = 'CPF ou CNPJ inválido. Confira os números.';
-      else if (!g('pix') && !(g('banco') && g('agencia') && g('conta'))) msg = 'Informe a chave PIX ou os dados completos da conta (banco, agência e conta).';
-      var er = cx1.querySelector('.erroCad'); er.textContent = msg; er.style.display = msg ? 'block' : 'none'; cx1.classList.toggle('comErro', !!msg);
-      if (msg){ ok = false; primeiro = primeiro || cx1; return; }
+      var g = function(c){ var e = cx1.querySelector('[data-c=' + c + ']'); return e ? String(e.value).trim() : ''; };
+      if (!validaCaixa(cx1)){ ok = false; primeiro = primeiro || cx1; cx1.querySelector('.erroCad').style.display = 'none'; return; }
       var np = {doc:g('doc').replace(/\D/g, ''), funcao:g('funcao'), tel:g('tel'), email:g('email'), pix:g('pix'), banco:g('banco'), tipoConta:g('tipoConta'), agencia:g('agencia'), conta:g('conta')};
       itens.forEach(function(i){ if (i.novaPessoa && semAcento(i.nome) === cx1.dataset.k){ np.nome = i.nome; i.novaPessoa = JSON.parse(JSON.stringify(np)); } });
     });
-    if (!ok){ e2.textContent = 'Complete o cadastro dos favorecidos novos (em vermelho).'; e2.style.display = 'block'; primeiro.scrollIntoView({behavior:'smooth', block:'center'}); return false; }
+    if (!ok){ var faltam = [].map.call(document.querySelectorAll('.cadn.comErro'), function(c){ return c.dataset.k; });
+      document.querySelectorAll('.lkcad').forEach(function(a){ if (faltam.indexOf(a.dataset.k) >= 0) a.classList.add('falta'); });
+      e2.textContent = faltam.length > 1 ? 'Faltam ' + faltam.length + ' cadastros. Clique em "Cadastrar favorecido" nas linhas em vermelho.' : 'Falta 1 cadastro. Clique em "Cadastrar favorecido" na linha em vermelho.'; e2.style.display = 'block'; return false; }
     if (caixas.length && !document.getElementById('lgpdLote').checked){ e2.textContent = 'Marque a autorização de uso dos dados (LGPD) no fim do cadastro.'; e2.style.display = 'block'; return false; }
     return true;
   }
