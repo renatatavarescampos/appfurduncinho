@@ -599,7 +599,7 @@ function telaReceber(){
   const rs = (db.recebimentos||[]).filter(x=>{ const d = x.recebidoEm || x.previsto;
     return passa(F.ano, d.slice(0,4)) && passa(F.mes, d.slice(5,7)) && passa(F.evento, x.eventoId); })
     .map(x=>({x, data:x.recebidoEm||x.previsto, sit: x.status==='cancelado' ? 'recusado' : x.recebidoEm ? 'recebido' : (x.previsto < HOJE ? 'atrasado' : 'areceber')}))
-    .sort((a,b)=>((b.sit==='recusado')-(a.sit==='recusado')) || b.data.localeCompare(a.data));
+    .sort((a,b)=>b.data.localeCompare(a.data));
   const soma = s => rs.filter(r=>r.sit===s).reduce((a,r)=>a+r.x.valor,0), qtd = s => rs.filter(r=>r.sit===s).length;
   const tot = rs.filter(r=>r.sit!=='recusado').reduce((a,r)=>a+r.x.valor,0);
   [...SEL].forEach(id=>{ if(!(db.recebimentos||[]).some(x=>x.id===id)) SEL.delete(id); });
@@ -647,7 +647,7 @@ document.addEventListener('change', e => {
 });
 function telaLista(){
   const inativo = p => ['recusado','cancelado'].includes(p.status);
-  const lista = filtrar(visiveis()).sort((a,b)=>(inativo(b)-inativo(a)) || b.vencimento.localeCompare(a.vencimento));
+  const lista = filtrar(visiveis()).sort((a,b)=>b.vencimento.localeCompare(a.vencimento));
   const tot = lista.filter(p=>!inativo(p)).reduce((a,p)=>a+p.valor,0);
   const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0), iv = cols.findIndex(c=>c.id==='valor');
   [...SEL].forEach(id=>{ if(!db.pedidos.some(p=>p.id===id)) SEL.delete(id); });
