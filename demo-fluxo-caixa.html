@@ -619,17 +619,23 @@ function telaDash(){
       const receita = (db.recebimentos||[]).filter(r=>r.eventoId===e.id && r.status!=='cancelado').reduce((a,r)=>a+r.valor,0);
       const custo = visiveis().filter(p=>p.eventoId===e.id && !['recusado','cancelado'].includes(p.status)).reduce((a,p)=>a+p.valor,0);
       return {e, receita, custo, lucro: receita-custo}; });
-  const posMax = Math.max(0,...lucroEv.map(x=>Math.max(x.lucro, x.custo))), negMax = Math.max(0,...lucroEv.map(x=>-x.lucro));
+  // coluna empilhada: em cima do eixo vai até a receita (lucro em verde embaixo + custo em vermelho-claro em cima); se der prejuízo, a parte do custo que passou da receita fica em vermelho abaixo do eixo
+  const posMax = Math.max(0,...lucroEv.map(x=>Math.max(0,x.receita))), negMax = Math.max(0,...lucroEv.map(x=>-x.lucro));
   const escala = Math.max(1, posMax+negMax), topo = negMax ? posMax/escala*100 : 100;
   const lucroTotal = lucroEv.reduce((a,x)=>a+x.lucro,0);
-  const graficoLucro = lucroEv.length ? `<div style="display:flex;gap:10px;height:240px;padding-top:18px;justify-content:center">${lucroEv.map(x=>{
-      const pos = x.lucro>=0, alt = Math.abs(x.lucro)/escala*100*0.88;
-      return `<div data-act="pagosEvento" data-id="${x.e.id}" style="flex:1;min-width:0;max-width:160px;display:flex;flex-direction:column;cursor:pointer" title="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Receita: ${brl(x.receita)}&#10;Custo: ${brl(x.custo)}&#10;Lucro: ${brl(x.lucro)}">
-        <div style="height:${topo}%;display:flex;gap:3px;align-items:flex-end">
-          <div style="flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end"><div style="font-size:10px;color:#b91c1c;text-align:center;font-weight:600;white-space:nowrap">${brlK(x.custo)}</div><div style="height:${x.custo/escala*100*0.88/topo*100}%;background:#fca5a5;border-radius:4px 4px 0 0;min-height:2px" title="Custo: ${brl(x.custo)}"></div></div>
-          <div style="flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end">${pos?`<div style="font-size:10px;color:#047857;text-align:center;font-weight:600;white-space:nowrap">${brlK(x.lucro)}</div><div style="height:${alt/topo*100}%;background:#10b981;border-radius:4px 4px 0 0;min-height:2px" title="Lucro: ${brl(x.lucro)}"></div>`:''}</div></div>
+  const graficoLucro = lucroEv.length ? `<div style="display:flex;gap:10px;height:260px;padding-top:6px;justify-content:center">${lucroEv.map(x=>{
+      const pos = x.lucro>=0, FATOR = 0.78;
+      const custoCima = pos ? x.custo : Math.max(0,x.receita);
+      const hCusto = posMax ? custoCima/posMax*100*FATOR : 0, hLucro = pos && posMax ? x.lucro/posMax*100*FATOR : 0;
+      const hPrej = !pos && negMax ? (-x.lucro)/negMax*100*FATOR : 0;
+      return `<div data-act="pagosEvento" data-id="${x.e.id}" style="flex:1;min-width:0;max-width:110px;display:flex;flex-direction:column;cursor:pointer" title="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Receita: ${brl(x.receita)}&#10;Custo: ${brl(x.custo)}&#10;Lucro: ${brl(x.lucro)}">
+        <div style="height:${topo}%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch">
+          <div style="font-size:10px;color:#b91c1c;text-align:center;font-weight:600;white-space:nowrap">${brlK(x.custo)}</div>
+          ${pos?`<div style="font-size:10px;color:#047857;text-align:center;font-weight:600;white-space:nowrap">${brlK(x.lucro)}</div>`:''}
+          <div style="height:${hCusto}%;background:#fca5a5;border-radius:4px 4px 0 0;${x.custo?'min-height:2px':''}" title="Custo: ${brl(x.custo)}"></div>
+          ${pos?`<div style="height:${hLucro}%;background:#10b981;min-height:2px" title="Lucro: ${brl(x.lucro)}"></div>`:''}</div>
         <div style="border-top:1px solid #9ca3af"></div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:stretch">${!pos?`<div style="height:${alt/(100-topo||1)*100}%;background:#ef4444;border-radius:0 0 4px 4px"></div><div style="font-size:10px;color:#b91c1c;text-align:center;font-weight:600">-${brlK(-x.lucro)}</div>`:''}</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:stretch">${!pos?`<div style="height:${hPrej}%;background:#ef4444;border-radius:0 0 4px 4px" title="Prejuízo: ${brl(x.lucro)}"></div><div style="font-size:10px;color:#b91c1c;text-align:center;font-weight:600">-${brlK(-x.lucro)}</div>`:''}</div>
         <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h(x.e.nome)}</div>
         <div style="font-size:10px;color:var(--muted);text-align:center">${(LF.serie?fmt(x.e.data):fmt(x.e.data).slice(0,5))}</div></div>`; }).join('')}</div>`
     : '<div class="empty">Nenhum evento neste período</div>';
@@ -695,7 +701,7 @@ function telaDash(){
       ? `<div class="legend"><span><i class="dot" style="background:#fca5a5"></i>Custo</span><span><i class="dot" style="background:#10b981"></i>Lucro</span><span><i class="dot" style="background:#ef4444"></i>Prejuízo</span><span>Total do período: <b style="color:${lucroTotal>=0?'#047857':'#b91c1c'}">${brl(lucroTotal)}</b></span></div></div>`
       : `<div class="legend"><span><i class="dot" style="background:var(--pago)"></i>Pago</span><span><i class="dot" style="background:var(--aprovado)"></i>A pagar</span><span><i class="dot" style="background:var(--aguardando)"></i>Aguardando aprovação</span></div></div>`}
     ${DASH_VIS==='lucro'
-      ? `${F.mes.length&&!LF.serie?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 0">${MESES.map((m,i)=>{const mm=String(i+1).padStart(2,'0');return `<button class="btn sm ${F.mes.includes(mm)?'pri':''}" data-act="lucroMesSel" data-id="${mm}">${m}</button>`;}).join('')}</div>`:''}${graficoLucro}<div class="meta">Lucro = receitas do evento (recebidas e a receber) − custos (pedidos válidos). ${LF.serie?'Mostrando todas as edições deste evento, de todos os anos.':'Escolha o ano e o mês nos filtros de cima: no mês, entram só os eventos daquele mês.'} Filtre por centro de custo ou por evento para comparar edições. Clique em um evento para ver as movimentações.</div>${linhaLucro}`
+      ? `${F.mes.length&&!LF.serie?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 0">${MESES.map((m,i)=>{const mm=String(i+1).padStart(2,'0');return `<button class="btn sm ${F.mes.includes(mm)?'pri':''}" data-act="lucroMesSel" data-id="${mm}">${m}</button>`;}).join('')}</div>`:''}${graficoLucro}<div class="meta">Cada coluna é a receita do evento: o verde embaixo é o lucro e o vermelho-claro em cima é o custo (se o custo passar da receita, o que falta aparece em vermelho abaixo da linha, como prejuízo). Lucro = receitas do evento (recebidas e a receber) − custos (pedidos válidos). ${LF.serie?'Mostrando todas as edições deste evento, de todos os anos.':'Escolha o ano e o mês nos filtros de cima: no mês, entram só os eventos daquele mês.'} Filtre por centro de custo ou por evento para comparar edições. Clique em um evento para ver as movimentações.</div>${linhaLucro}`
       : DASH_VIS==='evento'
       ? `<div class="chart">${porEv.map(x=>barra(x.pago+x.aprovado+x.aguardando, x, maxEv, 'pagosEvento', x.e.id, x.e.nome, false, x.e.nome+' ('+fmt(x.e.data)+')')).join('') || '<div class="empty" style="flex:1">Nenhum pagamento de evento neste período</div>'}</div>
     <div class="meta">Clique na barra de um evento para ver a relação dos pagamentos dele.</div>`
@@ -2346,7 +2352,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '4.4';
+const APP_VERSAO = '4.5';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
