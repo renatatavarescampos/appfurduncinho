@@ -391,7 +391,7 @@ function seed(){
   Object.assign(luna, novos);
   return {users,eventos,pessoas,categorias,pedidos,seq:n,zigMap:{...ZIG_PADRAO},alteracoes,extrato:[],recebimentos:seedRecebimentos(eventos,pedidos)};
 }
-function load(){ try{ db = JSON.parse(localStorage.getItem(KEY)); }catch(e){ db=null; } if(!db) db = seed(); if(!db.zigMap) db.zigMap = {...ZIG_PADRAO}; if(!db.alteracoes) db.alteracoes = []; if(!db.extrato) db.extrato = []; if(!db.recebimentos) db.recebimentos = seedRecebimentos(db.eventos,db.pedidos); if(db.colsLista && !db.migBanco){ const i=db.colsLista.indexOf('status'); if(!db.colsLista.includes('bancoConc')) db.colsLista.splice(i>=0?i+1:db.colsLista.length,0,'bancoConc'); } db.migBanco = true; db.eventos.forEach(e=>{ if(e.infos){ (e.notas=e.notas||[]).push({id:'n'+Math.random().toString(36).slice(2,8), texto:e.infos, quem:(db.users.find(u=>u.perfil==='admin')||db.users[0]).id, quando:new Date().toISOString().slice(0,19)}); delete e.infos; } }); }
+function load(){ try{ db = JSON.parse(localStorage.getItem(KEY)); }catch(e){ db=null; } if(!db) db = seed(); if(!db.zigMap) db.zigMap = {...ZIG_PADRAO}; if(!db.alteracoes) db.alteracoes = []; if(!db.extrato) db.extrato = []; if(!db.recebimentos) db.recebimentos = seedRecebimentos(db.eventos,db.pedidos); if(db.colsLista && !db.migBanco){ const i=db.colsLista.indexOf('status'); if(!db.colsLista.includes('bancoConc')) db.colsLista.splice(i>=0?i+1:db.colsLista.length,0,'bancoConc'); } db.migBanco = true; if(db.colsLista && !db.colsLista.includes('valor')){ const i=db.colsLista.indexOf('cc'); db.colsLista.splice(i>=0?i:db.colsLista.length,0,'valor'); } db.eventos.forEach(e=>{ if(e.infos){ (e.notas=e.notas||[]).push({id:'n'+Math.random().toString(36).slice(2,8), texto:e.infos, quem:(db.users.find(u=>u.perfil==='admin')||db.users[0]).id, quando:new Date().toISOString().slice(0,19)}); delete e.infos; } }); }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} }
 
 // ================= PERMISSÕES =================
@@ -571,6 +571,7 @@ const LISTA_COLS = [
   {id:'venc',     nome:'Vencimento',      td:p=>fmt(p.vencimento)},
   {id:'evento',   nome:'Nome do evento',  td:p=>h(evento(p.eventoId).nome)},
   {id:'dataEv',   nome:'Data do evento',  td:p=>evento(p.eventoId).data?fmt(evento(p.eventoId).data):'—'},
+  {id:'valor',    nome:'Valor', cls:'right', td:p=>brl(p.valor), v:p=>brl(p.valor)},
   {id:'cc',       nome:'Centro de custo', td:p=>h(ccDe(p))||'<span class="meta">—</span>', v:p=>ccDe(p)||'—'},
   {id:'fav',      nome:'Favorecido',      td:p=>h(pessoa(p.pessoaId).nome)},
   {id:'doc',      nome:'CPF/CNPJ',        td:p=>h(pessoa(p.pessoaId).doc||'')},
@@ -584,9 +585,12 @@ const LISTA_COLS = [
   {id:'pagoEm',   nome:'Pago em',         td:p=>p.status==='pago'&&dataPagamento(p)?fmt(String(dataPagamento(p)).slice(0,10)):'—'},
 ];
 const bancoPed = p => (p.conc&&p.conc.banco) || p.bancoPag || '';
-const LISTA_PADRAO = ['num','venc','evento','dataEv','cc','fav','cat','prod','status','bancoConc'];
+const LISTA_PADRAO = ['num','venc','evento','dataEv','valor','cc','fav','cat','prod','status','bancoConc'];
 const todasColsLista = () => [...LISTA_COLS, ...extras().map(c=>({id:c.id, nome:c.nome, td:p=>h(valorExtra(p,c))||'<span class="meta">—</span>', v:p=>valorExtra(p,c)||'—'}))];
-const colsLista = () => (db.colsLista||LISTA_PADRAO).map(id=>todasColsLista().find(c=>c.id===id)).filter(Boolean);
+const colsLista = () => { const ids = db.colsLista||LISTA_PADRAO; return [...ids, ...(ids.includes('valor')?[]:['valor'])].map(id=>todasColsLista().find(c=>c.id===id)).filter(Boolean); };
+// rodapé com a contagem e o total embaixo da coluna Valor, onde quer que ela esteja
+function rodapeTotal(antes, depois, cnt, tot){ return antes>0 ? `<td colspan="${antes}">${cnt}</td><td class="right"><b data-tot>${tot}</b></td>${depois>0?`<td colspan="${depois}"></td>`:''}`
+  : `<td class="right"><b data-tot>${tot}</b></td>${depois>0?`<td colspan="${depois}">${cnt}</td>`:''}`; }
 // ================= CONTAS A RECEBER =================
 function telaReceber(){
   if (!isAdmin()) return '';
@@ -596,19 +600,20 @@ function telaReceber(){
     .sort((a,b)=>b.data.localeCompare(a.data));
   const soma = s => rs.filter(r=>r.sit===s).reduce((a,r)=>a+r.x.valor,0), qtd = s => rs.filter(r=>r.sit===s).length;
   const tot = rs.reduce((a,r)=>a+r.x.valor,0);
+  [...SEL].forEach(id=>{ if(!(db.recebimentos||[]).some(x=>x.id===id)) SEL.delete(id); });
   const k = (s,l,cor) => `<div class="kpi"><div class="l"><span class="dot" style="background:${cor}"></span>${l}</div><div class="v">${brl(soma(s))}</div><div class="s">${qtd(s)} lançamento(s)</div></div>`;
-  return `<div class="toolbar"><h2 style="margin:0">Contas a receber</h2><div class="spacer"></div>
+  return `<div class="toolbar"><h2 style="margin:0">Contas a receber</h2><button class="btn bad" id="btnExclSel" data-act="excluirSelReceb" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionados (<span data-sel-n>${SEL.size}</span>)</button><div class="spacer"></div>
     <button class="btn" data-act="csvReceber">⬇ Exportar Excel (CSV)</button><button class="btn pri" data-act="formReceb">+ Novo recebimento</button></div>
   <div class="toolbar">${filtrosHTML({status:false, categoria:false})}</div>
-  <div class="panel"><table class="filtravel" data-key="receber4"><thead><tr><th>Data</th><th>Nº</th><th>Nome do evento</th><th>Data do evento</th><th>Centro de custo</th><th>Origem</th><th>Descrição</th><th>Forma</th><th>Situação</th><th>Banco</th><th class="right">Valor</th><th>Recebimento</th></tr></thead>
-  <tbody>${rs.map(({x,data,sit})=>`<tr class="click" data-act="formReceb" data-id="${x.id}" data-valor="${x.valor}"><td data-v="${fmt(data)}">${fmt(data)}${x.recebidoEm?'':'<br><span class="meta">previsto</span>'}</td><td>${x.id}</td><td>${h(evento(x.eventoId).nome)}</td><td>${evento(x.eventoId).data?fmt(evento(x.eventoId).data):'—'}</td><td data-v="${h(evento(x.eventoId).centroCusto||'—')}">${h(evento(x.eventoId).centroCusto||'—')}</td><td>${h(x.origem)}</td><td style="white-space:normal;min-width:180px">${h(x.descricao)}</td><td>${h(x.forma)}</td>
-    <td data-v="${SIT[sit].nome}">${tagSit(sit)}</td><td data-v="${h(x.banco||'—')}">${x.banco?h(x.banco):'<span class="meta">—</span>'}</td><td class="right">${brl(x.valor)}</td><td data-v="${x.recebidoEm?'Recebido':sit==='atrasado'?'Atrasado':'A receber'}" style="white-space:nowrap">${x.recebidoEm?`<span class="meta">✓ Recebido em ${fmt(x.recebidoEm)}</span>`:`${sit==='atrasado'?'<span class="tag" style="background:var(--recusado)">⏰ Atrasado</span>':'<span class="tag" style="background:var(--aprovado)">A receber</span>'} <button class="btn sm" data-act="receber" data-id="${x.id}" title="Registrar o recebimento">Marcar como recebido</button>`}</td></tr>`).join('') || '<tr><td colspan="12" class="empty">Nenhum recebimento com esses filtros</td></tr>'}</tbody>
-  <tfoot><tr><td colspan="10"><b data-cnt="recebimentos">${rs.length} recebimentos</b></td><td class="right"><b data-tot>${brl(tot)}</b></td><td></td></tr></tfoot></table></div>`;
+  <div class="panel"><table class="filtravel" data-key="receber6"><thead><tr><th class="sel-col" title="Selecionar todos os recebimentos que aparecem na lista"><input type="checkbox" data-sel-todos></th><th>Data</th><th>Nº</th><th>Nome do evento</th><th>Data do evento</th><th class="right">Valor</th><th>Centro de custo</th><th>Origem</th><th>Descrição</th><th>Forma</th><th>Situação</th><th>Banco</th><th>Recebimento</th></tr></thead>
+  <tbody>${rs.map(({x,data,sit})=>`<tr class="click" data-act="formReceb" data-id="${x.id}" data-valor="${x.valor}"><td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${x.id}" ${SEL.has(x.id)?'checked':''}></td><td data-v="${fmt(data)}">${fmt(data)}${x.recebidoEm?'':'<br><span class="meta">previsto</span>'}</td><td>${x.id}</td><td>${h(evento(x.eventoId).nome)}</td><td>${evento(x.eventoId).data?fmt(evento(x.eventoId).data):'—'}</td><td class="right">${brl(x.valor)}</td><td data-v="${h(evento(x.eventoId).centroCusto||'—')}">${h(evento(x.eventoId).centroCusto||'—')}</td><td>${h(x.origem)}</td><td style="white-space:normal;min-width:180px">${h(x.descricao)}</td><td>${h(x.forma)}</td>
+    <td data-v="${SIT[sit].nome}">${tagSit(sit)}</td><td data-v="${h(x.banco||'—')}">${x.banco?h(x.banco):'<span class="meta">—</span>'}</td><td data-v="${x.recebidoEm?'Recebido':sit==='atrasado'?'Atrasado':'A receber'}" style="white-space:nowrap">${x.recebidoEm?`<span class="meta">✓ Recebido em ${fmt(x.recebidoEm)}</span>`:`${sit==='atrasado'?'<span class="tag" style="background:var(--recusado)">⏰ Atrasado</span>':'<span class="tag" style="background:var(--aprovado)">A receber</span>'} <button class="btn sm" data-act="receber" data-id="${x.id}" title="Registrar o recebimento">Marcar como recebido</button>`}</td></tr>`).join('') || '<tr><td colspan="13" class="empty">Nenhum recebimento com esses filtros</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="5"><b data-cnt="recebimentos">${rs.length} recebimentos</b></td><td class="right"><b data-tot>${brl(tot)}</b></td><td colspan="7"></td></tr></tfoot></table></div>`;
 }
 function csvReceber(){
-  const linhas = [['Data','Nº','Nome do evento','Data do evento','Centro de custo','Origem','Descrição','Forma','Situação','Banco','Valor']];
+  const linhas = [['Data','Nº','Nome do evento','Data do evento','Valor','Centro de custo','Origem','Descrição','Forma','Situação','Banco']];
   (db.recebimentos||[]).forEach(x=>{ const d=x.recebidoEm||x.previsto; if(!(passa(F.ano,d.slice(0,4))&&passa(F.mes,d.slice(5,7))&&passa(F.evento,x.eventoId))) return;
-    const e=evento(x.eventoId); linhas.push([fmt(d),x.id,e.nome,e.data?fmt(e.data):'',e.centroCusto||'',x.origem,x.descricao,x.forma,x.recebidoEm?'Recebido':(x.previsto<HOJE?'Atrasado':'A receber'),x.banco||'',x.valor.toFixed(2).replace('.',',')]); });
+    const e=evento(x.eventoId); linhas.push([fmt(d),x.id,e.nome,e.data?fmt(e.data):'',x.valor.toFixed(2).replace('.',','),e.centroCusto||'',x.origem,x.descricao,x.forma,x.recebidoEm?'Recebido':(x.previsto<HOJE?'Atrasado':'A receber'),x.banco||'']); });
   const csv = '\ufeff'+linhas.map(l=>l.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(';')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download = 'contas_a_receber.csv'; a.click();
 }
@@ -641,26 +646,26 @@ document.addEventListener('change', e => {
 function telaLista(){
   const lista = filtrar(visiveis()).sort((a,b)=>b.vencimento.localeCompare(a.vencimento));
   const tot = lista.filter(p=>!['recusado','cancelado'].includes(p.status)).reduce((a,p)=>a+p.valor,0);
-  const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0);
+  const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0), iv = cols.findIndex(c=>c.id==='valor');
   [...SEL].forEach(id=>{ if(!db.pedidos.some(p=>p.id===id)) SEL.delete(id); });
   return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
     ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
-  <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th>${c.nome}</th>`).join('')}<th class="right">Valor</th><th>Pagamento</th></tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${['recusado','cancelado'].includes(p.status) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}<td class="right">${brl(p.valor)}</td>${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n+1}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
-  <tfoot><tr><td colspan="${n-2}"><b data-cnt="pedidos">${lista.length} pedidos</b> · ${F.status.some(s=>['recusado','cancelado'].includes(s))?'total':'total válido (sem recusados/cancelados)'}</td><td class="right"><b data-tot>${brl(tot)}</b></td><td></td></tr></tfoot></table></div>`;
+  <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}<th>Pagamento</th></tr></thead>
+  <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${['recusado','cancelado'].includes(p.status) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
+  <tfoot><tr>${rodapeTotal((adm?1:0)+iv, cols.length-iv, `<b data-cnt="pedidos">${lista.length} pedidos</b> · ${F.status.some(s=>['recusado','cancelado'].includes(s))?'total':'total válido (sem recusados/cancelados)'}`, brl(tot))}</tr></tfoot></table></div>`;
 }
 // Tabela de pedidos com as mesmas colunas escolhidas na Lista (usada nas relações do dashboard e em Aprovações)
 function tabelaPedidos(lista, key, {extraCols=[], acoes=null, vazio='Nenhum pedido', cnt='pedido(s)'} = {}){
   const cols = [...colsLista(), ...extraCols.filter(c=>!colsLista().some(x=>x.id===c.id))];
-  const n = cols.length + 1 + (acoes?1:0), tot = lista.reduce((a,p)=>a+p.valor,0);
-  return `<table class="filtravel" data-key="${key}_${cols.map(c=>c.id).join('-')}"><thead><tr>${cols.map(c=>`<th>${c.nome}</th>`).join('')}<th class="right">Valor</th>${acoes?'<th></th>':''}</tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${p.valor}">${cols.map(c=>`<td${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}<td class="right"><b>${brl(p.valor)}</b></td>${acoes?`<td>${acoes(p)}</td>`:''}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">${vazio}</td></tr>`}</tbody>
-  <tfoot><tr><td colspan="${cols.length}"><b data-cnt="${cnt}">${lista.length} ${cnt}</b></td><td class="right"><b data-tot>${brl(tot)}</b></td>${acoes?'<td></td>':''}</tr></tfoot></table>`;
+  const n = cols.length + (acoes?1:0), tot = lista.reduce((a,p)=>a+p.valor,0), iv = cols.findIndex(c=>c.id==='valor');
+  return `<table class="filtravel" data-key="${key}_${cols.map(c=>c.id).join('-')}"><thead><tr>${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}${acoes?'<th></th>':''}</tr></thead>
+  <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${p.valor}">${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${acoes?`<td>${acoes(p)}</td>`:''}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">${vazio}</td></tr>`}</tbody>
+  <tfoot><tr>${rodapeTotal(iv, cols.length-iv-1+(acoes?1:0), `<b data-cnt="${cnt}">${lista.length} ${cnt}</b>`, brl(tot))}</tr></tfoot></table>`;
 }
 let colsRasc = null, colsTipo = 'lista';
 const COLS_CFG = {
-  lista:{titulo:'⚙ Colunas da lista', ajuda:'Marque as colunas que quer ver e use ↑ ↓ para mudar a ordem. A coluna Valor fica sempre no fim.', todas:()=>todasColsLista(), padrao:()=>LISTA_PADRAO, chave:'colsLista', ok:'Colunas da lista salvas'},
+  lista:{titulo:'⚙ Colunas da lista', ajuda:'Marque as colunas que quer ver e use ↑ ↓ para mudar a ordem. A coluna Valor fica sempre visível.', todas:()=>todasColsLista(), padrao:()=>LISTA_PADRAO, chave:'colsLista', ok:'Colunas da lista salvas'},
   card: {titulo:'⚙ Campos do card', ajuda:'Marque o que aparece em cada card do Kanban e use ↑ ↓ para mudar a ordem. O valor fica sempre no canto de cima.', todas:()=>todosCamposCard(), padrao:()=>CARD_PADRAO, chave:'camposCard', ok:'Campos do card salvos'},
 };
 function formColunas(){
@@ -1942,8 +1947,8 @@ function lerForm(fid){ const f=document.getElementById(fid); if(!f.reportValidit
 
 function exportarCSV(){
   const lista = filtrar(visiveis());
-  const linhas = [['Nº','Vencimento','Nome do evento','Data do evento','Centro de custo','Favorecido','CPF/CNPJ','Categoria','Forma','Valor','Status','Banco','Produtor','Descrição',...extras().map(c=>c.nome)]];
-  lista.forEach(p=>linhas.push([p.id,fmt(p.vencimento),evento(p.eventoId).nome,evento(p.eventoId).data?fmt(evento(p.eventoId).data):'',ccDe(p),pessoa(p.pessoaId).nome,pessoa(p.pessoaId).doc,p.categoria,p.forma,p.valor.toFixed(2).replace('.',','),STATUS[p.status].nome,bancoPed(p),user(p.criadoPor).nome,p.descricao,...extras().map(c=>valorExtra(p,c))]));
+  const linhas = [['Nº','Vencimento','Nome do evento','Data do evento','Valor','Centro de custo','Favorecido','CPF/CNPJ','Categoria','Forma','Status','Banco','Produtor','Descrição',...extras().map(c=>c.nome)]];
+  lista.forEach(p=>linhas.push([p.id,fmt(p.vencimento),evento(p.eventoId).nome,evento(p.eventoId).data?fmt(evento(p.eventoId).data):'',p.valor.toFixed(2).replace('.',','),ccDe(p),pessoa(p.pessoaId).nome,pessoa(p.pessoaId).doc,p.categoria,p.forma,STATUS[p.status].nome,bancoPed(p),user(p.criadoPor).nome,p.descricao,...extras().map(c=>valorExtra(p,c))]));
   const csv = '﻿'+linhas.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download = 'pedidos.csv'; a.click();
 }
@@ -2435,6 +2440,16 @@ Object.assign(acoes, {
     db.pedidos = db.pedidos.filter(p=>!ids.includes(p.id));
     (db.extrato||[]).forEach(t=>{ if(ids.includes(t.pedidoId)) delete t.pedidoId; });
     ids.forEach(id=>SEL.delete(id)); save(); fechar(); render(); toast(ids.length+(ids.length>1?' contas excluídas':' conta excluída')); },
+  excluirSelReceb: () => { if(!isAdmin()) return;
+    const ids = selVisiveis().filter(c=>c.checked).map(c=>c.dataset.sel); if(!ids.length) return;
+    const rs = (db.recebimentos||[]).filter(x=>ids.includes(x.id)), tot = rs.reduce((a,x)=>a+x.valor,0);
+    modal(`<h3>Excluir ${rs.length} recebimento${rs.length>1?'s':''}?</h3>
+    <p style="color:var(--muted);margin:0 0 10px">Total: <b style="color:var(--text)">${brl(tot)}</b>. Os recebimentos somem da lista, do dashboard e do fluxo de caixa. <b>Essa ação não pode ser desfeita.</b></p>
+    <div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px">${rs.map(x=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span>${h(x.id)} · ${h(x.descricao||'')} · ${h(evento(x.eventoId).nome)}</span><b>${brl(x.valor)}</b></div>`).join('')}</div>
+    <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" style="background:var(--recusado);border-color:var(--recusado)" data-act="confirmarExcluirSelReceb" data-id="${ids.join(',')}">Excluir ${rs.length} recebimento${rs.length>1?'s':''}</button></div>`, 520); },
+  confirmarExcluirSelReceb: idsTxt => { if(!isAdmin()) return; const ids = String(idsTxt||'').split(',').filter(Boolean);
+    db.recebimentos = (db.recebimentos||[]).filter(x=>!ids.includes(x.id));
+    ids.forEach(id=>SEL.delete(id)); save(); fechar(); render(); toast(ids.length+(ids.length>1?' recebimentos excluídos':' recebimento excluído')); },
   confirmarExcluirReceb: id => { if(!isAdmin()) return; db.recebimentos = db.recebimentos.filter(x=>x.id!==id); save(); fechar(); render(); toast(id+' excluído'); }
 });
 document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k){ FC[k] = [...e.target.selectedOptions].map(o=>o.value).filter(Boolean);
@@ -2444,7 +2459,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '6.0';
+const APP_VERSAO = '6.1';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
