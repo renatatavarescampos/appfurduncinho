@@ -161,7 +161,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     var linha = function(t, v){ return v ? '<dt>' + t + '</dt><dd>' + v + '</dd>' : ''; };
     var p2 = document.getElementById('passo2');
     p2.innerHTML = '<div class="passos"><span class="on"></span><span class="on"></span></div><h1>Confira os dados</h1><p class="intro">Veja se está tudo certo antes de enviar.</p><dl class="res">'
-      + linha('Quem está pedindo', esc(d.get('s_nome')) + ' · ' + esc(d.get('s_contato')))
+      + linha('Quem está pedindo', esc(d.get('s_nome')) + (d.get('s_contato') ? ' · ' + esc(d.get('s_contato')) : ''))
       + linha('Evento', esc(txtSel(fm, 'eventoId')))
       + linha('Favorecido', nova ? esc(d.get('p_nome')) + ' <small>(cadastro novo)</small>' : esc(txtSel(fm, 'pessoaId')))
       + linha('PIX', nova ? (esc(d.get('p_pix')) || (d.get('p_banco') ? esc(d.get('p_banco')) + ' · ag. ' + esc(d.get('p_agencia')) + ' · conta ' + esc(d.get('p_conta')) : '')) : (function(){ var f = (F.opcoes.favorecidos||[]).filter(function(x){ return x.id === d.get('pessoaId'); })[0]; return f && f.pix ? esc(f.pix) : '<span style="color:var(--cobre)">sem PIX no cadastro</span>'; })())
@@ -197,7 +197,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     var e2 = document.getElementById('msg2'); e2.style.display = 'none';
     var sit = document.querySelector('[name=situacao]:checked').value, pagoEm = document.getElementById('dataPago').value;
     if (sit === 'pago' && !pagoEm){ e2.textContent = 'Informe a data do pagamento.'; e2.style.display = 'block'; return; }
-    var conteudo = {solicitante:{nome:String(d.get('s_nome')).trim(), contato:String(d.get('s_contato')).trim()},
+    var conteudo = {solicitante:{nome:String(d.get('s_nome')||'').trim(), contato:String(d.get('s_contato')||'').trim(), usuarioId:String(d.get('s_usuario')||'')},
       eventoId:d.get('eventoId'), categoria:d.get('categoria')||'', valor:Number(d.get('valor')), vencimento:d.get('vencimento'), forma:d.get('forma'),
       descricao:String(d.get('descricao')||'').trim(), link:String(d.get('link')||'').trim(), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : ''};
     if (d.get('pessoaId') === '__novo__') conteudo.novaPessoa = pessoaDoForm(d); else conteudo.pessoaId = d.get('pessoaId');
@@ -281,8 +281,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Importar planilha</h1><p class="intro">Envie uma planilha Excel com vários pagamentos. Na próxima tela você confere tudo antes de enviar.</p>'
       + '<form id="fm" novalidate>'
       + '<div class="grupo">Quem está pedindo</div><div class="form">'
-      + '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
-      + '<label><span>Seu WhatsApp ou e-mail <b>*</b></span><input name="s_contato" required maxlength="120"></label>'
+      + camposSol(o)
       + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label></div>'
       + '<div class="grupo">Planilha</div>'
       + '<div class="arq" id="planBox">📊 Toque para escolher a planilha<small>Excel (.xlsx, .xls) ou .csv · uma linha por pagamento</small></div>'
@@ -412,8 +411,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Colar mensagem</h1><p class="intro">Copie a mensagem do WhatsApp e cole abaixo. Na próxima tela você confere o que foi entendido antes de enviar.</p>'
       + '<form id="fm" novalidate>'
       + '<div class="grupo">Quem está pedindo</div><div class="form">'
-      + '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
-      + '<label><span>Seu WhatsApp ou e-mail <b>*</b></span><input name="s_contato" required maxlength="120"></label>'
+      + camposSol(o)
       + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label></div>'
       + '<div class="grupo">Mensagem</div>'
       + '<label><span>Cole aqui o texto <b>*</b></span><textarea name="texto" id="txZap" required maxlength="8000" style="min-height:180px" placeholder="Exemplo:\nDJ Marcos - R$ 1.500,00 - 10/12\nGráfica Nova R$ 480 vence 15/12 pix grafica@nova.com"></textarea></label>'
@@ -453,7 +451,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
         + '</td><td class="pixc"' + (i.novaPessoa ? ' data-nk="' + esc(semAcento(i.nome)) + '"' : '') + '>' + pixDe(i) + '</td><td class="r"><b>' + (i.valor > 0 ? brl(i.valor) : '—') + '</b><div class="sub">' + (fmt(i.vencimento) || '—') + '</div></td></tr>'; }).join('')
       + '</tbody><tfoot><tr><td colspan="2">' + itens.length + (itens.length > 1 ? ' pagamentos' : ' pagamento') + '</td><td class="r">' + brl(total) + '</td></tr></tfoot></table></div>';
     p2.innerHTML = '<div class="passos"><span class="on"></span><span class="on"></span></div><h1>Confira os dados</h1><p class="intro">Veja se está tudo certo antes de enviar.</p><dl class="res">'
-      + '<dt>Quem está pedindo</dt><dd>' + esc(d.get('s_nome')) + ' · ' + esc(d.get('s_contato')) + '</dd>'
+      + '<dt>Quem está pedindo</dt><dd>' + esc(d.get('s_nome')) + (d.get('s_contato') ? ' · ' + esc(d.get('s_contato')) : '') + '</dd>'
       + '<dt>Evento</dt><dd>' + esc(txtSel(fm, 'eventoId')) + '</dd>'
       + (modo === 'texto' ? '' : '<dt>Planilha</dt><dd>📊 ' + esc(PLAN.name) + '</dd>')
       + (ARQS.length ? '<dt>' + (modo === 'texto' ? 'Anexos' : 'Outros anexos') + '</dt><dd>' + ARQS.map(function(f){ return '📄 ' + esc(f.name); }).join('<br>') + '</dd>' : '')
@@ -537,7 +535,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     var sit = document.querySelector('[name=situacao]:checked').value, pagoEm = document.getElementById('dataPago').value;
     if (sit === 'pago' && !pagoEm){ e2.textContent = 'Informe a data do pagamento.'; e2.style.display = 'block'; return; }
     var bt = document.getElementById('btConf'), bv = document.getElementById('btVolta'); bt.disabled = bv.disabled = true; bt.textContent = 'Enviando arquivos…';
-    var base = {solicitante:{nome:String(d.get('s_nome')).trim(), contato:String(d.get('s_contato')).trim()}, eventoId:d.get('eventoId'), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : ''};
+    var base = {solicitante:{nome:String(d.get('s_nome')||'').trim(), contato:String(d.get('s_contato')||'').trim(), usuarioId:String(d.get('s_usuario')||'')}, eventoId:d.get('eventoId'), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : ''};
     if (modo === 'texto') base.colado = true; else base.importado = PLAN.name;
     var lista = itens.map(function(i){ var x = {valor:i.valor, vencimento:i.vencimento, forma:i.forma, categoria:i.categoria || '', descricao:i.descricao}; if (i.pessoaId) x.pessoaId = i.pessoaId; else x.novaPessoa = i.novaPessoa; return x; });
     var sobe = LOTE.anexos ? Promise.resolve(LOTE.anexos) : !PLAN ? subirArquivos() : (ARQS.unshift(PLAN), subirArquivos().then(function(a){ ARQS.shift(); return a; }, function(e){ ARQS.shift(); throw e; }));
@@ -550,6 +548,14 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       bt.disabled = bv.disabled = false; bt.textContent = 'Confirmar e enviar ' + itens.length;
       e2.textContent = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message; e2.style.display = 'block'; });
   }
+  // "Seu nome": lista da Equipe quando o app mandou a lista; senão, campo livre
+  function camposSol(o){
+    var eq = (o && o.equipe) || [];
+    if (!eq.length) return '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
+      + '<label><span>Seu WhatsApp ou e-mail <b>*</b></span><input name="s_contato" required maxlength="120"></label>';
+    return '<label class="full"><span>Seu nome <b>*</b></span><select name="s_usuario" required onchange="var o=this.options[this.selectedIndex];this.form.s_nome.value=this.value?o.text:\'\'"><option value="">Selecione…</option>'
+      + eq.map(function(u){ return '<option value="' + esc(u.id) + '">' + esc(u.nome) + '</option>'; }).join('') + '</select><input type="hidden" name="s_nome"></label>';
+  }
   function telaPedido(o){
     var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
     var fav = (o.favorecidos||[]).map(function(p){ return '<option value="' + esc(p.id) + '">' + esc(p.nome) + '</option>'; }).join('');
@@ -559,8 +565,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Novo pagamento</h1><p class="intro">Preencha os dados abaixo. Na próxima tela você confere tudo antes de enviar.</p>'
       + '<form id="fm" novalidate>'
       + '<div class="grupo">Quem está pedindo</div><div class="form">'
-      + '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
-      + '<label><span>Seu WhatsApp ou e-mail <b>*</b></span><input name="s_contato" required maxlength="120"></label></div>'
+      + camposSol(o) + '</div>'
       + '<div class="grupo">Pagamento</div><div class="form">'
       + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label>'
       + '<label class="full"><span>Favorecido (quem vai receber) <b>*</b></span><select name="pessoaId" id="selFav" required><option value="">Selecione…</option>' + fav + '<option value="__novo__">➕ Não está na lista: cadastrar agora</option></select></label>'
@@ -605,7 +610,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     } else {
       var valor = Number(d.get('valor'));
       if (!(valor > 0)) return erro('Informe um valor maior que zero.');
-      conteudo = {solicitante:{nome:String(d.get('s_nome')).trim(), contato:String(d.get('s_contato')).trim()},
+      conteudo = {solicitante:{nome:String(d.get('s_nome')||'').trim(), contato:String(d.get('s_contato')||'').trim(), usuarioId:String(d.get('s_usuario')||'')},
         eventoId:d.get('eventoId'), categoria:d.get('categoria'), valor:valor, vencimento:d.get('vencimento'), forma:d.get('forma'),
         descricao:String(d.get('descricao')||'').trim(), link:String(d.get('link')||'').trim()};
       if (d.get('pessoaId') === '__novo__'){ var np = pessoaDoForm(d); if (typeof np === 'string') return erro(np); conteudo.novaPessoa = np; }

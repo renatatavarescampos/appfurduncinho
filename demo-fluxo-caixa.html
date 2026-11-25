@@ -1880,7 +1880,8 @@ function opcoesForm(tipo){
   return {...base,
     eventos: [...db.eventos].filter(e=>!e.data || e.data >= desde).sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(e=>({id:e.id, nome:e.nome, data:e.data||''})),
     favorecidos: db.pessoas.filter(p=>p.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(p=>({id:p.id, nome:p.nome, pix:pixMascarado(p)})),
-    categorias: [...db.categorias], formas: [...FORMAS]};
+    categorias: [...db.categorias], formas: [...FORMAS],
+    equipe: db.users.filter(u=>u.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(u=>({id:u.id, nome:u.nome}))};
 }
 // cria (ou atualiza as opções de) o link deste cliente no banco
 async function garantirForm(tipo, novo){
@@ -1936,7 +1937,7 @@ async function puxarEnvios(){
     let np = 0, nc = 0;
     rows.sort((a,b)=>String(a.criado_em).localeCompare(String(b.criado_em))).forEach(r=>{
       const c = r.conteudo || {}, t = k => String(c[k] ?? '').trim().slice(0, 500);
-      const sol = c.solicitante || {}, solNome = String(sol.nome||'').trim().slice(0,120) || 'Sem nome', solCont = String(sol.contato||'').trim().slice(0,120);
+      const sol = c.solicitante || {}, solU = sol.usuarioId && db.users.find(u=>u.id===sol.usuarioId), solNome = (solU ? solU.nome : String(sol.nome||'').trim().slice(0,120)) || 'Sem nome', solCont = solU ? (solU.tel || solU.email || '') : String(sol.contato||'').trim().slice(0,120);
       const pessoaDe = np0 => {
         if (!np0) return null;
         const d = k => String(np0[k] ?? '').trim().slice(0, 200), dig = d('doc').replace(/\D/g,'');
@@ -1961,7 +1962,7 @@ async function puxarEnvios(){
       const p = {id:'PG-'+String(db.seq++).padStart(4,'0'), eventoId: db.eventos.some(e=>e.id===c.eventoId) ? c.eventoId : '', pessoaId: pes ? pes.id : '',
         categoria:t('categoria'), valor, vencimento: /^\d{4}-\d{2}-\d{2}$/.test(t('vencimento')) ? t('vencimento') : HOJE, forma: FORMAS.includes(t('forma')) ? t('forma') : FORMAS[0],
         descricao:t('descricao'), link:urlOk(t('link')), centroCusto:'', extras:{}, status: jaPago ? 'pago' : 'aguardando', ...(jaPago?{pagoEm}:{}), criadoPor:me.id, criadoEm:HOJE,
-        solicitante:{nome:solNome, contato:solCont}, anexos,
+        solicitante:{nome:solNome, contato:solCont, ...(solU?{usuarioId:solU.id}:{})}, anexos,
         historico:[{quando:agora(), quem:me.id, acao:`Recebido pelo formulário por link — enviado por ${solNome}${solCont?' ('+solCont+')':''}` + (c.importado ? ` · importado da planilha ${String(c.importado).slice(0,80)}` : '') + (c.colado ? ' · colado de uma mensagem do WhatsApp' : '') + (jaPago ? ` · informado como já pago em ${fmt(pagoEm)}` : ' · solicitação de pagamento')}]};
       db.pedidos.push(p); np++;
       });
