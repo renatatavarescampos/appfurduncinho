@@ -97,6 +97,7 @@ label.cb{position:relative}
 .sug .op.nv{color:var(--cobre);font-weight:600;border-bottom:0}.sug .vz{padding:10px 12px;color:var(--muted);font-size:13px}
 .stFav{font-size:12px;margin-top:2px;color:var(--muted)}.stFav.ok{color:#15803d}.stFav a,.qm{color:var(--cobre);font-weight:600;text-decoration:underline;cursor:pointer}
 .qm{font-size:12px;display:inline-block;margin-top:3px}
+.msgAprov{white-space:pre-wrap;text-align:left;background:#efbb3c14;border:1px solid #efbb3c66;border-radius:12px;padding:12px 14px;font-size:13px;color:var(--verde);max-height:260px;overflow:auto;overflow-wrap:anywhere}
 .erroCad .usaFav{margin-top:10px;width:auto;padding:10px 16px;font-size:13.5px}
 .rodape{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
 @media (max-width:560px){ .form{grid-template-columns:1fr} h1{font-size:24px} }
@@ -227,20 +228,26 @@ label.cb{position:relative}
         e2.textContent = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message; e2.style.display = 'block'; });
   }
   // mensagem pronta para pedir a aprovação pelo WhatsApp
+  function linkAprovacao(){ var c = (F.opcoes || {}).cliente; return location.href.replace(/[?#].*$/, '').replace(/[^\/]*$/, '') + 'demo-fluxo-caixa.html?' + (c ? 'c=' + encodeURIComponent(c) + '&' : '') + 'aprovar=1'; }
+  function copiarTexto(t){ if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t); return new Promise(function(ok, falha){ var a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); try { document.execCommand('copy') ? ok() : falha(); } catch(e){ falha(e); } a.remove(); }); }
   function textoAprovacao(sol, eventoId, itens){
     var o = F.opcoes || {}, ev = (o.eventos||[]).filter(function(e){ return e.id === eventoId; })[0];
     var favN = function(i){ if (i.novaPessoa) return i.novaPessoa.nome + ' (cadastro novo)'; var f = (o.favorecidos||[]).filter(function(x){ return x.id === i.pessoaId; })[0]; return f ? f.nome : ''; };
     var total = itens.reduce(function(t, i){ return t + (Number(i.valor) || 0); }, 0);
     return 'Olá! Enviei ' + (itens.length > 1 ? itens.length + ' pedidos de pagamento' : '1 pedido de pagamento') + (o.empresa ? ' da ' + o.empresa : '') + (ev ? ', evento ' + ev.nome : '') + ', e preciso da sua aprovação:\n\n'
       + itens.slice(0, 30).map(function(i){ return '• ' + favN(i) + ': ' + brl(i.valor) + (i.vencimento ? ', vence ' + fmt(i.vencimento) : ''); }).join('\n')
-      + (itens.length > 30 ? '\n• … e mais ' + (itens.length - 30) : '') + (itens.length > 1 ? '\n\nTotal: ' + brl(total) : '') + '\n\nPedido por ' + sol + '. Pode aprovar no app de pagamentos?';
+      + (itens.length > 30 ? '\n• … e mais ' + (itens.length - 30) : '') + (itens.length > 1 ? '\n\nTotal: ' + brl(total) : '') + '\n\nPedido por ' + sol + '. Para ver tudo o que está esperando aprovação e aprovar, abra:\n' + linkAprovacao();
   }
   function sucesso(nome, sit, qtd, aprov){
     cx.innerHTML = '<div class="ok"><div class="ic">✅</div><h1>' + (F.tipo === 'cadastro' ? 'Cadastro enviado!' : qtd ? (qtd + (qtd > 1 ? (sit === 'pago' ? ' pagamentos registrados!' : ' pedidos enviados!') : (sit === 'pago' ? ' pagamento registrado!' : ' pedido enviado!'))) : sit === 'pago' ? 'Pagamento registrado!' : 'Pedido enviado!') + '</h1>'
       + '<p class="intro">Obrigado, <b>' + esc(nome) + '</b>. ' + (F.tipo === 'cadastro' ? 'Seus dados foram recebidos pela equipe financeira.' : sit === 'pago' ? 'O registro foi enviado para a equipe financeira conferir.' : qtd > 1 ? 'Os pedidos foram recebidos e vão para aprovação da equipe financeira.' : 'O pedido foi recebido e vai para aprovação da equipe financeira.') + '</p>'
-      + (aprov && sit !== 'pago' ? '<a class="btn" id="btAprov" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none" href="https://wa.me/?text=' + encodeURIComponent(aprov) + '">📲 Solicitar aprovação</a><p class="ajuda" style="margin:8px 0 12px;text-align:center">Abre o WhatsApp com o resumo pronto. É só escolher quem aprova e enviar.</p>' : '')
+      + (aprov && sit !== 'pago' ? '<div class="grupo" style="margin-top:4px">Solicitar aprovação</div><div class="msgAprov" id="txAprov"></div>'
+        + '<div class="lado" style="margin-top:12px"><button type="button" class="btn sec" id="btCopiar">📋 Copiar mensagem e link</button><a class="btn" id="btAprov" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="https://wa.me/?text=' + encodeURIComponent(aprov) + '">📲 Enviar pelo WhatsApp</a></div>'
+        + '<p class="ajuda" style="margin:8px 0 16px;text-align:center">O link abre o app direto na lista de tudo o que está esperando aprovação.</p>' : '')
       + '<button class="btn sec" id="btOutro">' + (F.tipo === 'cadastro' ? 'Cadastrar outra pessoa' : 'Enviar outro') + '</button></div>';
     document.getElementById('btOutro').onclick = montar; window.scrollTo(0,0);
+    var tx = document.getElementById('txAprov'); if (tx) tx.textContent = aprov;
+    var bc = document.getElementById('btCopiar'); if (bc) bc.onclick = function(){ copiarTexto(aprov).then(function(){ bc.textContent = '✓ Copiado! Cole no WhatsApp ou e-mail'; setTimeout(function(){ bc.textContent = '📋 Copiar mensagem e link'; }, 4000); }, function(){ bc.textContent = 'Não consegui copiar. Selecione o texto acima.'; }); };
   }
   // ---------- tela inicial: manual ou importar ----------
   function telaInicio(o){
