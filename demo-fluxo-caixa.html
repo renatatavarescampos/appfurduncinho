@@ -10,7 +10,7 @@
 :root{
   --bg:#f4efeb;--card:#fff;--text:#002620;--muted:#002620b3;--line:#c37f3640;
   --brand:#002620;--brand-soft:#efbb3c33;
-  --aguardando:#efbb3c;--aprovado:#c37f36;--pago:#002620;--recusado:#702b16;--cancelado:#0026208c;
+  --aguardando:#efbb3c;--aprovado:#c37f36;--pago:#002620;--recusado:#ef4444;--cancelado:#0026208c;
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
@@ -34,7 +34,7 @@ h2{margin:0 0 12px;font-size:18px}
 .btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
 .btn.ok{background:var(--pago);border-color:var(--pago);color:#fff}
 .btn.blue{background:var(--aprovado);border-color:var(--aprovado);color:#fff}
-.btn.bad{color:var(--recusado);border-color:#702b1633}
+.btn.bad{color:var(--recusado);border-color:#ef444433}
 .btn.sm{padding:4px 8px;font-size:12px}
 .spacer{flex:1}
 /* Kanban */
@@ -73,7 +73,7 @@ tr.click:hover td{background:#f4efeb}
 .hist-item{border-top:1px solid var(--line);padding:10px 0}
 .hist-item:first-of-type{border-top:0}
 .hist-x{position:absolute;top:8px;right:0;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:18px;line-height:1;cursor:pointer}
-.hist-x:hover{background:#702b1614;color:var(--recusado);border-color:#702b1633}
+.hist-x:hover{background:#ef444414;color:var(--recusado);border-color:#ef444433}
 .hist-tab{margin:6px 0 0 4px;width:auto}
 .hist-tab td{border:0;padding:2px 8px 2px 0;white-space:normal;font-size:13px}
 .kpi.click{cursor:pointer;transition:border-color .15s,box-shadow .15s}
@@ -185,12 +185,12 @@ tr.click:hover td{background:#f4efeb}
 .fc-plan td.click:hover{outline:2px solid var(--brand);outline-offset:-2px}
 .fc-plan tr.r-ini td,.fc-plan tr.r-ini th{color:var(--muted)}
 .fc-plan tr.r-sec th,.fc-plan tr.r-sec td{background:#f4efeb;font-weight:700}
-.fc-plan tr.r-pag th,.fc-plan tr.r-pag td{background:#702b1626;font-weight:700}
+.fc-plan tr.r-pag th,.fc-plan tr.r-pag td{background:#ef444426;font-weight:700}
 .fc-plan tr.r-atr th{font-style:italic}
 .fc-plan tr.r-saldo th,.fc-plan tr.r-saldo td{background:#002620;color:#fff;font-weight:700}
-.fc-plan tr.r-saldo td.neg{background:#702b16}
+.fc-plan tr.r-saldo td.neg{background:#ef4444}
 .fc-plan tr.r-ent th,.fc-plan tr.r-ent td{background:#00262012}
-.fc-plan tr.r-sai th,.fc-plan tr.r-sai td{background:#702b1614}
+.fc-plan tr.r-sai th,.fc-plan tr.r-sai td{background:#ef444414}
 .fc-mes .lab{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 @media (max-width:760px){
   table.cards thead{display:block}
@@ -699,7 +699,7 @@ function telaDash(){
       return `<div data-act="pagosEvento" data-id="${x.e.id}" style="flex:1;min-width:52px;max-width:160px;display:flex;flex-direction:column;cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Receita: ${brl(x.receita)}&#10;Custo: ${brl(x.custo)}&#10;Lucro: ${brl(x.lucro)}">
         <div style="height:${topo}%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch">${pos?`<div style="font-size:10px;color:#002620;text-align:center;font-weight:600">${brlK(x.lucro)}</div><div style="height:${alt/topo*100}%;background:#002620;border-radius:4px 4px 0 0;min-height:2px"></div>`:''}</div>
         <div style="border-top:1px solid #0026208c"></div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:stretch">${!pos?`<div style="height:${alt/(100-topo||1)*100}%;background:#702b16;border-radius:0 0 4px 4px"></div><div style="font-size:10px;color:#702b16;text-align:center;font-weight:600">-${brlK(-x.lucro)}</div>`:''}</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:stretch">${!pos?`<div style="height:${alt/(100-topo||1)*100}%;background:#ef4444;border-radius:0 0 4px 4px"></div><div style="font-size:10px;color:#ef4444;text-align:center;font-weight:600">-${brlK(-x.lucro)}</div>`:''}</div>
         <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h(x.e.nome)}</div>
         <div style="font-size:10px;color:var(--muted);text-align:center">${(LF.serie?fmt(x.e.data):fmt(x.e.data).slice(0,5))}</div></div>`; }).join('')}</div></div>${lucroEv.length>5?'<div class="dica-rola">↔ Deslize o gráfico para o lado para ver todos os eventos</div>':''}`
     : '<div class="empty">Nenhum evento neste período</div>';
@@ -719,15 +719,15 @@ function telaDash(){
     const ticks = [mx, (mx+mn)/2, mn];
     return `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <div class="toolbar" style="margin:0 0 4px"><b>Tendência do lucro</b><div class="spacer"></div>
-        <span class="tag" style="background:${sobe?'#002620':'#702b16'};font-size:12px;padding:4px 10px">${sobe?'▲ Lucro subindo':'▼ Lucro descendo'}</span>
-        <span class="meta">Último evento × anterior: <b style="color:${dif>=0?'#002620':'#702b16'}">${dif>=0?'+':''}${brl(dif)}</b></span></div>
+        <span class="tag" style="background:${sobe?'#002620':'#ef4444'};font-size:12px;padding:4px 10px">${sobe?'▲ Lucro subindo':'▼ Lucro descendo'}</span>
+        <span class="meta">Último evento × anterior: <b style="color:${dif>=0?'#002620':'#ef4444'}">${dif>=0?'+':''}${brl(dif)}</b></span></div>
       <div class="graf-rola"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block;max-width:none">
         ${ticks.map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#f4efeb"/><text x="${pl-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="#002620b3">${brlK(v)}</text>`).join('')}
         ${mn<0?`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="#0026208c"/>`:''}
-        <line x1="${X(0)}" y1="${Y(t0)}" x2="${X(n-1)}" y2="${Y(t1)}" stroke="${sobe?'#002620':'#702b16'}" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
+        <line x1="${X(0)}" y1="${Y(t0)}" x2="${X(n-1)}" y2="${Y(t1)}" stroke="${sobe?'#002620':'#ef4444'}" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
         <polyline fill="none" stroke="#002620" stroke-width="3" stroke-linejoin="round" points="${vs.map((v,i)=>X(i)+','+Y(v)).join(' ')}"/>
-        ${lucroEv.map((x,i)=>`<g data-act="pagosEvento" data-id="${x.e.id}" style="cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Lucro: ${brl(x.lucro)}"><circle cx="${X(i)}" cy="${Y(x.lucro)}" r="6" fill="${x.lucro>=0?'#002620':'#702b16'}" stroke="#fff" stroke-width="2"/>
-          <text x="${X(i)}" y="${Y(x.lucro)-10}" text-anchor="middle" font-size="11" font-weight="600" fill="${x.lucro>=0?'#002620':'#702b16'}">${brlK(x.lucro)}</text>
+        ${lucroEv.map((x,i)=>`<g data-act="pagosEvento" data-id="${x.e.id}" style="cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Lucro: ${brl(x.lucro)}"><circle cx="${X(i)}" cy="${Y(x.lucro)}" r="6" fill="${x.lucro>=0?'#002620':'#ef4444'}" stroke="#fff" stroke-width="2"/>
+          <text x="${X(i)}" y="${Y(x.lucro)-10}" text-anchor="middle" font-size="11" font-weight="600" fill="${x.lucro>=0?'#002620':'#ef4444'}">${brlK(x.lucro)}</text>
           <text x="${X(i)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#002620b3">${h(x.e.nome.length>(estreito?11:16)?x.e.nome.slice(0,estreito?10:15)+'…':x.e.nome)}</text></g>`).join('')}
       </svg></div>
       <div class="meta">Linha escura: lucro de cada evento, em ordem de data. Linha tracejada: tendência (${sobe?'subindo':'descendo'} em média ${brl(Math.abs(slope))} por evento).</div></div>`;
@@ -764,7 +764,7 @@ function telaDash(){
     <select data-lf="serie" title="Evento (todas as edições)" style="padding:5px 8px;border:1px solid var(--line);border-radius:8px"><option value="">Todos os eventos</option>${[...new Set(db.eventos.map(serieDe))].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(x=>{const n=db.eventos.filter(e=>serieDe(e)===x).length;return `<option value="${h(x)}" ${LF.serie===x?'selected':''}>${h(x)}${n>1?' ('+n+' edições)':''}</option>`;}).join('')}</select>
     ${LF.cc||LF.serie?'<button class="btn sm" data-act="lucroLimpar">✕ Limpar</button>':''}<div class="spacer"></div>
     ${DASH_VIS==='lucro'
-      ? `<div class="legend"><span><i class="dot" style="background:#002620"></i>Lucro</span><span><i class="dot" style="background:#702b16"></i>Prejuízo</span><span>Total do período: <b style="color:${lucroTotal>=0?'#002620':'#702b16'}">${brl(lucroTotal)}</b></span></div></div>`
+      ? `<div class="legend"><span><i class="dot" style="background:#002620"></i>Lucro</span><span><i class="dot" style="background:#ef4444"></i>Prejuízo</span><span>Total do período: <b style="color:${lucroTotal>=0?'#002620':'#ef4444'}">${brl(lucroTotal)}</b></span></div></div>`
       : `<div class="legend"><span><i class="dot" style="background:var(--pago)"></i>Pago</span><span><i class="dot" style="background:var(--aprovado)"></i>A pagar</span><span><i class="dot" style="background:var(--aguardando)"></i>Aguardando aprovação</span></div></div>`}
     ${DASH_VIS==='lucro'
       ? `${F.mes.length&&!LF.serie?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 0">${MESES.map((m,i)=>{const mm=String(i+1).padStart(2,'0');return `<button class="btn sm ${F.mes.includes(mm)?'pri':''}" data-act="lucroMesSel" data-id="${mm}">${m}</button>`;}).join('')}</div>`:''}${graficoLucro}<div class="meta">Lucro = receitas do evento (recebidas e a receber) − custos (pedidos válidos). ${LF.serie?'Mostrando todas as edições deste evento, de todos os anos.':'Escolha o ano e o mês nos filtros de cima: no mês, entram só os eventos daquele mês.'} Filtre por centro de custo ou por evento para comparar edições. Clique em um evento para ver as movimentações.</div>${linhaLucro}`
@@ -807,10 +807,10 @@ function verAtrasos(){
               ...recs.map(r=>({ent:true, x:r, d:r.previsto, quem:r.origem, oque:r.descricao||'', sit:'A receber', cor:'var(--aprovado)'}))].sort((a,b)=>a.d.localeCompare(b.d));
   const sm = l => l.reduce((a,x)=>a+x.valor,0);
   modal(`<h3>⏰ Atrasados</h3>
-  <p class="meta" style="margin:-8px 0 12px">A pagar vencido: <b style="color:#702b16">${brl(sm(pags))}</b> (${pags.length})${isProd()?'':` · A receber atrasado: <b style="color:#c37f36">${brl(sm(recs))}</b> (${recs.length})`} · clique em uma linha para abrir</p>
+  <p class="meta" style="margin:-8px 0 12px">A pagar vencido: <b style="color:#ef4444">${brl(sm(pags))}</b> (${pags.length})${isProd()?'':` · A receber atrasado: <b style="color:#c37f36">${brl(sm(recs))}</b> (${recs.length})`} · clique em uma linha para abrir</p>
   <div style="overflow-x:auto"><table class="filtravel" data-key="atrasos" style="font-size:13px"><thead><tr><th>Tipo</th><th>Vencimento</th><th>Atraso</th><th>Nome do evento</th><th>Favorecido / Origem</th><th>Categoria / Descrição</th><th>Situação</th><th class="right">Valor</th></tr></thead>
   <tbody>${ms.map(m=>{ const dias = Math.round(diasEntre(m.d, HOJE)); return `<tr class="click" data-act="${m.ent?'formReceb':'ver'}" data-id="${m.x.id}" data-valor="${m.x.valor}">
-    <td data-v="${m.ent?'A receber':'A pagar'}"><span class="tag" style="background:${m.ent?'#002620':'#702b16'}">${m.ent?'⬆ A receber':'⬇ A pagar'}</span></td><td>${fmt(m.d)}</td><td data-v="${dias}"><b style="color:var(--recusado)">${dias} dia(s)</b></td>
+    <td data-v="${m.ent?'A receber':'A pagar'}"><span class="tag" style="background:${m.ent?'#002620':'#ef4444'}">${m.ent?'⬆ A receber':'⬇ A pagar'}</span></td><td>${fmt(m.d)}</td><td data-v="${dias}"><b style="color:var(--recusado)">${dias} dia(s)</b></td>
     <td>${h(evento(m.x.eventoId).nome)}</td><td>${h(m.quem)}<br><span class="meta" style="font-size:11px">${m.x.id}</span></td><td style="white-space:normal;min-width:120px">${h(m.oque)}</td><td data-v="${m.sit}"><span class="tag" style="background:${m.cor}">${m.sit}</span></td><td class="right"><b>${brl(m.x.valor)}</b></td></tr>`; }).join('') || '<tr><td colspan="8" class="empty">Nenhum atraso 🎉</td></tr>'}</tbody>
   <tfoot><tr><td colspan="7"><b data-cnt="atraso(s)">${ms.length} atraso(s)</b></td><td class="right"><b data-tot>${brl(sm(pags)+sm(recs))}</b></td></tr></tfoot></table></div>
   <div class="actions"><button class="btn" data-act="fechar">Fechar</button></div>`, 1200);
@@ -831,13 +831,13 @@ function pagosEvento(id){
       const recs = (db.recebimentos||[]).filter(r=>r.eventoId===id && r.status!=='cancelado');
       const recebido = recs.filter(r=>r.recebidoEm).reduce((a,r)=>a+r.valor,0), aReceber = recs.filter(r=>!r.recebidoEm).reduce((a,r)=>a+r.valor,0);
       const pago = st('pago'), aPagar = st('aprovado')+st('aguardando');
-      const linhas = isProd() ? [['Pago', pago, '#702b16', aPagar?'+ '+brl(aPagar)+' a pagar':'']] : [['Recebido', recebido, '#002620', aReceber?'+ '+brl(aReceber)+' a receber':''], ['Pago', pago, '#702b16', aPagar?'+ '+brl(aPagar)+' a pagar':'']];
+      const linhas = isProd() ? [['Pago', pago, '#ef4444', aPagar?'+ '+brl(aPagar)+' a pagar':'']] : [['Recebido', recebido, '#002620', aReceber?'+ '+brl(aReceber)+' a receber':''], ['Pago', pago, '#ef4444', aPagar?'+ '+brl(aPagar)+' a pagar':'']];
       const mx = Math.max(1, ...linhas.map(l=>l[1]));
       const res = recebido - pago;
       return linhas.map(([n,v,cor,obs])=>`<div class="hbar"><div class="name"><b>${n}</b></div><div class="track" style="height:18px"><div class="fill" style="width:${v/mx*100}%;background:${cor};height:100%"></div></div><div class="right"><b>${brl(v)}</b>${obs?`<br><span class="meta" style="font-size:11px">${obs}</span>`:''}</div></div>`).join('')
-        + `<div class="legend" style="margin:6px 0 12px">${isProd()?'':`<span>Resultado (recebido − pago): <b style="color:${res>=0?'#002620':'#702b16'}">${brl(res)}</b></span>`}${e.orcamento?`<span>Orçamento: <b>${brl(e.orcamento)}</b> (${(todos.reduce((a,p)=>a+p.valor,0)/e.orcamento*100).toFixed(0)}% usado)</span>`:''}</div>`;
+        + `<div class="legend" style="margin:6px 0 12px">${isProd()?'':`<span>Resultado (recebido − pago): <b style="color:${res>=0?'#002620':'#ef4444'}">${brl(res)}</b></span>`}${e.orcamento?`<span>Orçamento: <b>${brl(e.orcamento)}</b> (${(todos.reduce((a,p)=>a+p.valor,0)/e.orcamento*100).toFixed(0)}% usado)</span>`:''}</div>`;
     })()}
-    ${cats.length?`<b style="font-size:13px">Pago por categoria</b>${cats.map(([c,v])=>`<div class="hbar"><div class="name" title="${h(c)}">${h(c)}</div><div class="track"><div class="fill" style="width:${v/mxCat*100}%;background:#702b1680"></div></div><div class="right">${brl(v)}</div></div>`).join('')}`:''}
+    ${cats.length?`<b style="font-size:13px">Pago por categoria</b>${cats.map(([c,v])=>`<div class="hbar"><div class="name" title="${h(c)}">${h(c)}</div><div class="track"><div class="fill" style="width:${v/mxCat*100}%;background:#ef444480"></div></div><div class="right">${brl(v)}</div></div>`).join('')}`:''}
   </div>` : '';
   // todas as movimentações do evento: saídas (pedidos válidos) e entradas (recebimentos)
   const recsEv = isProd() ? [] : (db.recebimentos||[]).filter(r=>r.eventoId===id && r.status!=='cancelado');
@@ -850,13 +850,13 @@ function pagosEvento(id){
   const totEnt = movs.filter(m=>m.tipo==='entrada').reduce((a,m)=>a+m.valor,0), totSai = movs.filter(m=>m.tipo==='saida').reduce((a,m)=>a+m.valor,0);
   const tabMov = `<table class="filtravel" data-key="movEvento" style="font-size:13px"><thead><tr><th>Data</th><th>Tipo</th><th>Nº</th><th>Favorecido / Origem</th><th>Categoria / Descrição</th><th>Centro de custo</th><th>Situação</th><th>Banco</th><th class="right">Valor</th></tr></thead>
   <tbody>${movs.map(m=>{ const ent=m.tipo==='entrada', x=m.ref; return `<tr class="click" data-act="${ent?'formReceb':'ver'}" data-id="${x.id}" data-valor="${ent?m.valor:-m.valor}">
-    <td data-v="${fmt(m.data)}">${fmt(m.data)}</td><td data-v="${ent?'Recebimento':'Pagamento'}"><span class="tag" style="background:${ent?'#002620':'#702b16'}">${ent?'⬆ Recebimento':'⬇ Pagamento'}</span></td><td>${x.id}</td>
+    <td data-v="${fmt(m.data)}">${fmt(m.data)}</td><td data-v="${ent?'Recebimento':'Pagamento'}"><span class="tag" style="background:${ent?'#002620':'#ef4444'}">${ent?'⬆ Recebimento':'⬇ Pagamento'}</span></td><td>${x.id}</td>
     <td>${h(m.quem)}</td><td style="white-space:normal;min-width:150px">${h(m.oque)}</td><td>${h(ent?(e.centroCusto||'—'):(ccDe(x)||'—'))}</td>
     <td data-v="${m.sit}"><span class="tag" style="background:${m.cor}">${m.sit}</span></td><td data-v="${h(m.banco||'—')}">${m.banco?h(m.banco):'<span class="meta">—</span>'}</td>
-    <td class="right" style="color:${ent?'#002620':'#702b16'};white-space:nowrap"><b>${ent?'+ ':'− '}${brl(m.valor)}</b></td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">Nenhuma movimentação neste evento</td></tr>'}</tbody>
-  <tfoot><tr><td colspan="8"><b data-cnt="movimentação(ões)">${movs.length} movimentação(ões)</b> · entradas <b style="color:#002620">${brl(totEnt)}</b> · saídas <b style="color:#702b16">${brl(totSai)}</b> · ${isProd()?'total':'saldo'}:</td><td class="right"><b data-tot>${brl(totEnt-totSai)}</b></td></tr></tfoot></table>`;
+    <td class="right" style="color:${ent?'#002620':'#ef4444'};white-space:nowrap"><b>${ent?'+ ':'− '}${brl(m.valor)}</b></td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">Nenhuma movimentação neste evento</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="8"><b data-cnt="movimentação(ões)">${movs.length} movimentação(ões)</b> · entradas <b style="color:#002620">${brl(totEnt)}</b> · saídas <b style="color:#ef4444">${brl(totSai)}</b> · ${isProd()?'total':'saldo'}:</td><td class="right"><b data-tot>${brl(totEnt-totSai)}</b></td></tr></tfoot></table>`;
   modal(`<div style="display:flex;align-items:center;gap:10px"><h3 style="flex:1">Movimentações — ${h(e.nome)}</h3>${movs.length?`<button class="btn" style="border-color:#00262033;color:#002620" data-act="csvPagos" data-id="${id}">⬇ Exportar Excel do evento</button>`:''}</div>
-  <p class="meta" style="margin:-8px 0 12px">${fmt(e.data)} · ${h(e.local||'')}${e.centroCusto?' · '+h(e.centroCusto):''}${e.responsavel?' · Responsável: <b>'+h(e.responsavel)+'</b>':''} · <b>${movs.length} movimentação(ões)</b>${isProd()?'':` · entradas <b style="color:#002620">${brl(totEnt)}</b> · saídas <b style="color:#702b16">${brl(totSai)}</b>`}</p>
+  <p class="meta" style="margin:-8px 0 12px">${fmt(e.data)} · ${h(e.local||'')}${e.centroCusto?' · '+h(e.centroCusto):''}${e.responsavel?' · Responsável: <b>'+h(e.responsavel)+'</b>':''} · <b>${movs.length} movimentação(ões)</b>${isProd()?'':` · entradas <b style="color:#002620">${brl(totEnt)}</b> · saídas <b style="color:#ef4444">${brl(totSai)}</b>`}</p>
   ${isProd()?'':`<div class="panel" style="margin-bottom:12px"><b>📝 Anotações</b> <span class="meta">— as mesmas do cadastro do evento</span>${notasEditor(id,'mov')}</div>`}
   ${isProd()?'':`<div class="panel" style="margin-bottom:12px"><b>🔗 Links</b> <span class="meta">— os mesmos do cadastro do evento</span>${linksEditor(id,'mov')}</div>`}
   ${grafico}
@@ -2220,13 +2220,13 @@ function fluxoResumo(lista, todos){
       <div class="lab">${x.nome}</div></div>`).join('')}</div>
     ${FC.diario ? fluxoDiario(base) : `<div style="overflow-x:auto;margin-top:14px"><table class="cards"><thead><tr><th>Mês</th><th class="right">Recebido</th><th class="right">A receber</th><th class="right">Pago</th><th class="right">A pagar</th><th class="right">Saldo do mês</th><th class="right">Saldo acumulado</th></tr></thead><tbody>
       ${saldoInicial?`<tr><td class="meta">Saldo anterior</td><td></td><td></td><td></td><td></td><td></td><td class="right"><b>${brl(saldoInicial)}</b></td></tr>`:''}
-      ${meses.map(x=>`<tr class="click" data-act="fcMes" data-id="${x.a}-${x.mm}" title="Ver o diário de ${x.nome}"><td>${x.nome}</td><td class="right" style="color:#002620">${brl(x.entR)}</td><td class="right meta">${brl(x.entP)}</td><td class="right" style="color:#702b16">${brl(x.saiR)}</td><td class="right meta">${brl(x.saiP)}</td>
+      ${meses.map(x=>`<tr class="click" data-act="fcMes" data-id="${x.a}-${x.mm}" title="Ver o diário de ${x.nome}"><td>${x.nome}</td><td class="right" style="color:#002620">${brl(x.entR)}</td><td class="right meta">${brl(x.entP)}</td><td class="right" style="color:#ef4444">${brl(x.saiR)}</td><td class="right meta">${brl(x.saiP)}</td>
         <td class="right" style="font-weight:600;color:${x.saldo<0?'var(--recusado)':'inherit'}">${brl(x.saldo)}</td><td class="right" style="font-weight:700;color:${x.acum<0?'var(--recusado)':'inherit'}">${brl(x.acum)}</td></tr>`).join('')}
     </tbody></table></div>
     <p class="meta" style="margin:8px 0 0">O gráfico e a tabela mostram o ano inteiro (com o filtro de eventos e de realizado/previsto). <b>Clique em um mês para abrir o diário</b> (dia a dia).</p>`}</div>
   <div class="panel" style="margin-top:12px"><b>Resultado por evento</b> <span class="meta">— entradas menos saídas do evento inteiro (todas as datas), para os eventos com movimento no período filtrado</span>
     <table class="cards" style="margin-top:6px"><thead><tr><th>Evento</th><th>Data</th><th class="right">Entradas</th><th class="right">Saídas</th><th class="right">Resultado</th><th class="right">Margem</th><th class="right">Saldo já realizado</th></tr></thead><tbody>
-    ${porEv.map(x=>{ const res=x.ent-x.sai, mg=x.ent?res/x.ent*100:0; return `<tr class="click" data-act="fcEvento" data-id="${x.e.id}" title="Filtrar por este evento"><td><b>${h(x.e.nome)}</b></td><td>${fmt(x.e.data)}</td><td class="right" style="color:#002620">${brl(x.ent)}</td><td class="right" style="color:#702b16">${brl(x.sai)}</td>
+    ${porEv.map(x=>{ const res=x.ent-x.sai, mg=x.ent?res/x.ent*100:0; return `<tr class="click" data-act="fcEvento" data-id="${x.e.id}" title="Filtrar por este evento"><td><b>${h(x.e.nome)}</b></td><td>${fmt(x.e.data)}</td><td class="right" style="color:#002620">${brl(x.ent)}</td><td class="right" style="color:#ef4444">${brl(x.sai)}</td>
       <td class="right" style="font-weight:700;color:${res<0?'var(--recusado)':'var(--pago)'}">${brl(res)}</td><td class="right">${x.ent?mg.toFixed(0)+'%':'—'}</td><td class="right meta">${brl(x.entR-x.saiR)}</td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">Nenhuma movimentação com esses filtros</td></tr>'}
     </tbody>${porEv.length?`<tfoot><tr><td colspan="2"><b>Total</b></td><td class="right"><b>${brl(tEnt)}</b></td><td class="right"><b>${brl(tSai)}</b></td><td class="right"><b style="color:${tEnt-tSai<0?'var(--recusado)':'var(--pago)'}">${brl(tEnt-tSai)}</b></td><td class="right">${tEnt?((tEnt-tSai)/tEnt*100).toFixed(0)+'%':'—'}</td><td></td></tr></tfoot>`:''}</table></div>`;
 }
@@ -2308,7 +2308,7 @@ function fcCelula(id, key){
   modal(`<h3>${h(L.nome)} · ${id.length===7?MESES[+id.slice(5)-1]+'/'+id.slice(0,4):fmt(id)}</h3>
   <div style="overflow-x:auto"><table class="cards"><thead><tr><th>Data</th><th>Nº</th><th>Centro de custo</th><th>Favorecido / origem</th><th>Situação</th><th class="right">Valor</th></tr></thead><tbody>
   ${xs.map(x=>{ const r=x.ref, ent=x.tipo==='entrada'; return `<tr class="click" data-act="${ent?'formReceb':'ver'}" data-id="${r.id}"><td>${fmt(x.data)}</td><td>${r.id}</td><td>${h(evento(r.eventoId).nome)}</td>
-    <td style="white-space:normal">${h(ent?r.origem+' — '+r.descricao:pessoa(r.pessoaId).nome+' — '+r.categoria)}</td><td>${tagSit(x.sit)}</td><td class="right" style="font-weight:600;color:${ent?'#002620':'#702b16'}">${brl(r.valor)}</td></tr>`; }).join('')}
+    <td style="white-space:normal">${h(ent?r.origem+' — '+r.descricao:pessoa(r.pessoaId).nome+' — '+r.categoria)}</td><td>${tagSit(x.sit)}</td><td class="right" style="font-weight:600;color:${ent?'#002620':'#ef4444'}">${brl(r.valor)}</td></tr>`; }).join('')}
   </tbody><tfoot><tr><td colspan="5"><b>${xs.length} lançamento(s)</b></td><td class="right"><b>${brl(tot)}</b></td></tr></tfoot></table></div>
   <div class="actions"><button class="btn" data-act="fechar">Fechar</button></div>`, 820);
 }
@@ -2430,7 +2430,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '5.3';
+const APP_VERSAO = '5.4';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
