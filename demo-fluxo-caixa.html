@@ -214,6 +214,30 @@ tr.sel-on td{background:#f6ecd2!important}
 .tag[style*="--aguardando"]{color:#002620}
 .dica-rola{display:none;font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 @media (max-width:700px){.dica-rola{display:block}}
+/* cabeçalho compacto */
+.demo-bar{padding:3px 16px;font-size:11px;gap:8px;background:#0b3b33}
+.demo-bar button{padding:1px 7px;font-size:11px}
+header{padding:6px 16px;gap:10px;border-bottom-width:2px}
+header .logo{font-size:19px}
+header .logo span.marca{width:30px!important;height:26px!important}
+header .who .av{width:28px;height:28px;font-size:11px}
+header .who .nm{font-size:13px;line-height:1.15;display:flex;align-items:center;gap:6px}
+header .who .nm br{display:none}
+header.emb{padding:4px 12px;background:#0b3b33;border-bottom-width:1px}
+.demo-mini{font-size:11px;color:#d9cdb8;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.demo-mini button{background:transparent;border:1px solid #f4efeb55;color:#f4efeb;border-radius:6px;padding:1px 7px;font-size:11px;cursor:pointer}
+nav button{padding:9px 12px}
+@media (max-width:640px){
+  .demo-bar{font-size:10px;padding:3px 10px}
+  header{padding:5px 10px}
+  header .logo{font-size:16px}
+  header .logo small{display:none}
+  header .who .nm{display:none}
+  .demo-mini button{display:none}
+  nav button{padding:8px 10px;font-size:13px}
+  .toolbar .combo{min-width:0;flex:1 1 calc(50% - 8px)}
+  .toolbar .combo-in{font-size:13px}
+}
 .graf-rola{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
 #dicaGraf{position:fixed;z-index:9999;pointer-events:none;display:none;background:#002620;color:#fff;font-size:12px;line-height:1.45;padding:7px 10px;border-radius:8px;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:260px}
 /* ===== Identidade visual Renata Campos · Inteligência Financeira ===== */
@@ -401,9 +425,11 @@ function render(){
   abas.push(['pessoas', 'Pessoas']);
   if (isAdmin()) abas.push(['usuarios','Equipe']);
   if (!abas.some(a=>a[0]===view) && !(view==='conciliacao' && isAdmin())) view='dashboard';
-  app.innerHTML = demoBar() + `
-  <header>
-    <div class="logo"><span class="marca">$</span>Pagamentos de Eventos <small class="meta" style="font-weight:400" title="Versão do app">v${APP_VERSAO}</small></div>
+  const emb = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
+  app.innerHTML = (emb ? '' : demoBar()) + `
+  <header class="${emb?'emb':''}">
+    ${emb ? `<div class="demo-mini" title="Dados fictícios, salvos só neste navegador">🧪 Demonstração · v${APP_VERSAO} <button data-act="reset" title="Restaurar dados de exemplo">↺ Restaurar exemplo</button></div>`
+          : `<div class="logo"><span class="marca">$</span>Pagamentos de Eventos <small class="meta" style="font-weight:400" title="Versão do app">v${APP_VERSAO}</small></div>`}
     <div class="who"><div class="av">${iniciais(me.nome)}</div><div class="nm">${h(me.nome)}<br><span class="badge">${PERFIS[me.perfil]}</span></div>
     <button class="btn sm" data-act="sair">Sair</button></div>
   </header>
@@ -2402,7 +2428,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '5.0';
+const APP_VERSAO = '5.1';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
