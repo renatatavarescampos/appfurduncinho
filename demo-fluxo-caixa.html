@@ -8,9 +8,9 @@
 <title>Pagamentos de Eventos</title>
 <style>
 :root{
-  --bg:#f4efeb;--card:#fff;--text:#002620;--muted:#6b7280;--line:#e5e7eb;
+  --bg:#f4efeb;--card:#fff;--text:#002620;--muted:#6f6a63;--line:#e6ddd2;
   --brand:#002620;--brand-soft:#f6ecd2;
-  --aguardando:#f59e0b;--aprovado:#3b82f6;--pago:#10b981;--recusado:#ef4444;--cancelado:#9ca3af;
+  --aguardando:#efbb3c;--aprovado:#c37f36;--pago:#002620;--recusado:#702b16;--cancelado:#a89f95;
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
@@ -30,11 +30,11 @@ h2{margin:0 0 12px;font-size:18px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .toolbar select,.toolbar input{padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;cursor:pointer}
-.btn:hover{border-color:#c7cad1}
+.btn:hover{border-color:#cfc4b6}
 .btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
 .btn.ok{background:var(--pago);border-color:var(--pago);color:#fff}
 .btn.blue{background:var(--aprovado);border-color:var(--aprovado);color:#fff}
-.btn.bad{color:var(--recusado);border-color:#fecaca}
+.btn.bad{color:var(--recusado);border-color:#e8cfc6}
 .btn.sm{padding:4px 8px;font-size:12px}
 .spacer{flex:1}
 /* Kanban */
@@ -47,7 +47,7 @@ h2{margin:0 0 12px;font-size:18px}
 .card{background:var(--card);border-radius:10px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px #0000000d;cursor:pointer;border-left:3px solid var(--line)}
 .card:hover{box-shadow:0 2px 8px #00000014}
 /* Colunas finalizadas (pago, recusado, cancelado) mais claras para destacar as duas primeiras */
-.col-fim{background:#f5f6f9}
+.col-fim{background:#faf7f3}
 .col-fim .col-h,.col-fim .col-total{opacity:.6}
 .col-fim .card{opacity:.55;box-shadow:none}
 .col-fim .card:hover{opacity:1;box-shadow:0 2px 8px #00000014}
@@ -64,7 +64,7 @@ table{width:100%;border-collapse:collapse}
 th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{font-size:12px;color:var(--muted);font-weight:600}
 tr.click{cursor:pointer}
-tr.click:hover td{background:#fafafa}
+tr.click:hover td{background:#faf7f3}
 .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;color:#fff;font-weight:600}
 .right{text-align:right}
 /* dashboard */
@@ -73,7 +73,7 @@ tr.click:hover td{background:#fafafa}
 .hist-item{border-top:1px solid var(--line);padding:10px 0}
 .hist-item:first-of-type{border-top:0}
 .hist-x{position:absolute;top:8px;right:0;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:18px;line-height:1;cursor:pointer}
-.hist-x:hover{background:#fef2f2;color:var(--recusado);border-color:#fecaca}
+.hist-x:hover{background:#f5e6e0;color:var(--recusado);border-color:#e8cfc6}
 .hist-tab{margin:6px 0 0 4px;width:auto}
 .hist-tab td{border:0;padding:2px 8px 2px 0;white-space:normal;font-size:13px}
 .kpi.click{cursor:pointer;transition:border-color .15s,box-shadow .15s}
@@ -90,12 +90,12 @@ tr.click:hover td{background:#fafafa}
 .bar .lab{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 .bar .tot{font-size:10px;color:var(--muted);text-align:center;margin-bottom:2px;white-space:nowrap}
 .hbar{display:grid;grid-template-columns:150px 1fr 110px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
-.hbar .track{background:#f0f1f4;border-radius:4px;height:14px;overflow:hidden}
+.hbar .track{background:#eee7df;border-radius:4px;height:14px;overflow:hidden}
 .hbar .fill{height:100%;background:var(--brand);border-radius:4px}
 .hbar .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .evlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-top:10px}
 .evitem{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
-.evitem:hover{border-color:var(--pago);background:#f0fdf4}
+.evitem:hover{border-color:var(--pago);background:#e4ece9}
 .evitem small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
 .legend span{display:flex;align-items:center;gap:4px}
@@ -114,7 +114,7 @@ tr.click:hover td{background:#fafafa}
 .hist{border-left:2px solid var(--line);margin:8px 0 0 4px;padding-left:12px}
 .hist div{margin-bottom:8px;font-size:13px}
 .hist small{color:var(--muted);display:block}
-.note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:8px;padding:8px 10px;font-size:12px;margin-top:12px}
+.note{background:#fbf3e0;border:1px solid #ecd29a;color:#702b16;border-radius:8px;padding:8px 10px;font-size:12px;margin-top:12px}
 /* login */
 .login{max-width:520px;margin:40px auto;background:var(--card);border-radius:16px;padding:24px;border:1px solid var(--line)}
 .login h1{font-size:20px;margin:0 0 4px}
@@ -127,9 +127,9 @@ tr.click:hover td{background:#fafafa}
 /* campo de escolha com busca */
 /* filtro por coluna */
 .cf-row th{padding:4px 6px 8px;background:transparent}
-.cf-in{width:100%;min-width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-weight:400;background:#fafbfc;color:var(--text)}
+.cf-in{width:100%;min-width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;font-weight:400;background:#faf7f3;color:var(--text)}
 .cf-in:focus{outline:2px solid var(--brand-soft);border-color:var(--brand);background:#fff}
-.cf-row .combo-in{padding:5px 22px 5px 8px;font-size:12px;background:#fafbfc;min-width:90px;font-weight:400}
+.cf-row .combo-in{padding:5px 22px 5px 8px;font-size:12px;background:#faf7f3;min-width:90px;font-weight:400}
 .cf-row .combo::after{right:7px}
 /* múltipla escolha */
 .ms-btn{text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
@@ -148,7 +148,7 @@ tr.click:hover td{background:#fafafa}
 .combo::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);font-size:12px}
 .combo-in{width:100%;padding:7px 28px 7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
 .combo-in:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.combo-in:disabled{background:#f3f4f6;color:var(--muted)}
+.combo-in:disabled{background:#efe8e1;color:var(--muted)}
 .form .combo-in{padding:8px 28px 8px 10px}
 .combo-sel{position:absolute!important;opacity:0;pointer-events:none;width:1px!important;height:1px!important;left:0;bottom:0;padding:0!important;border:0!important}
 .combo-list{display:none;position:absolute;z-index:40;left:0;top:calc(100% + 4px);min-width:100%;width:max-content;max-width:min(420px,90vw);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px #00000022;max-height:260px;overflow:auto}
@@ -174,23 +174,23 @@ tr.click:hover td{background:#fafafa}
 .fc-col .seg:first-child{border-radius:3px 3px 0 0}
 .fc-plan{overflow:auto;max-height:75vh;border:1px solid var(--line);border-radius:8px}
 .fc-plan table{border-collapse:separate;border-spacing:0;font-size:12px}
-.fc-plan th,.fc-plan td{padding:4px 8px;border-bottom:1px solid #eef0f3;border-right:1px solid #eef0f3;min-width:92px}
-.fc-plan thead th{position:sticky;top:0;z-index:2;background:#dbeafe;color:var(--text);font-weight:500;text-align:center;font-size:11px;line-height:1.35}
+.fc-plan th,.fc-plan td{padding:4px 8px;border-bottom:1px solid #eee7df;border-right:1px solid #eee7df;min-width:92px}
+.fc-plan thead th{position:sticky;top:0;z-index:2;background:#f6e6d3;color:var(--text);font-weight:500;text-align:center;font-size:11px;line-height:1.35}
 .fc-plan thead th.fds{background:#f6ecd2}
 .fc-plan .fc-rot{position:sticky;left:0;z-index:1;background:#fff;text-align:left;min-width:220px;max-width:260px;white-space:normal;font-weight:400;color:var(--text);font-size:12px}
-.fc-plan thead .fc-rot{z-index:3;background:#dbeafe;text-align:center}
-.fc-plan td.hj{background:#f5f3ff}
-.fc-plan td.tot,.fc-plan th.tot{background:#f3f4f6;font-weight:700}
+.fc-plan thead .fc-rot{z-index:3;background:#f6e6d3;text-align:center}
+.fc-plan td.hj{background:#fbf6ea}
+.fc-plan td.tot,.fc-plan th.tot{background:#efe8e1;font-weight:700}
 .fc-plan td.click{cursor:pointer}
 .fc-plan td.click:hover{outline:2px solid var(--brand);outline-offset:-2px}
 .fc-plan tr.r-ini td,.fc-plan tr.r-ini th{color:var(--muted)}
-.fc-plan tr.r-sec th,.fc-plan tr.r-sec td{background:#d9d9d9;font-weight:700}
-.fc-plan tr.r-pag th,.fc-plan tr.r-pag td{background:#f4cccc;font-weight:700}
+.fc-plan tr.r-sec th,.fc-plan tr.r-sec td{background:#e3d9cc;font-weight:700}
+.fc-plan tr.r-pag th,.fc-plan tr.r-pag td{background:#ecd5cc;font-weight:700}
 .fc-plan tr.r-atr th{font-style:italic}
-.fc-plan tr.r-saldo th,.fc-plan tr.r-saldo td{background:#1d4ed8;color:#fff;font-weight:700}
-.fc-plan tr.r-saldo td.neg{background:#b91c1c}
-.fc-plan tr.r-ent th,.fc-plan tr.r-ent td{background:#d1fae5}
-.fc-plan tr.r-sai th,.fc-plan tr.r-sai td{background:#fee2e2}
+.fc-plan tr.r-saldo th,.fc-plan tr.r-saldo td{background:#002620;color:#fff;font-weight:700}
+.fc-plan tr.r-saldo td.neg{background:#702b16}
+.fc-plan tr.r-ent th,.fc-plan tr.r-ent td{background:#e4ece9}
+.fc-plan tr.r-sai th,.fc-plan tr.r-sai td{background:#f5e6e0}
 .fc-mes .lab{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 @media (max-width:760px){
   table.cards thead{display:block}
@@ -208,7 +208,14 @@ tr.click:hover td{background:#fafafa}
   .kanban{grid-template-columns:repeat(5,82vw)}
   .who .nm{display:none}
 }
-#dicaGraf{position:fixed;z-index:9999;pointer-events:none;display:none;background:#1f2937;color:#fff;font-size:12px;line-height:1.45;padding:7px 10px;border-radius:8px;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:260px}
+.sel-col{width:36px;text-align:center!important;padding-left:4px!important;padding-right:4px!important}
+.sel-col input{width:17px;height:17px;accent-color:#002620;cursor:pointer;vertical-align:middle}
+tr.sel-on td{background:#f6ecd2!important}
+.tag[style*="--aguardando"]{color:#002620}
+.dica-rola{display:none;font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
+@media (max-width:700px){.dica-rola{display:block}}
+.graf-rola{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+#dicaGraf{position:fixed;z-index:9999;pointer-events:none;display:none;background:#002620;color:#fff;font-size:12px;line-height:1.45;padding:7px 10px;border-radius:8px;white-space:pre-line;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:260px}
 /* ===== Identidade visual Renata Campos · Inteligência Financeira ===== */
 :root{--ouro:#efbb3c;--cobre:#c37f36;--terra:#702b16;--creme:#f4efeb;--line:#e6ddd2;--muted:#6f6a63;--text:#1c2422}
 body{font-family:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -411,7 +418,7 @@ function demoBar(){
 function telaLogin(){
   return `<div class="login">
     <h1>Pagamentos de Eventos</h1>
-    ${linkAprovar?`<div class="note" style="margin:0 0 12px;background:#ecfdf5;border-color:#a7f3d0;color:#065f46">🔗 Você abriu o link de aprovação de pagamentos. Entre como sócio para ver a lista completa e aprovar.</div>`:''}
+    ${linkAprovar?`<div class="note" style="margin:0 0 12px;background:#e4ece9;border-color:#b9cdc7;color:#002620">🔗 Você abriu o link de aprovação de pagamentos. Entre como sócio para ver a lista completa e aprovar.</div>`:''}
     <p>Na versão real aqui terá e-mail e senha. Na demonstração, escolha com qual perfil entrar para ver o que cada pessoa enxerga:</p>
     <div class="ulist">${db.users.filter(u=>u.ativo!==false).map(u=>`
       <button class="ubtn" data-act="entrar" data-id="${u.id}"><div class="av">${iniciais(u.nome)}</div>
@@ -464,7 +471,7 @@ function card(p){
     <div class="card-top"><span class="ev">${ids.includes('evento')?h(evento(p.eventoId).nome):''}</span><span class="val">${brl(p.valor)}</span></div>
     ${ids.includes('fav')?`<div class="fav">${h(pessoa(p.pessoaId).nome)}</div>`:''}
     ${linhas.map(l=>`<div class="meta">${l}</div>`).join('')}
-    ${isProd() && p.status==='aguardando' ? '<div class="meta" style="margin-top:6px;color:#b45309">⏳ Aguardando aprovação de um sócio ou da gestora financeira</div>' : ''}
+    ${isProd() && p.status==='aguardando' ? '<div class="meta" style="margin-top:6px;color:#a8682a">⏳ Aguardando aprovação de um sócio ou da gestora financeira</div>' : ''}
     ${botoes(p)?`<div class="btns">${botoes(p)}</div>`:''}</div>`;
 }
 function telaKanban(){
@@ -573,16 +580,33 @@ function celPagamento(p){
   else { v='Recusado / cancelado'; html=`<span class="meta">${STATUS[p.status].nome}</span>`; }
   return `<td data-v="${v}" style="white-space:nowrap">${html}</td>`;
 }
+// seleção de contas na lista (para excluir várias de uma vez)
+const SEL = new Set();
+function selVisiveis(){ return [...document.querySelectorAll('input[data-sel]')].filter(c => c.closest('tr').style.display !== 'none'); }
+function selAtualizar(){
+  const vis = selVisiveis(), marcadas = vis.filter(c=>c.checked);
+  const todos = document.querySelector('input[data-sel-todos]');
+  if (todos){ todos.checked = vis.length>0 && marcadas.length===vis.length; todos.indeterminate = marcadas.length>0 && marcadas.length<vis.length; }
+  const b = document.getElementById('btnExclSel'); if (b){ b.style.display = marcadas.length?'':'none'; b.querySelector('[data-sel-n]').textContent = marcadas.length; }
+  document.querySelectorAll('input[data-sel]').forEach(c=>c.closest('tr').classList.toggle('sel-on', c.checked));
+}
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.matches && t.matches('input[data-sel-todos]')){ selVisiveis().forEach(c=>{ c.checked = t.checked; t.checked?SEL.add(c.dataset.sel):SEL.delete(c.dataset.sel); }); selAtualizar(); }
+  else if (t.matches && t.matches('input[data-sel]')){ t.checked?SEL.add(t.dataset.sel):SEL.delete(t.dataset.sel); selAtualizar(); }
+  else if (t.dataset && t.dataset.col !== undefined) setTimeout(selAtualizar, 0);
+});
 function telaLista(){
   const lista = filtrar(visiveis()).sort((a,b)=>b.vencimento.localeCompare(a.vencimento));
   const tot = lista.filter(p=>!['recusado','cancelado'].includes(p.status)).reduce((a,p)=>a+p.valor,0);
-  const cols = colsLista(), n = cols.length + 1;
-  return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2><div class="spacer"></div>
-    ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#e3c98a;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#86efac;color:#15803d" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
+  const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0);
+  [...SEL].forEach(id=>{ if(!db.pedidos.some(p=>p.id===id)) SEL.delete(id); });
+  return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
+    ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#e3c98a;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#b9cdc7;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
-  <div class="panel"><table class="filtravel" data-key="lista4_${cols.map(c=>c.id).join('-')}"><thead><tr>${cols.map(c=>`<th>${c.nome}</th>`).join('')}<th class="right">Valor</th><th>Pagamento</th></tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${['recusado','cancelado'].includes(p.status) && !F.status.includes(p.status)?0:p.valor}">${cols.map(c=>`<td${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}<td class="right">${brl(p.valor)}</td>${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n+1}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
-  <tfoot><tr><td colspan="${n-1}"><b data-cnt="pedidos">${lista.length} pedidos</b> · ${F.status.some(s=>['recusado','cancelado'].includes(s))?'total':'total válido (sem recusados/cancelados)'}</td><td class="right"><b data-tot>${brl(tot)}</b></td><td></td></tr></tfoot></table></div>`;
+  <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th>${c.nome}</th>`).join('')}<th class="right">Valor</th><th>Pagamento</th></tr></thead>
+  <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${['recusado','cancelado'].includes(p.status) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}<td class="right">${brl(p.valor)}</td>${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n+1}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
+  <tfoot><tr><td colspan="${n-2}"><b data-cnt="pedidos">${lista.length} pedidos</b> · ${F.status.some(s=>['recusado','cancelado'].includes(s))?'total':'total válido (sem recusados/cancelados)'}</td><td class="right"><b data-tot>${brl(tot)}</b></td><td></td></tr></tfoot></table></div>`;
 }
 // Tabela de pedidos com as mesmas colunas escolhidas na Lista (usada nas relações do dashboard e em Aprovações)
 function tabelaPedidos(lista, key, {extraCols=[], acoes=null, vazio='Nenhum pedido', cnt='pedido(s)'} = {}){
@@ -603,7 +627,7 @@ function formColunas(){
   if (!colsRasc) colsRasc = [...(db[cfg.chave]||cfg.padrao())];
   const TODAS = cfg.todas();
   const fora = TODAS.filter(c=>!colsRasc.includes(c.id));
-  const linha = (c, i, on) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:${on?'#fff':'#f9fafb'}">
+  const linha = (c, i, on) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:${on?'#fff':'#faf7f3'}">
     <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;${on?'':'color:var(--muted)'}"><input type="checkbox" data-col-tg="${c.id}" ${on?'checked':''}> ${c.nome}</label>
     ${on?`<button class="btn sm" data-act="colMove" data-id="${c.id}:-1" ${i===0?'disabled':''} title="Subir">↑</button><button class="btn sm" data-act="colMove" data-id="${c.id}:1" ${i===colsRasc.length-1?'disabled':''} title="Descer">↓</button>`:''}</div>`;
   modal(`<h3>${cfg.titulo}</h3>
@@ -642,21 +666,23 @@ function telaDash(){
   const posMax = Math.max(0,...lucroEv.map(x=>x.lucro)), negMax = Math.max(0,...lucroEv.map(x=>-x.lucro));
   const escala = Math.max(1, posMax+negMax), topo = negMax ? posMax/escala*100 : 100;
   const lucroTotal = lucroEv.reduce((a,x)=>a+x.lucro,0);
-  const graficoLucro = lucroEv.length ? `<div style="display:flex;gap:10px;height:240px;padding-top:18px;justify-content:center">${lucroEv.map(x=>{
+  const graficoLucro = lucroEv.length ? `<div class="graf-rola"><div style="display:flex;gap:10px;height:240px;padding-top:18px;justify-content:center;min-width:${lucroEv.length*62}px">${lucroEv.map(x=>{
       const pos = x.lucro>=0, alt = Math.abs(x.lucro)/escala*100*0.88;
-      return `<div data-act="pagosEvento" data-id="${x.e.id}" style="flex:1;min-width:0;max-width:160px;display:flex;flex-direction:column;cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Receita: ${brl(x.receita)}&#10;Custo: ${brl(x.custo)}&#10;Lucro: ${brl(x.lucro)}">
-        <div style="height:${topo}%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch">${pos?`<div style="font-size:10px;color:#047857;text-align:center;font-weight:600">${brlK(x.lucro)}</div><div style="height:${alt/topo*100}%;background:#10b981;border-radius:4px 4px 0 0;min-height:2px"></div>`:''}</div>
-        <div style="border-top:1px solid #9ca3af"></div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:stretch">${!pos?`<div style="height:${alt/(100-topo||1)*100}%;background:#ef4444;border-radius:0 0 4px 4px"></div><div style="font-size:10px;color:#b91c1c;text-align:center;font-weight:600">-${brlK(-x.lucro)}</div>`:''}</div>
+      return `<div data-act="pagosEvento" data-id="${x.e.id}" style="flex:1;min-width:52px;max-width:160px;display:flex;flex-direction:column;cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Receita: ${brl(x.receita)}&#10;Custo: ${brl(x.custo)}&#10;Lucro: ${brl(x.lucro)}">
+        <div style="height:${topo}%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch">${pos?`<div style="font-size:10px;color:#002620;text-align:center;font-weight:600">${brlK(x.lucro)}</div><div style="height:${alt/topo*100}%;background:#002620;border-radius:4px 4px 0 0;min-height:2px"></div>`:''}</div>
+        <div style="border-top:1px solid #a89f95"></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:stretch">${!pos?`<div style="height:${alt/(100-topo||1)*100}%;background:#702b16;border-radius:0 0 4px 4px"></div><div style="font-size:10px;color:#702b16;text-align:center;font-weight:600">-${brlK(-x.lucro)}</div>`:''}</div>
         <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h(x.e.nome)}</div>
-        <div style="font-size:10px;color:var(--muted);text-align:center">${(LF.serie?fmt(x.e.data):fmt(x.e.data).slice(0,5))}</div></div>`; }).join('')}</div>`
+        <div style="font-size:10px;color:var(--muted);text-align:center">${(LF.serie?fmt(x.e.data):fmt(x.e.data).slice(0,5))}</div></div>`; }).join('')}</div></div>${lucroEv.length>5?'<div class="dica-rola">↔ Deslize o gráfico para o lado para ver todos os eventos</div>':''}`
     : '<div class="empty">Nenhum evento neste período</div>';
   // linha do lucro evento a evento, com a tendência (sobe ou desce) pela reta de tendência
   const linhaLucro = (()=>{
     if (lucroEv.length < 2) return lucroEv.length ? '<div class="meta" style="margin-top:10px">Com um evento só não dá para ver a tendência. Tire o filtro de mês para comparar mais eventos.</div>' : '';
-    const W = 1200, H = 230, pl = 110, pr = 80, pt = 28, pb = 34;
+    const larg = Math.min(1200, Math.max(300, (document.getElementById('app')?.clientWidth || innerWidth) - 64)), estreito = larg < 640;
+    const pl = estreito ? 58 : 110, pr = estreito ? 30 : 80, pt = 28, pb = 34, H = estreito ? 210 : 230;
+    const W = Math.max(larg, pl + pr + (lucroEv.length-1)*76);
     const vs = lucroEv.map(x=>x.lucro), mn = Math.min(0,...vs), mx = Math.max(0,...vs), rg = (mx-mn)||1;
-    const X = i => pl + i*(W-pl-pr)/(vs.length-1), Y = v => pt + (mx-v)/rg*(H-pt-pb);
+    const X = i => pl + 34 + i*(W-pl-pr-34)/(vs.length-1), Y = v => pt + (mx-v)/rg*(H-pt-pb);
     const n = vs.length, xm = (n-1)/2, ym = vs.reduce((a,v)=>a+v,0)/n;
     const slope = vs.reduce((a,v,i)=>a+(i-xm)*(v-ym),0) / vs.reduce((a,v,i)=>a+(i-xm)**2,0);
     const t0 = ym - slope*xm, t1 = ym + slope*xm;
@@ -665,18 +691,18 @@ function telaDash(){
     const ticks = [mx, (mx+mn)/2, mn];
     return `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <div class="toolbar" style="margin:0 0 4px"><b>Tendência do lucro</b><div class="spacer"></div>
-        <span class="tag" style="background:${sobe?'#10b981':'#ef4444'};font-size:12px;padding:4px 10px">${sobe?'▲ Lucro subindo':'▼ Lucro descendo'}</span>
-        <span class="meta">Último evento × anterior: <b style="color:${dif>=0?'#047857':'#b91c1c'}">${dif>=0?'+':''}${brl(dif)}</b></span></div>
-      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
-        ${ticks.map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eef0f3"/><text x="${pl-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="#6b7280">${brlK(v)}</text>`).join('')}
-        ${mn<0?`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="#9ca3af"/>`:''}
-        <line x1="${X(0)}" y1="${Y(t0)}" x2="${X(n-1)}" y2="${Y(t1)}" stroke="${sobe?'#10b981':'#ef4444'}" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
+        <span class="tag" style="background:${sobe?'#002620':'#702b16'};font-size:12px;padding:4px 10px">${sobe?'▲ Lucro subindo':'▼ Lucro descendo'}</span>
+        <span class="meta">Último evento × anterior: <b style="color:${dif>=0?'#002620':'#702b16'}">${dif>=0?'+':''}${brl(dif)}</b></span></div>
+      <div class="graf-rola"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="display:block;max-width:none">
+        ${ticks.map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eee7df"/><text x="${pl-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="#6f6a63">${brlK(v)}</text>`).join('')}
+        ${mn<0?`<line x1="${pl}" x2="${W-pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="#a89f95"/>`:''}
+        <line x1="${X(0)}" y1="${Y(t0)}" x2="${X(n-1)}" y2="${Y(t1)}" stroke="${sobe?'#002620':'#702b16'}" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>
         <polyline fill="none" stroke="#002620" stroke-width="3" stroke-linejoin="round" points="${vs.map((v,i)=>X(i)+','+Y(v)).join(' ')}"/>
-        ${lucroEv.map((x,i)=>`<g data-act="pagosEvento" data-id="${x.e.id}" style="cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Lucro: ${brl(x.lucro)}"><circle cx="${X(i)}" cy="${Y(x.lucro)}" r="6" fill="${x.lucro>=0?'#10b981':'#ef4444'}" stroke="#fff" stroke-width="2"/>
-          <text x="${X(i)}" y="${Y(x.lucro)-10}" text-anchor="middle" font-size="11" font-weight="600" fill="${x.lucro>=0?'#047857':'#b91c1c'}">${brlK(x.lucro)}</text>
-          <text x="${X(i)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#6b7280">${h(x.e.nome.length>16?x.e.nome.slice(0,15)+'…':x.e.nome)}</text></g>`).join('')}
-      </svg>
-      <div class="meta">Linha roxa: lucro de cada evento, em ordem de data. Linha tracejada: tendência (${sobe?'subindo':'descendo'} em média ${brl(Math.abs(slope))} por evento).</div></div>`;
+        ${lucroEv.map((x,i)=>`<g data-act="pagosEvento" data-id="${x.e.id}" style="cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Lucro: ${brl(x.lucro)}"><circle cx="${X(i)}" cy="${Y(x.lucro)}" r="6" fill="${x.lucro>=0?'#002620':'#702b16'}" stroke="#fff" stroke-width="2"/>
+          <text x="${X(i)}" y="${Y(x.lucro)-10}" text-anchor="middle" font-size="11" font-weight="600" fill="${x.lucro>=0?'#002620':'#702b16'}">${brlK(x.lucro)}</text>
+          <text x="${X(i)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#6f6a63">${h(x.e.nome.length>(estreito?11:16)?x.e.nome.slice(0,estreito?10:15)+'…':x.e.nome)}</text></g>`).join('')}
+      </svg></div>
+      <div class="meta">Linha escura: lucro de cada evento, em ordem de data. Linha tracejada: tendência (${sobe?'subindo':'descendo'} em média ${brl(Math.abs(slope))} por evento).</div></div>`;
   })();
   const barra = (t, x, mx, act, id, lab, on, tip) => `<div class="bar" title="${h(tip)}: ${brl(t)}" data-act="${act}" data-id="${id}" style="cursor:pointer">
       <div class="tot">${t?brlK(t):''}</div>
@@ -699,7 +725,7 @@ function telaDash(){
       const aRec = recs.filter(r=>r.previsto>=HOJE), recAtr = recs.filter(r=>r.previsto<HOJE);
       const pagAtr = base.filter(atrasadoPag);
       const sm = l => l.reduce((a,x)=>a+x.valor,0);
-      return (isProd()?'':`<div class="kpi click" data-act="aba" data-id="receber" title="Ver Contas a receber"><div class="l"><span class="dot" style="background:#10b981"></span>A receber</div><div class="v">${brl(sm(aRec))}</div><div class="s">${aRec.length} recebimento(s)</div></div>`)
+      return (isProd()?'':`<div class="kpi click" data-act="aba" data-id="receber" title="Ver Contas a receber"><div class="l"><span class="dot" style="background:#002620"></span>A receber</div><div class="v">${brl(sm(aRec))}</div><div class="s">${aRec.length} recebimento(s)</div></div>`)
         + `<div class="kpi click" data-act="verAtrasos" title="Ver os atrasos"><div class="l"><span class="dot" style="background:var(--recusado)"></span>Atrasado</div><div class="v" style="color:${sm(pagAtr)+sm(recAtr)?'var(--recusado)':'inherit'}">${brl(sm(pagAtr)+sm(recAtr))}</div>
           <div class="s">A pagar vencido: <b>${brl(sm(pagAtr))}</b> (${pagAtr.length})</div>
           ${isProd()?'':`<div class="s">A receber atrasado: <b>${brl(sm(recAtr))}</b> (${recAtr.length})</div>`}</div>`; })()}
@@ -710,7 +736,7 @@ function telaDash(){
     <select data-lf="serie" title="Evento (todas as edições)" style="padding:5px 8px;border:1px solid var(--line);border-radius:8px"><option value="">Todos os eventos</option>${[...new Set(db.eventos.map(serieDe))].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(x=>{const n=db.eventos.filter(e=>serieDe(e)===x).length;return `<option value="${h(x)}" ${LF.serie===x?'selected':''}>${h(x)}${n>1?' ('+n+' edições)':''}</option>`;}).join('')}</select>
     ${LF.cc||LF.serie?'<button class="btn sm" data-act="lucroLimpar">✕ Limpar</button>':''}<div class="spacer"></div>
     ${DASH_VIS==='lucro'
-      ? `<div class="legend"><span><i class="dot" style="background:#10b981"></i>Lucro</span><span><i class="dot" style="background:#ef4444"></i>Prejuízo</span><span>Total do período: <b style="color:${lucroTotal>=0?'#047857':'#b91c1c'}">${brl(lucroTotal)}</b></span></div></div>`
+      ? `<div class="legend"><span><i class="dot" style="background:#002620"></i>Lucro</span><span><i class="dot" style="background:#702b16"></i>Prejuízo</span><span>Total do período: <b style="color:${lucroTotal>=0?'#002620':'#702b16'}">${brl(lucroTotal)}</b></span></div></div>`
       : `<div class="legend"><span><i class="dot" style="background:var(--pago)"></i>Pago</span><span><i class="dot" style="background:var(--aprovado)"></i>A pagar</span><span><i class="dot" style="background:var(--aguardando)"></i>Aguardando aprovação</span></div></div>`}
     ${DASH_VIS==='lucro'
       ? `${F.mes.length&&!LF.serie?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 0">${MESES.map((m,i)=>{const mm=String(i+1).padStart(2,'0');return `<button class="btn sm ${F.mes.includes(mm)?'pri':''}" data-act="lucroMesSel" data-id="${mm}">${m}</button>`;}).join('')}</div>`:''}${graficoLucro}<div class="meta">Lucro = receitas do evento (recebidas e a receber) − custos (pedidos válidos). ${LF.serie?'Mostrando todas as edições deste evento, de todos os anos.':'Escolha o ano e o mês nos filtros de cima: no mês, entram só os eventos daquele mês.'} Filtre por centro de custo ou por evento para comparar edições. Clique em um evento para ver as movimentações.</div>${linhaLucro}`
@@ -753,10 +779,10 @@ function verAtrasos(){
               ...recs.map(r=>({ent:true, x:r, d:r.previsto, quem:r.origem, oque:r.descricao||'', sit:'A receber', cor:'var(--aprovado)'}))].sort((a,b)=>a.d.localeCompare(b.d));
   const sm = l => l.reduce((a,x)=>a+x.valor,0);
   modal(`<h3>⏰ Atrasados</h3>
-  <p class="meta" style="margin:-8px 0 12px">A pagar vencido: <b style="color:#b91c1c">${brl(sm(pags))}</b> (${pags.length})${isProd()?'':` · A receber atrasado: <b style="color:#b45309">${brl(sm(recs))}</b> (${recs.length})`} · clique em uma linha para abrir</p>
+  <p class="meta" style="margin:-8px 0 12px">A pagar vencido: <b style="color:#702b16">${brl(sm(pags))}</b> (${pags.length})${isProd()?'':` · A receber atrasado: <b style="color:#a8682a">${brl(sm(recs))}</b> (${recs.length})`} · clique em uma linha para abrir</p>
   <div style="overflow-x:auto"><table class="filtravel" data-key="atrasos" style="font-size:13px"><thead><tr><th>Tipo</th><th>Vencimento</th><th>Atraso</th><th>Nome do evento</th><th>Favorecido / Origem</th><th>Categoria / Descrição</th><th>Situação</th><th class="right">Valor</th></tr></thead>
   <tbody>${ms.map(m=>{ const dias = Math.round(diasEntre(m.d, HOJE)); return `<tr class="click" data-act="${m.ent?'formReceb':'ver'}" data-id="${m.x.id}" data-valor="${m.x.valor}">
-    <td data-v="${m.ent?'A receber':'A pagar'}"><span class="tag" style="background:${m.ent?'#10b981':'#ef4444'}">${m.ent?'⬆ A receber':'⬇ A pagar'}</span></td><td>${fmt(m.d)}</td><td data-v="${dias}"><b style="color:var(--recusado)">${dias} dia(s)</b></td>
+    <td data-v="${m.ent?'A receber':'A pagar'}"><span class="tag" style="background:${m.ent?'#002620':'#702b16'}">${m.ent?'⬆ A receber':'⬇ A pagar'}</span></td><td>${fmt(m.d)}</td><td data-v="${dias}"><b style="color:var(--recusado)">${dias} dia(s)</b></td>
     <td>${h(evento(m.x.eventoId).nome)}</td><td>${h(m.quem)}<br><span class="meta" style="font-size:11px">${m.x.id}</span></td><td style="white-space:normal;min-width:120px">${h(m.oque)}</td><td data-v="${m.sit}"><span class="tag" style="background:${m.cor}">${m.sit}</span></td><td class="right"><b>${brl(m.x.valor)}</b></td></tr>`; }).join('') || '<tr><td colspan="8" class="empty">Nenhum atraso 🎉</td></tr>'}</tbody>
   <tfoot><tr><td colspan="7"><b data-cnt="atraso(s)">${ms.length} atraso(s)</b></td><td class="right"><b data-tot>${brl(sm(pags)+sm(recs))}</b></td></tr></tfoot></table></div>
   <div class="actions"><button class="btn" data-act="fechar">Fechar</button></div>`, 1200);
@@ -777,13 +803,13 @@ function pagosEvento(id){
       const recs = (db.recebimentos||[]).filter(r=>r.eventoId===id && r.status!=='cancelado');
       const recebido = recs.filter(r=>r.recebidoEm).reduce((a,r)=>a+r.valor,0), aReceber = recs.filter(r=>!r.recebidoEm).reduce((a,r)=>a+r.valor,0);
       const pago = st('pago'), aPagar = st('aprovado')+st('aguardando');
-      const linhas = isProd() ? [['Pago', pago, '#ef4444', aPagar?'+ '+brl(aPagar)+' a pagar':'']] : [['Recebido', recebido, '#10b981', aReceber?'+ '+brl(aReceber)+' a receber':''], ['Pago', pago, '#ef4444', aPagar?'+ '+brl(aPagar)+' a pagar':'']];
+      const linhas = isProd() ? [['Pago', pago, '#702b16', aPagar?'+ '+brl(aPagar)+' a pagar':'']] : [['Recebido', recebido, '#002620', aReceber?'+ '+brl(aReceber)+' a receber':''], ['Pago', pago, '#702b16', aPagar?'+ '+brl(aPagar)+' a pagar':'']];
       const mx = Math.max(1, ...linhas.map(l=>l[1]));
       const res = recebido - pago;
       return linhas.map(([n,v,cor,obs])=>`<div class="hbar"><div class="name"><b>${n}</b></div><div class="track" style="height:18px"><div class="fill" style="width:${v/mx*100}%;background:${cor};height:100%"></div></div><div class="right"><b>${brl(v)}</b>${obs?`<br><span class="meta" style="font-size:11px">${obs}</span>`:''}</div></div>`).join('')
-        + `<div class="legend" style="margin:6px 0 12px">${isProd()?'':`<span>Resultado (recebido − pago): <b style="color:${res>=0?'#047857':'#b91c1c'}">${brl(res)}</b></span>`}${e.orcamento?`<span>Orçamento: <b>${brl(e.orcamento)}</b> (${(todos.reduce((a,p)=>a+p.valor,0)/e.orcamento*100).toFixed(0)}% usado)</span>`:''}</div>`;
+        + `<div class="legend" style="margin:6px 0 12px">${isProd()?'':`<span>Resultado (recebido − pago): <b style="color:${res>=0?'#002620':'#702b16'}">${brl(res)}</b></span>`}${e.orcamento?`<span>Orçamento: <b>${brl(e.orcamento)}</b> (${(todos.reduce((a,p)=>a+p.valor,0)/e.orcamento*100).toFixed(0)}% usado)</span>`:''}</div>`;
     })()}
-    ${cats.length?`<b style="font-size:13px">Pago por categoria</b>${cats.map(([c,v])=>`<div class="hbar"><div class="name" title="${h(c)}">${h(c)}</div><div class="track"><div class="fill" style="width:${v/mxCat*100}%;background:#fca5a5"></div></div><div class="right">${brl(v)}</div></div>`).join('')}`:''}
+    ${cats.length?`<b style="font-size:13px">Pago por categoria</b>${cats.map(([c,v])=>`<div class="hbar"><div class="name" title="${h(c)}">${h(c)}</div><div class="track"><div class="fill" style="width:${v/mxCat*100}%;background:#d9a593"></div></div><div class="right">${brl(v)}</div></div>`).join('')}`:''}
   </div>` : '';
   // todas as movimentações do evento: saídas (pedidos válidos) e entradas (recebimentos)
   const recsEv = isProd() ? [] : (db.recebimentos||[]).filter(r=>r.eventoId===id && r.status!=='cancelado');
@@ -796,13 +822,13 @@ function pagosEvento(id){
   const totEnt = movs.filter(m=>m.tipo==='entrada').reduce((a,m)=>a+m.valor,0), totSai = movs.filter(m=>m.tipo==='saida').reduce((a,m)=>a+m.valor,0);
   const tabMov = `<table class="filtravel" data-key="movEvento" style="font-size:13px"><thead><tr><th>Data</th><th>Tipo</th><th>Nº</th><th>Favorecido / Origem</th><th>Categoria / Descrição</th><th>Centro de custo</th><th>Situação</th><th>Banco</th><th class="right">Valor</th></tr></thead>
   <tbody>${movs.map(m=>{ const ent=m.tipo==='entrada', x=m.ref; return `<tr class="click" data-act="${ent?'formReceb':'ver'}" data-id="${x.id}" data-valor="${ent?m.valor:-m.valor}">
-    <td data-v="${fmt(m.data)}">${fmt(m.data)}</td><td data-v="${ent?'Recebimento':'Pagamento'}"><span class="tag" style="background:${ent?'#10b981':'#ef4444'}">${ent?'⬆ Recebimento':'⬇ Pagamento'}</span></td><td>${x.id}</td>
+    <td data-v="${fmt(m.data)}">${fmt(m.data)}</td><td data-v="${ent?'Recebimento':'Pagamento'}"><span class="tag" style="background:${ent?'#002620':'#702b16'}">${ent?'⬆ Recebimento':'⬇ Pagamento'}</span></td><td>${x.id}</td>
     <td>${h(m.quem)}</td><td style="white-space:normal;min-width:150px">${h(m.oque)}</td><td>${h(ent?(e.centroCusto||'—'):(ccDe(x)||'—'))}</td>
     <td data-v="${m.sit}"><span class="tag" style="background:${m.cor}">${m.sit}</span></td><td data-v="${h(m.banco||'—')}">${m.banco?h(m.banco):'<span class="meta">—</span>'}</td>
-    <td class="right" style="color:${ent?'#047857':'#b91c1c'};white-space:nowrap"><b>${ent?'+ ':'− '}${brl(m.valor)}</b></td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">Nenhuma movimentação neste evento</td></tr>'}</tbody>
-  <tfoot><tr><td colspan="8"><b data-cnt="movimentação(ões)">${movs.length} movimentação(ões)</b> · entradas <b style="color:#047857">${brl(totEnt)}</b> · saídas <b style="color:#b91c1c">${brl(totSai)}</b> · ${isProd()?'total':'saldo'}:</td><td class="right"><b data-tot>${brl(totEnt-totSai)}</b></td></tr></tfoot></table>`;
-  modal(`<div style="display:flex;align-items:center;gap:10px"><h3 style="flex:1">Movimentações — ${h(e.nome)}</h3>${movs.length?`<button class="btn" style="border-color:#86efac;color:#15803d" data-act="csvPagos" data-id="${id}">⬇ Exportar Excel do evento</button>`:''}</div>
-  <p class="meta" style="margin:-8px 0 12px">${fmt(e.data)} · ${h(e.local||'')}${e.centroCusto?' · '+h(e.centroCusto):''}${e.responsavel?' · Responsável: <b>'+h(e.responsavel)+'</b>':''} · <b>${movs.length} movimentação(ões)</b>${isProd()?'':` · entradas <b style="color:#047857">${brl(totEnt)}</b> · saídas <b style="color:#b91c1c">${brl(totSai)}</b>`}</p>
+    <td class="right" style="color:${ent?'#002620':'#702b16'};white-space:nowrap"><b>${ent?'+ ':'− '}${brl(m.valor)}</b></td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">Nenhuma movimentação neste evento</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="8"><b data-cnt="movimentação(ões)">${movs.length} movimentação(ões)</b> · entradas <b style="color:#002620">${brl(totEnt)}</b> · saídas <b style="color:#702b16">${brl(totSai)}</b> · ${isProd()?'total':'saldo'}:</td><td class="right"><b data-tot>${brl(totEnt-totSai)}</b></td></tr></tfoot></table>`;
+  modal(`<div style="display:flex;align-items:center;gap:10px"><h3 style="flex:1">Movimentações — ${h(e.nome)}</h3>${movs.length?`<button class="btn" style="border-color:#b9cdc7;color:#002620" data-act="csvPagos" data-id="${id}">⬇ Exportar Excel do evento</button>`:''}</div>
+  <p class="meta" style="margin:-8px 0 12px">${fmt(e.data)} · ${h(e.local||'')}${e.centroCusto?' · '+h(e.centroCusto):''}${e.responsavel?' · Responsável: <b>'+h(e.responsavel)+'</b>':''} · <b>${movs.length} movimentação(ões)</b>${isProd()?'':` · entradas <b style="color:#002620">${brl(totEnt)}</b> · saídas <b style="color:#702b16">${brl(totSai)}</b>`}</p>
   ${isProd()?'':`<div class="panel" style="margin-bottom:12px"><b>📝 Anotações</b> <span class="meta">— as mesmas do cadastro do evento</span>${notasEditor(id,'mov')}</div>`}
   ${isProd()?'':`<div class="panel" style="margin-bottom:12px"><b>🔗 Links</b> <span class="meta">— os mesmos do cadastro do evento</span>${linksEditor(id,'mov')}</div>`}
   ${grafico}
@@ -844,7 +870,7 @@ function itemHist(a, comNome, comX){
       ${comNome?`<b>${h(pessoa(a.pessoaId).nome)}</b>`:''}<span class="meta">🕒 ${fmtHora(a.quando)} · ${a.quem==='externo'
         ? `pela <b>própria pessoa</b> (link enviado por ${h(user(a.convite).nome)})`
         : `por <b>${h(user(a.quem).nome)}</b> (${PERFIS[user(a.quem).perfil]||''})`}</span></div>
-    ${a.campos.length?`<table class="hist-tab"><tbody>${a.campos.map(k=>`<tr><td class="meta">${CAMPOS_PESSOA[k]}</td><td><s style="color:var(--muted)">${h(a.antes[k]||'—')}</s></td><td>→</td><td><b style="color:#15803d">${h(a.depois[k]||'—')}</b></td></tr>`).join('')}</tbody></table>`:''}
+    ${a.campos.length?`<table class="hist-tab"><tbody>${a.campos.map(k=>`<tr><td class="meta">${CAMPOS_PESSOA[k]}</td><td><s style="color:var(--muted)">${h(a.antes[k]||'—')}</s></td><td>→</td><td><b style="color:#002620">${h(a.depois[k]||'—')}</b></td></tr>`).join('')}</tbody></table>`:''}
   </div>`;
 }
 function verHistorico(pessoaId){
@@ -883,10 +909,10 @@ function modalLinkAuto(){
   const msg = `Olá! Para receber seus pagamentos, faça seu cadastro (dados pessoais e bancários) por este link: ${link}`;
   modal(`<h3>🔗 Link para a pessoa se cadastrar</h3>
   <p style="margin:0 0 12px;color:var(--muted)">Envie para o fornecedor, artista ou prestador. Ele mesmo preenche os dados pessoais e bancários, <b>sem precisar de login</b>. O cadastro entra direto em Pessoas, marcado como <span class="tag" style="background:var(--brand)">autocadastro</span>, e fica registrado no histórico.</p>
-  <input id="campoLink" readonly value="${h(link)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#f9fafb" onfocus="this.select()">
-  <div class="note" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">🔒 Quem usa o link só consegue <b>criar um cadastro novo</b> — não vê nem altera dados de ninguém. Se o CPF/CNPJ já estiver cadastrado, o sistema avisa e não muda nada.</div>
+  <input id="campoLink" readonly value="${h(link)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#faf7f3" onfocus="this.select()">
+  <div class="note" style="background:#e4ece9;border-color:#b9cdc7;color:#002620">🔒 Quem usa o link só consegue <b>criar um cadastro novo</b> — não vê nem altera dados de ninguém. Se o CPF/CNPJ já estiver cadastrado, o sistema avisa e não muda nada.</div>
   <div class="actions"><button class="btn" data-act="abrirFormAuto">👀 Testar o formulário</button>
-    <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}" style="text-decoration:none;color:#15803d;border-color:#86efac">Enviar pelo WhatsApp</a>
+    <a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}" style="text-decoration:none;color:#002620;border-color:#b9cdc7">Enviar pelo WhatsApp</a>
     <button class="btn pri" data-act="copiarLinkAuto">🔗 Copiar link</button></div>`, 600);
 }
 function telaAutocadastro(){
@@ -1155,7 +1181,7 @@ function verPedido(id){
   </dl>
   <h4 style="margin:16px 0 0">Histórico</h4>
   <div class="hist">${p.historico.map(x=>`<div>${h(x.acao)}<small>${h(user(x.quem).nome)} · ${fmt(x.quando)}</small></div>`).join('')}</div>
-  ${isAdmin()?`<div class="note" style="background:#f5f3ff;border-color:#efe0bb;color:#002620">Admin: alterar status manualmente
+  ${isAdmin()?`<div class="note" style="background:#fbf6ea;border-color:#efe0bb;color:#002620">Admin: alterar status manualmente
     <select id="novoStatus" style="margin-left:6px">${ORDEM.map(s=>`<option value="${s}" ${s===p.status?'selected':''}>${STATUS[s].nome}</option>`).join('')}</select>
     <button class="btn sm" data-act="mudarStatus" data-id="${p.id}">Aplicar</button></div>`:''}
   ${isProd()&&p.status!=='aguardando'?'<div class="note">Este pedido já saiu de "Aguardando aprovação", então só o admin pode alterá-lo.</div>':''}
@@ -1195,7 +1221,7 @@ const baseNome = n => String(n||'').replace(/\b(19|20)\d{2}\b/g,'').replace(/\b\
 const linkify = t => h(t||'').replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/g, u => `<a href="${u.startsWith('www.')?'https://'+u:u}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--brand);word-break:break-all">${u}</a>`);
 // Links com nome do evento (lista de {nome, url}); mesma lista no cadastro, na lista de Eventos e nas Movimentações
 const urlOk = u => { u=(u||'').trim(); return !u ? '' : /^https?:\/\//i.test(u) ? u : 'https://'+u; };
-const linksChips = e => (e.links||[]).map(l=>`<a href="${h(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${h(l.url)}" style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border:1px solid #e3c98a;border-radius:999px;color:#002620;text-decoration:none;font-size:12px;background:#f5f3ff">🔗 ${h(l.nome)}</a>`).join('');
+const linksChips = e => (e.links||[]).map(l=>`<a href="${h(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${h(l.url)}" style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border:1px solid #e3c98a;border-radius:999px;color:#002620;text-decoration:none;font-size:12px;background:#fbf6ea">🔗 ${h(l.nome)}</a>`).join('');
 const linksEditor = (id, ctx) => { const e = evento(id); return `<div>${(e.links||[]).map((l,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)"><a href="${h(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--brand);font-weight:500">🔗 ${h(l.nome)}</a><span class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${h(l.url)}</span><button class="btn sm bad" data-act="delLink" data-id="${id}:${i}" data-arg="${ctx}" title="Remover link">✕</button></div>`).join('') || '<div class="meta">Nenhum link ainda.</div>'}
   <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input id="lkNome_${ctx}" placeholder="Nome do link (ex.: Contrato do DJ)" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--line);border-radius:8px"><input id="lkUrl_${ctx}" placeholder="Cole o link (https://…)" style="flex:2;min-width:220px;padding:7px 10px;border:1px solid var(--line);border-radius:8px"><button class="btn pri" data-act="addLink" data-id="${id}" data-arg="${ctx}">+ Adicionar link</button></div></div>`; };
 // Anotações do evento: mesma lista (com data e autor) no cadastro, na lista de Eventos e nas Movimentações
@@ -1690,7 +1716,7 @@ function telaConciliacao(){
     <li>O app procura, para cada saída do banco, o pedido com <b>mesmo valor</b>, <b>data próxima</b> (até ${CONC_TOL_DIAS} dias) e <b>nome/CPF/CNPJ do favorecido</b> na descrição.</li>
     <li>Você confere as sugestões e confirma. Pedidos "Aprovado · a pagar" que aparecem no banco viram <b>Pago</b> automaticamente, com a data do banco.</li>
     <li>O que não bater, você concilia <b>manualmente</b> — escolhendo o lançamento, ou informando a data de pagamento sem extrato.</li></ol></div>`:''}
-  ${sug.length?`<div class="panel" style="margin-bottom:12px;border-color:#a7f3d0"><div class="toolbar" style="margin:0 0 6px"><b>✨ Sugestões automáticas (${sug.length})</b><div class="spacer"></div><button class="btn sm ok" data-act="concTodas">Confirmar todas</button></div>
+  ${sug.length?`<div class="panel" style="margin-bottom:12px;border-color:#b9cdc7"><div class="toolbar" style="margin:0 0 6px"><b>✨ Sugestões automáticas (${sug.length})</b><div class="spacer"></div><button class="btn sm ok" data-act="concTodas">Confirmar todas</button></div>
     <table class="cards"><thead><tr><th>Data banco</th><th>Extrato</th><th class="right">Valor</th><th>Pedido</th><th>Favorecido</th><th class="right">Valor</th><th>Status</th><th>Por quê</th><th></th></tr></thead><tbody>
     ${sug.map(s=>`<tr>${tx(s.t)}${ped(s.p)}<td class="meta" style="white-space:normal">${s.motivo}</td><td><div class="btns" style="margin:0;flex-wrap:nowrap"><button class="btn sm ok" data-act="concConfirmar" data-id="${s.t.id}" data-arg="${s.p.id}">Confirmar</button><button class="btn sm" data-act="concRejeitar" data-id="${s.t.id}" data-arg="${s.p.id}">Não é este</button></div></td></tr>`).join('')}
     </tbody></table></div>`:''}
@@ -1773,7 +1799,7 @@ function compartilhar(aposCriar){
   const link = linkAprovacao();
   modal(`<h3>${aposCriar?'✅ Pedido enviado para aprovação!':'Link de aprovação para os sócios'}</h3>
   <p style="margin:0 0 12px;color:var(--muted)">Copie o link e cole no WhatsApp dos sócios. Ao abrir, o sócio vê a <b>lista completa de pagamentos aguardando aprovação</b> e aprova direto no app — basta um sócio aprovar.</p>
-  <input id="campoLink" readonly value="${h(link)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#f9fafb" onfocus="this.select()">
+  <input id="campoLink" readonly value="${h(link)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:#faf7f3" onfocus="this.select()">
   <div class="actions"><button class="btn" data-act="fechar">${aposCriar?'Agora não':'Fechar'}</button><button class="btn pri" data-act="copiarLink">🔗 Copiar link</button></div>`);
 }
 function telaAprovacoes(){
@@ -1833,7 +1859,7 @@ function formPessoa(id){
   const p = id ? pessoa(id) : {nome:'',doc:'',funcao:'',pix:'',tel:'',banco:'',agencia:'',conta:'',tipoConta:'Corrente',pixTipo:''};
   const sel = (nome, ops, v) => `<select name="${nome}"><option value="">—</option>${ops.map(o=>`<option ${v===o?'selected':''}>${o}</option>`).join('')}</select>`;
   modal(`<h3>${id?'Editar cadastro — '+h(p.nome):'Novo cadastro'}</h3>
-  ${id?`<div class="note" style="margin:-4px 0 12px;background:#eff6ff;border-color:#bfdbfe;color:#1e3a8a">A alteração vale na hora e fica registrada no histórico com data, hora e o seu nome. <a href="#" data-act="verHist" data-id="${id}">Ver histórico</a></div>`:''}
+  ${id?`<div class="note" style="margin:-4px 0 12px;background:#f6e6d3;border-color:#e8c9a3;color:#5b3a10">A alteração vale na hora e fica registrada no histórico com data, hora e o seu nome. <a href="#" data-act="verHist" data-id="${id}">Ver histórico</a></div>`:''}
   <form class="form" id="fPessoa">
     <label class="full">Nome / Razão social *<input name="nome" required value="${h(p.nome)}"></label>
     <label>CPF ou CNPJ *<input name="doc" required value="${h(p.doc)}"></label>
@@ -2160,19 +2186,19 @@ function fluxoResumo(lista, todos){
     return {e:evento(id), ent:s('entrada'), sai:s('saida'), entR:s('entrada',true), saiR:s('saida',true)}; }).sort((a,b)=>(b.e.data||'').localeCompare(a.e.data||''));
   const tEnt = porEv.reduce((a,x)=>a+x.ent,0), tSai = porEv.reduce((a,x)=>a+x.sai,0);
   return `<div class="panel"><div class="toolbar" style="margin:0 0 4px"><b>Entradas × saídas mês a mês — ${anosSel.join(' + ')}</b><div class="spacer"></div>
-    <div class="legend"><span><span class="dot" style="background:var(--pago)"></span>Entradas</span><span><span class="dot" style="background:var(--recusado)"></span>Saídas</span><span><span class="dot" style="background:#9ca3af;opacity:.4"></span>Mais claro = previsto</span></div></div>
+    <div class="legend"><span><span class="dot" style="background:var(--pago)"></span>Entradas</span><span><span class="dot" style="background:var(--recusado)"></span>Saídas</span><span><span class="dot" style="background:#a89f95;opacity:.4"></span>Mais claro = previsto</span></div></div>
     <div class="fc-chart">${meses.map(x=>`<div class="fc-mes ${FC.diario===x.a+'-'+x.mm?'sel':''}" data-act="fcMes" data-id="${x.a}-${x.mm}" title="${x.nome} — clique para ver o diário">
       <div class="fc-par">${col(x.entR,x.entP,'var(--pago)',`Entradas: ${brl(x.entR)} recebido + ${brl(x.entP)} previsto`)}${col(x.saiR,x.saiP,'var(--recusado)',`Saídas: ${brl(x.saiR)} pago + ${brl(x.saiP)} previsto`)}</div>
       <div class="lab">${x.nome}</div></div>`).join('')}</div>
     ${FC.diario ? fluxoDiario(base) : `<div style="overflow-x:auto;margin-top:14px"><table class="cards"><thead><tr><th>Mês</th><th class="right">Recebido</th><th class="right">A receber</th><th class="right">Pago</th><th class="right">A pagar</th><th class="right">Saldo do mês</th><th class="right">Saldo acumulado</th></tr></thead><tbody>
       ${saldoInicial?`<tr><td class="meta">Saldo anterior</td><td></td><td></td><td></td><td></td><td></td><td class="right"><b>${brl(saldoInicial)}</b></td></tr>`:''}
-      ${meses.map(x=>`<tr class="click" data-act="fcMes" data-id="${x.a}-${x.mm}" title="Ver o diário de ${x.nome}"><td>${x.nome}</td><td class="right" style="color:#047857">${brl(x.entR)}</td><td class="right meta">${brl(x.entP)}</td><td class="right" style="color:#b91c1c">${brl(x.saiR)}</td><td class="right meta">${brl(x.saiP)}</td>
+      ${meses.map(x=>`<tr class="click" data-act="fcMes" data-id="${x.a}-${x.mm}" title="Ver o diário de ${x.nome}"><td>${x.nome}</td><td class="right" style="color:#002620">${brl(x.entR)}</td><td class="right meta">${brl(x.entP)}</td><td class="right" style="color:#702b16">${brl(x.saiR)}</td><td class="right meta">${brl(x.saiP)}</td>
         <td class="right" style="font-weight:600;color:${x.saldo<0?'var(--recusado)':'inherit'}">${brl(x.saldo)}</td><td class="right" style="font-weight:700;color:${x.acum<0?'var(--recusado)':'inherit'}">${brl(x.acum)}</td></tr>`).join('')}
     </tbody></table></div>
     <p class="meta" style="margin:8px 0 0">O gráfico e a tabela mostram o ano inteiro (com o filtro de eventos e de realizado/previsto). <b>Clique em um mês para abrir o diário</b> (dia a dia).</p>`}</div>
   <div class="panel" style="margin-top:12px"><b>Resultado por evento</b> <span class="meta">— entradas menos saídas do evento inteiro (todas as datas), para os eventos com movimento no período filtrado</span>
     <table class="cards" style="margin-top:6px"><thead><tr><th>Evento</th><th>Data</th><th class="right">Entradas</th><th class="right">Saídas</th><th class="right">Resultado</th><th class="right">Margem</th><th class="right">Saldo já realizado</th></tr></thead><tbody>
-    ${porEv.map(x=>{ const res=x.ent-x.sai, mg=x.ent?res/x.ent*100:0; return `<tr class="click" data-act="fcEvento" data-id="${x.e.id}" title="Filtrar por este evento"><td><b>${h(x.e.nome)}</b></td><td>${fmt(x.e.data)}</td><td class="right" style="color:#047857">${brl(x.ent)}</td><td class="right" style="color:#b91c1c">${brl(x.sai)}</td>
+    ${porEv.map(x=>{ const res=x.ent-x.sai, mg=x.ent?res/x.ent*100:0; return `<tr class="click" data-act="fcEvento" data-id="${x.e.id}" title="Filtrar por este evento"><td><b>${h(x.e.nome)}</b></td><td>${fmt(x.e.data)}</td><td class="right" style="color:#002620">${brl(x.ent)}</td><td class="right" style="color:#702b16">${brl(x.sai)}</td>
       <td class="right" style="font-weight:700;color:${res<0?'var(--recusado)':'var(--pago)'}">${brl(res)}</td><td class="right">${x.ent?mg.toFixed(0)+'%':'—'}</td><td class="right meta">${brl(x.entR-x.saiR)}</td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">Nenhuma movimentação com esses filtros</td></tr>'}
     </tbody>${porEv.length?`<tfoot><tr><td colspan="2"><b>Total</b></td><td class="right"><b>${brl(tEnt)}</b></td><td class="right"><b>${brl(tSai)}</b></td><td class="right"><b style="color:${tEnt-tSai<0?'var(--recusado)':'var(--pago)'}">${brl(tEnt-tSai)}</b></td><td class="right">${tEnt?((tEnt-tSai)/tEnt*100).toFixed(0)+'%':'—'}</td><td></td></tr></tfoot>`:''}</table></div>`;
 }
@@ -2254,7 +2280,7 @@ function fcCelula(id, key){
   modal(`<h3>${h(L.nome)} · ${id.length===7?MESES[+id.slice(5)-1]+'/'+id.slice(0,4):fmt(id)}</h3>
   <div style="overflow-x:auto"><table class="cards"><thead><tr><th>Data</th><th>Nº</th><th>Centro de custo</th><th>Favorecido / origem</th><th>Situação</th><th class="right">Valor</th></tr></thead><tbody>
   ${xs.map(x=>{ const r=x.ref, ent=x.tipo==='entrada'; return `<tr class="click" data-act="${ent?'formReceb':'ver'}" data-id="${r.id}"><td>${fmt(x.data)}</td><td>${r.id}</td><td>${h(evento(r.eventoId).nome)}</td>
-    <td style="white-space:normal">${h(ent?r.origem+' — '+r.descricao:pessoa(r.pessoaId).nome+' — '+r.categoria)}</td><td>${tagSit(x.sit)}</td><td class="right" style="font-weight:600;color:${ent?'#047857':'#b91c1c'}">${brl(r.valor)}</td></tr>`; }).join('')}
+    <td style="white-space:normal">${h(ent?r.origem+' — '+r.descricao:pessoa(r.pessoaId).nome+' — '+r.categoria)}</td><td>${tagSit(x.sit)}</td><td class="right" style="font-weight:600;color:${ent?'#002620':'#702b16'}">${brl(r.valor)}</td></tr>`; }).join('')}
   </tbody><tfoot><tr><td colspan="5"><b>${xs.length} lançamento(s)</b></td><td class="right"><b>${brl(tot)}</b></td></tr></tfoot></table></div>
   <div class="actions"><button class="btn" data-act="fechar">Fechar</button></div>`, 820);
 }
@@ -2355,6 +2381,18 @@ Object.assign(acoes, {
   excluirReceb: id => { if(!isAdmin()) return; const x=recebimento(id);
     modal(`<h3>Excluir ${x.id}?</h3><p style="color:var(--muted)">${h(x.descricao)} · ${brl(x.valor)} · ${h(evento(x.eventoId).nome)}<br>O recebimento sai do fluxo de caixa. Essa ação não pode ser desfeita.</p>
     <div class="actions"><button class="btn" data-act="formReceb" data-id="${id}">Voltar</button><button class="btn bad" data-act="confirmarExcluirReceb" data-id="${id}">Excluir</button></div>`); },
+  selCel: () => {},
+  excluirSel: () => { if(!isAdmin()) return;
+    const ids = selVisiveis().filter(c=>c.checked).map(c=>c.dataset.sel); if(!ids.length) return;
+    const ps = db.pedidos.filter(p=>ids.includes(p.id)), tot = ps.reduce((a,p)=>a+p.valor,0);
+    modal(`<h3>Excluir ${ps.length} conta${ps.length>1?'s':''}?</h3>
+    <p style="color:var(--muted);margin:0 0 10px">Total: <b style="color:var(--text)">${brl(tot)}</b>. As contas somem da lista, do dashboard e do fluxo de caixa. Se alguma estava conciliada, o lançamento do extrato volta a ficar pendente. <b>Essa ação não pode ser desfeita.</b></p>
+    <div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px">${ps.map(p=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span>${h(p.id)} · ${h(pessoa(p.pessoaId).nome||'')} · ${h(evento(p.eventoId).nome)}</span><b>${brl(p.valor)}</b></div>`).join('')}</div>
+    <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" style="background:var(--recusado);border-color:var(--recusado)" data-act="confirmarExcluirSel" data-id="${ids.join(',')}">Excluir ${ps.length} conta${ps.length>1?'s':''}</button></div>`, 520); },
+  confirmarExcluirSel: idsTxt => { if(!isAdmin()) return; const ids = String(idsTxt||'').split(',').filter(Boolean);
+    db.pedidos = db.pedidos.filter(p=>!ids.includes(p.id));
+    (db.extrato||[]).forEach(t=>{ if(ids.includes(t.pedidoId)) delete t.pedidoId; });
+    ids.forEach(id=>SEL.delete(id)); save(); fechar(); render(); toast(ids.length+(ids.length>1?' contas excluídas':' conta excluída')); },
   confirmarExcluirReceb: id => { if(!isAdmin()) return; db.recebimentos = db.recebimentos.filter(x=>x.id!==id); save(); fechar(); render(); toast(id+' excluído'); }
 });
 document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k){ FC[k] = [...e.target.selectedOptions].map(o=>o.value).filter(Boolean);
@@ -2364,7 +2402,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '4.8';
+const APP_VERSAO = '5.0';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
@@ -2414,6 +2452,27 @@ document.addEventListener('mousemove', e=>{
   d.style.left = Math.max(8,x)+'px'; d.style.top = Math.max(8,y)+'px';
 });
 document.addEventListener('mouseleave', ()=>{ const d=document.getElementById('dicaGraf'); if(d) d.style.display='none'; });
+// no celular: o 1º toque mostra a dica, o 2º toque no mesmo item abre as movimentações
+let dicaToque = null;
+window.addEventListener('click', e=>{
+  if (!matchMedia('(hover: none)').matches) return;
+  const d = document.getElementById('dicaGraf'); if(!d) return;
+  const t = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+  if (!t){ d.style.display='none'; dicaToque=null; return; }
+  if (dicaToque === t){ d.style.display='none'; dicaToque=null; return; }
+  e.preventDefault(); e.stopPropagation(); dicaToque = t;
+  d.textContent = t.getAttribute('data-tip'); d.style.display='block';
+  const r = t.getBoundingClientRect(), w = d.offsetWidth, hgt = d.offsetHeight;
+  let x = r.left + r.width/2 - w/2, y = r.top - hgt - 8; if (y < 8) y = r.bottom + 8;
+  d.style.left = Math.max(8, Math.min(innerWidth - w - 8, x))+'px'; d.style.top = y+'px';
+}, true);
+window.addEventListener('scroll', ()=>{ const d=document.getElementById('dicaGraf'); if(d && dicaToque){ d.style.display='none'; dicaToque=null; } }, true);
+// redesenha os gráficos quando a largura da tela muda (girar o celular, redimensionar a janela)
+let larguraAnt = innerWidth, tmrLarg;
+window.addEventListener('resize', ()=>{ clearTimeout(tmrLarg); tmrLarg = setTimeout(()=>{
+  if (Math.abs(innerWidth - larguraAnt) < 40) return; larguraAnt = innerWidth;
+  if (typeof me !== 'undefined' && me && view === 'dashboard' && !document.querySelector('.overlay') && typeof render === 'function') render();
+}, 250); });
 </script>
 </body>
 </html>
