@@ -423,6 +423,10 @@ function render(){
   if (cadastroPor){ app.innerHTML = demoBar() + telaAutocadastro(); turbinarSelects(app); return; }
   // com login real: a pessoa do cliente entra direto no perfil cadastrado com o e-mail dela
   if (!me && window.NUVEM && !window.NUVEM.gestora){ const meus = usuariosDoLogin(); if (meus.length === 1){ me = meus[0]; view = 'dashboard'; } }
+  // a gestora master entra direto: no perfil com o e-mail dela, ou no primeiro Admin master
+  if (!me && window.NUVEM && window.NUVEM.gestora){ const ativos = db.users.filter(u=>u.ativo!==false), em = String(window.NUVEM.email||'').trim().toLowerCase();
+    const eu = ativos.find(u=>String(u.email||'').trim().toLowerCase()===em) || ativos.find(u=>u.perfil==='admin');
+    if (eu){ me = eu; view = 'dashboard'; } }
   if (!me){ app.innerHTML = demoBar() + telaLogin(); return; }
   if (!render._puxou && NAPI() && isAdmin()){ render._puxou = true; setTimeout(puxarEnvios, 300); }
   const abas = [['dashboard','Dashboard'],['lista', isProd()?'Meus pedidos':'Contas a pagar']];
@@ -439,7 +443,7 @@ function render(){
     ${emb ? (window.NUVEM ? `<div class="demo-mini">☁ Dados na nuvem · v${APP_VERSAO}</div>` : `<div class="demo-mini" title="Dados fictícios, salvos só neste navegador">🧪 Demonstração · v${APP_VERSAO} <button data-act="reset" title="Restaurar dados de exemplo">↺ Restaurar exemplo</button></div>`)
           : `<div class="logo"><span class="marca">$</span>Pagamentos de Eventos <small class="meta" style="font-weight:400" title="Versão do app">v${APP_VERSAO}</small></div>`}
     <div class="who"><div class="av">${iniciais(me.nome)}</div><div class="nm">${h(me.nome)}<br><span class="badge">${PERFIS[me.perfil]}</span></div>
-    <button class="btn sm" data-act="sair">Sair</button></div>
+    ${window.NUVEM ? '' : '<button class="btn sm" data-act="sair">Sair</button>'}</div>
   </header>
   <nav>${abas.map(([k,n])=>`<button class="${view===k?'on':''}" data-act="aba" data-id="${k}">${n}</button>`).join('')}</nav>
   <main>${({kanban:telaKanban,conciliacao:telaConciliacao,aprovacoes:telaAprovacoes,lista:telaLista,receber:telaReceber,dashboard:telaDash,fluxo:telaFluxo,eventos:telaEventos,pessoas:telaPessoas,usuarios:telaUsuarios})[view]()}</main>`;
