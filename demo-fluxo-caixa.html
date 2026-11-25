@@ -212,6 +212,8 @@ tr.click:hover td{background:#f4efeb}
 .sel-col{width:36px;text-align:center!important;padding-left:4px!important;padding-right:4px!important}
 .sel-col input{width:17px;height:17px;accent-color:#002620;cursor:pointer;vertical-align:middle}
 tr.sel-on td{background:#efbb3c33!important}
+tr.inativo td{color:#8a8a8a}
+tr.inativo td .meta{color:#8a8a8a}
 .tag{color:#fff!important}
 .dica-rola{display:none;font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 @media (max-width:700px){.dica-rola{display:block}}
@@ -596,24 +598,24 @@ function telaReceber(){
   if (!isAdmin()) return '';
   const rs = (db.recebimentos||[]).filter(x=>{ const d = x.recebidoEm || x.previsto;
     return passa(F.ano, d.slice(0,4)) && passa(F.mes, d.slice(5,7)) && passa(F.evento, x.eventoId); })
-    .map(x=>({x, data:x.recebidoEm||x.previsto, sit: x.recebidoEm ? 'recebido' : (x.previsto < HOJE ? 'atrasado' : 'areceber')}))
-    .sort((a,b)=>b.data.localeCompare(a.data));
+    .map(x=>({x, data:x.recebidoEm||x.previsto, sit: x.status==='cancelado' ? 'recusado' : x.recebidoEm ? 'recebido' : (x.previsto < HOJE ? 'atrasado' : 'areceber')}))
+    .sort((a,b)=>((b.sit==='recusado')-(a.sit==='recusado')) || b.data.localeCompare(a.data));
   const soma = s => rs.filter(r=>r.sit===s).reduce((a,r)=>a+r.x.valor,0), qtd = s => rs.filter(r=>r.sit===s).length;
-  const tot = rs.reduce((a,r)=>a+r.x.valor,0);
+  const tot = rs.filter(r=>r.sit!=='recusado').reduce((a,r)=>a+r.x.valor,0);
   [...SEL].forEach(id=>{ if(!(db.recebimentos||[]).some(x=>x.id===id)) SEL.delete(id); });
   const k = (s,l,cor) => `<div class="kpi"><div class="l"><span class="dot" style="background:${cor}"></span>${l}</div><div class="v">${brl(soma(s))}</div><div class="s">${qtd(s)} lançamento(s)</div></div>`;
   return `<div class="toolbar"><h2 style="margin:0">Contas a receber</h2><button class="btn bad" id="btnExclSel" data-act="excluirSelReceb" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionados (<span data-sel-n>${SEL.size}</span>)</button><div class="spacer"></div>
     <button class="btn" data-act="csvReceber">⬇ Exportar Excel (CSV)</button><button class="btn pri" data-act="formReceb">+ Novo recebimento</button></div>
   <div class="toolbar">${filtrosHTML({status:false, categoria:false})}</div>
   <div class="panel"><table class="filtravel" data-key="receber6"><thead><tr><th class="sel-col" title="Selecionar todos os recebimentos que aparecem na lista"><input type="checkbox" data-sel-todos></th><th>Data</th><th>Nº</th><th>Nome do evento</th><th>Data do evento</th><th class="right">Valor</th><th>Centro de custo</th><th>Origem</th><th>Descrição</th><th>Forma</th><th>Situação</th><th>Banco</th><th>Recebimento</th></tr></thead>
-  <tbody>${rs.map(({x,data,sit})=>`<tr class="click" data-act="formReceb" data-id="${x.id}" data-valor="${x.valor}"><td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${x.id}" ${SEL.has(x.id)?'checked':''}></td><td data-v="${fmt(data)}">${fmt(data)}${x.recebidoEm?'':'<br><span class="meta">previsto</span>'}</td><td>${x.id}</td><td>${h(evento(x.eventoId).nome)}</td><td>${evento(x.eventoId).data?fmt(evento(x.eventoId).data):'—'}</td><td class="right">${brl(x.valor)}</td><td data-v="${h(evento(x.eventoId).centroCusto||'—')}">${h(evento(x.eventoId).centroCusto||'—')}</td><td>${h(x.origem)}</td><td style="white-space:normal;min-width:180px">${h(x.descricao)}</td><td>${h(x.forma)}</td>
-    <td data-v="${SIT[sit].nome}">${tagSit(sit)}</td><td data-v="${h(x.banco||'—')}">${x.banco?h(x.banco):'<span class="meta">—</span>'}</td><td data-v="${x.recebidoEm?'Recebido':sit==='atrasado'?'Atrasado':'A receber'}" style="white-space:nowrap">${x.recebidoEm?`<span class="meta">✓ Recebido em ${fmt(x.recebidoEm)}</span>`:`${sit==='atrasado'?'<span class="tag" style="background:var(--recusado)">⏰ Atrasado</span>':'<span class="tag" style="background:var(--aprovado)">A receber</span>'} <button class="btn sm" data-act="receber" data-id="${x.id}" title="Registrar o recebimento">Marcar como recebido</button>`}</td></tr>`).join('') || '<tr><td colspan="13" class="empty">Nenhum recebimento com esses filtros</td></tr>'}</tbody>
-  <tfoot><tr><td colspan="5"><b data-cnt="recebimentos">${rs.length} recebimentos</b></td><td class="right"><b data-tot>${brl(tot)}</b></td><td colspan="7"></td></tr></tfoot></table></div>`;
+  <tbody>${rs.map(({x,data,sit})=>`<tr class="click${sit==='recusado'?' inativo':''}" data-act="formReceb" data-id="${x.id}" data-valor="${sit==='recusado'?0:x.valor}"><td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${x.id}" ${SEL.has(x.id)?'checked':''}></td><td data-v="${fmt(data)}">${fmt(data)}${x.recebidoEm?'':'<br><span class="meta">previsto</span>'}</td><td>${x.id}</td><td>${h(evento(x.eventoId).nome)}</td><td>${evento(x.eventoId).data?fmt(evento(x.eventoId).data):'—'}</td><td class="right">${brl(x.valor)}</td><td data-v="${h(evento(x.eventoId).centroCusto||'—')}">${h(evento(x.eventoId).centroCusto||'—')}</td><td>${h(x.origem)}</td><td style="white-space:normal;min-width:180px">${h(x.descricao)}</td><td>${h(x.forma)}</td>
+    <td data-v="${SIT[sit].nome}">${tagSit(sit)}</td><td data-v="${h(x.banco||'—')}">${x.banco?h(x.banco):'<span class="meta">—</span>'}</td><td data-v="${sit==='recusado'?'Recusado':x.recebidoEm?'Recebido':sit==='atrasado'?'Atrasado':'A receber'}" style="white-space:nowrap">${sit==='recusado'?'<span class="meta">Recusado, não entra no caixa</span>':x.recebidoEm?`<span class="meta">✓ Recebido em ${fmt(x.recebidoEm)}</span>`:`${sit==='atrasado'?'<span class="tag" style="background:var(--recusado)">⏰ Atrasado</span>':'<span class="tag" style="background:var(--aprovado)">A receber</span>'} <button class="btn sm" data-act="receber" data-id="${x.id}" title="Registrar o recebimento">Marcar como recebido</button>`}</td></tr>`).join('') || '<tr><td colspan="13" class="empty">Nenhum recebimento com esses filtros</td></tr>'}</tbody>
+  <tfoot><tr><td colspan="5"><b data-cnt="recebimentos">${rs.length} recebimentos</b> · total válido (sem recusados)</td><td class="right"><b data-tot>${brl(tot)}</b></td><td colspan="7"></td></tr></tfoot></table></div>`;
 }
 function csvReceber(){
   const linhas = [['Data','Nº','Nome do evento','Data do evento','Valor','Centro de custo','Origem','Descrição','Forma','Situação','Banco']];
   (db.recebimentos||[]).forEach(x=>{ const d=x.recebidoEm||x.previsto; if(!(passa(F.ano,d.slice(0,4))&&passa(F.mes,d.slice(5,7))&&passa(F.evento,x.eventoId))) return;
-    const e=evento(x.eventoId); linhas.push([fmt(d),x.id,e.nome,e.data?fmt(e.data):'',x.valor.toFixed(2).replace('.',','),e.centroCusto||'',x.origem,x.descricao,x.forma,x.recebidoEm?'Recebido':(x.previsto<HOJE?'Atrasado':'A receber'),x.banco||'']); });
+    const e=evento(x.eventoId); linhas.push([fmt(d),x.id,e.nome,e.data?fmt(e.data):'',x.valor.toFixed(2).replace('.',','),e.centroCusto||'',x.origem,x.descricao,x.forma,x.status==='cancelado'?'Recusado':x.recebidoEm?'Recebido':(x.previsto<HOJE?'Atrasado':'A receber'),x.banco||'']); });
   const csv = '\ufeff'+linhas.map(l=>l.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(';')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download = 'contas_a_receber.csv'; a.click();
 }
@@ -644,15 +646,16 @@ document.addEventListener('change', e => {
   else if (t.dataset && t.dataset.col !== undefined) setTimeout(selAtualizar, 0);
 });
 function telaLista(){
-  const lista = filtrar(visiveis()).sort((a,b)=>b.vencimento.localeCompare(a.vencimento));
-  const tot = lista.filter(p=>!['recusado','cancelado'].includes(p.status)).reduce((a,p)=>a+p.valor,0);
+  const inativo = p => ['recusado','cancelado'].includes(p.status);
+  const lista = filtrar(visiveis()).sort((a,b)=>(inativo(b)-inativo(a)) || b.vencimento.localeCompare(a.vencimento));
+  const tot = lista.filter(p=>!inativo(p)).reduce((a,p)=>a+p.valor,0);
   const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0), iv = cols.findIndex(c=>c.id==='valor');
   [...SEL].forEach(id=>{ if(!db.pedidos.some(p=>p.id===id)) SEL.delete(id); });
   return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
     ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
   <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}<th>Pagamento</th></tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${['recusado','cancelado'].includes(p.status) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
+  <tbody>${lista.map(p=>`<tr class="click${inativo(p)?' inativo':''}" data-act="ver" data-id="${p.id}" data-valor="${inativo(p) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
   <tfoot><tr>${rodapeTotal((adm?1:0)+iv, cols.length-iv, `<b data-cnt="pedidos">${lista.length} pedidos</b> · ${F.status.some(s=>['recusado','cancelado'].includes(s))?'total':'total válido (sem recusados/cancelados)'}`, brl(tot))}</tr></tfoot></table></div>`;
 }
 // Tabela de pedidos com as mesmas colunas escolhidas na Lista (usada nas relações do dashboard e em Aprovações)
@@ -2163,7 +2166,7 @@ function seedRecebimentos(eventos, pedidos){
 const recebimento = id => db.recebimentos.find(x=>x.id===id);
 const SIT = {
   pago:{nome:'Pago',cor:'var(--pago)'}, apagar:{nome:'A pagar',cor:'var(--aprovado)'}, aguardando:{nome:'Aguardando aprovação',cor:'var(--aguardando)'},
-  recebido:{nome:'Recebido',cor:'var(--pago)'}, areceber:{nome:'A receber',cor:'var(--aprovado)'}, atrasado:{nome:'Atrasado',cor:'var(--recusado)'}
+  recebido:{nome:'Recebido',cor:'var(--pago)'}, areceber:{nome:'A receber',cor:'var(--aprovado)'}, atrasado:{nome:'Atrasado',cor:'var(--recusado)'}, recusado:{nome:'Recusado',cor:'var(--recusado)'}
 };
 // Movimentos do fluxo: cada pagamento e recebimento vira {tipo, data, valor, realizado, ...}
 function movimentosFluxo(){
@@ -2173,7 +2176,7 @@ function movimentosFluxo(){
     const sit = pago ? 'pago' : p.status==='aguardando' ? 'aguardando' : (p.vencimento < HOJE ? 'atrasado' : 'apagar');
     return {tipo:'saida', ref:p, id:p.id, eventoId:p.eventoId, data, valor:p.valor, realizado:pago, sit};
   });
-  const recs = db.recebimentos.map(x=>({tipo:'entrada', ref:x, id:x.id, eventoId:x.eventoId, data:x.recebidoEm || x.previsto, valor:x.valor,
+  const recs = db.recebimentos.filter(x=>x.status!=='cancelado').map(x=>({tipo:'entrada', ref:x, id:x.id, eventoId:x.eventoId, data:x.recebidoEm || x.previsto, valor:x.valor,
     realizado:!!x.recebidoEm, sit: x.recebidoEm ? 'recebido' : (x.previsto < HOJE ? 'atrasado' : 'areceber')}));
   return pags.concat(recs);
 }
@@ -2371,6 +2374,7 @@ function formReceb(id){
     <label>Data prevista *<input name="previsto" type="date" required value="${x.previsto}"></label>
     <label>Recebido em <span class="meta">(vazio = ainda não entrou)</span><input name="recebidoEm" type="date" value="${x.recebidoEm||''}"></label>
     <label>Banco <span class="meta">(conta onde entrou)</span>${selectBanco('banco', x.banco||'')}</label>
+    <label class="full">Situação<select name="situacao"><option value="ativo" ${x.status!=='cancelado'?'selected':''}>Válido (entra no caixa)</option><option value="recusado" ${x.status==='cancelado'?'selected':''}>Recusado (não vai entrar)</option></select></label>
   </form>
   ${id&&x.historico?.length?`<div style="margin-top:12px"><b style="font-size:13px">Histórico</b><div class="hist">${x.historico.map(a=>`<div>${h(a.acao)}<small>${fmt(a.quando)} · ${h(user(a.quem).nome)}</small></div>`).join('')}</div></div>`:''}
   <div class="actions">${id?`<button class="btn bad" data-act="excluirReceb" data-id="${id}" style="margin-right:auto">Excluir</button>`:''}<button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="salvarReceb" data-id="${id||''}">${id?'Salvar alterações':'Lançar recebimento'}</button></div>`, 620);
@@ -2402,10 +2406,12 @@ Object.assign(acoes, {
   csvReceber: () => csvReceber(),
   salvarReceb: id => { if(!isAdmin()) return; const d=lerForm('fReceb'); if(!d) return;
     const dados = {eventoId:d.eventoId, origem:d.origem, forma:d.forma, descricao:(d.descricao||'').trim()||d.origem, valor:Number(d.valor)||0, previsto:d.previsto, recebidoEm:d.recebidoEm||'', banco:lembrarBanco(d.banco)};
-    if (id){ const x=recebimento(id), antes=!!x.recebidoEm; Object.assign(x,dados);
+    const recusar = d.situacao==='recusado';
+    if (id){ const x=recebimento(id), antes=!!x.recebidoEm, eraRec = x.status==='cancelado'; Object.assign(x,dados); if(recusar) x.status='cancelado'; else delete x.status;
+      if (recusar!==eraRec) x.historico.push({quando:agora(),quem:me.id,acao: recusar?'Marcou como recusado':'Voltou a ser válido'});
       x.historico.push({quando:agora(),quem:me.id,acao: !antes&&x.recebidoEm ? 'Marcou como recebido em '+fmt(x.recebidoEm) : antes&&!x.recebidoEm ? 'Voltou para "a receber"' : 'Editou o recebimento'}); toast('Recebimento atualizado'); }
     else { db.recSeq = (db.recSeq || db.recebimentos.length+1);
-      db.recebimentos.push({id:'RC-'+String(db.recSeq++).padStart(4,'0'),...dados,historico:[{quando:agora(),quem:me.id,acao:'Lançou o recebimento'}]}); toast('Recebimento lançado'); }
+      db.recebimentos.push({id:'RC-'+String(db.recSeq++).padStart(4,'0'),...dados,...(recusar?{status:'cancelado'}:{}),historico:[{quando:agora(),quem:me.id,acao:'Lançou o recebimento'}]}); toast('Recebimento lançado'); }
     save(); fechar(); render(); },
   receber: id => { if(!isAdmin()) return; const x=recebimento(id); if(!x || x.recebidoEm) return;
     modal(`<h3>✓ Confirmar recebimento ${x.id}</h3>
@@ -2459,7 +2465,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '6.1';
+const APP_VERSAO = '6.2';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
