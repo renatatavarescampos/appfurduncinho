@@ -71,6 +71,8 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
 .tab .r{text-align:right;white-space:nowrap}
 .tab tfoot td{font-weight:600;background:#f4efeb}
 .tab tr.ruim td{background:#ef44440f}
+.tab .pixc{font-size:12.5px;overflow-wrap:anywhere;min-width:96px}
+.tab .pixc .nw{white-space:nowrap}
 .tab .sub{font-size:12px;color:var(--muted);margin-top:2px}
 .tab .pb{color:#b91c1c;font-size:12px}.tab .av{color:var(--cobre);font-size:12px}
 .tg{background:#efbb3c40;border-radius:6px;padding:1px 6px;font-size:11px}
@@ -154,6 +156,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       + linha('Quem está pedindo', esc(d.get('s_nome')) + ' · ' + esc(d.get('s_contato')))
       + linha('Evento', esc(txtSel(fm, 'eventoId')))
       + linha('Favorecido', nova ? esc(d.get('p_nome')) + ' <small>(cadastro novo)</small>' : esc(txtSel(fm, 'pessoaId')))
+      + linha('PIX', nova ? (esc(d.get('p_pix')) || (d.get('p_banco') ? esc(d.get('p_banco')) + ' · ag. ' + esc(d.get('p_agencia')) + ' · conta ' + esc(d.get('p_conta')) : '')) : (function(){ var f = (F.opcoes.favorecidos||[]).filter(function(x){ return x.id === d.get('pessoaId'); })[0]; return f && f.pix ? esc(f.pix) : '<span style="color:var(--cobre)">sem PIX no cadastro</span>'; })())
       + linha('Categoria', esc(txtSel(fm, 'categoria')) || '<span style="color:var(--muted)">não informada</span>')
       + linha('Valor', '<b>' + brl(d.get('valor')) + '</b>')
       + linha('Vencimento', fmt(d.get('vencimento')))
@@ -206,8 +209,10 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
   function telaInicio(o){
     cx.innerHTML = '<h1>Como você quer enviar?</h1><p class="intro">Escolha uma opção.</p><div class="escolha">'
       + '<button type="button" id="opManual"><span class="ic">✍️</span><span><b>Lançamento manual</b><small>Preencher um pagamento por vez, com nota fiscal ou print se tiver.</small></span></button>'
+      + '<button type="button" id="opZap"><span class="ic">💬</span><span><b>Colar mensagem do WhatsApp</b><small>Copiar o texto da conversa e colar aqui. A gente monta os pagamentos para você conferir.</small></span></button>'
       + '<button type="button" id="opImport"><span class="ic">📥</span><span><b>Importar arquivo</b><small>Enviar uma planilha Excel com vários pagamentos de uma vez.</small></span></button></div>';
     document.getElementById('opManual').onclick = function(){ telaPedido(o); window.scrollTo(0,0); };
+    document.getElementById('opZap').onclick = function(){ telaColar(o); window.scrollTo(0,0); };
     document.getElementById('opImport').onclick = function(){ telaImportar(o); window.scrollTo(0,0); };
   }
   function voltarInicio(){ var a = document.getElementById('btInicio'); if (a) a.onclick = function(ev){ ev.preventDefault(); telaInicio(F.opcoes || {}); window.scrollTo(0,0); }; }
@@ -340,23 +345,110 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       revisarLote(fm, itens, o);
     }).catch(function(e){ fim(); console.warn(e); erro(/xlsx/.test(e && e.message) ? 'Não consegui abrir o leitor de planilhas. Verifique a internet e tente de novo.' : 'Não consegui ler esta planilha. Salve como .xlsx e tente de novo.'); });
   }
-  function revisarLote(fm, itens, o){
+  // ---------- colar mensagem do WhatsApp ----------
+  var RE_VALOR = /(?:R\$\s*)(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)|(\d{1,3}(?:\.\d{3})+,\d{2}|\d+,\d{2})|(\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|\d+)\s*(?:reais|mil)\b/i;
+  var RE_DATA = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/;
+  var RE_DOC = /\b(\d{3}\.?\d{3}\.?\d{3}-?\d{2}|\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})\b/;
+  var RE_EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
+  function semPrefixoZap(l){ return l.replace(/^\s*\[[^\]]{4,30}\]\s*[^:]{1,40}:\s*/, '').replace(/^\s*\d{1,2}\/\d{1,2}\/\d{2,4},?\s+\d{1,2}:\d{2}\s*-\s*[^:]{1,40}:\s*/, ''); }
+  function valorTexto(l){
+    var m = l.match(RE_VALOR);
+    if (!m){ var f = l.replace(/\d{8,}/g, ' ').match(/(?:^|[\s(])(\d{1,3}(?:\.\d{3})+|\d{2,6})(?=[\s),;!]|\.(?:\s|$)|$)/); if (!f) return null; return {v:lerValor(f[1]), txt:f[1]}; }
+    var bruto = m[1] || m[2] || m[3], v = lerValor(bruto);
+    if (m[3] && /mil\b/i.test(m[0])) v = v * 1000;
+    return {v:v, txt:m[0]};
+  }
+  function dataTexto(l){
+    var m = l.match(RE_DATA); if (!m) return null;
+    var a = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : null, h = hoje();
+    if (!a){ a = +h.slice(0,4); var tent = a + '-' + String(m[2]).padStart(2,'0') + '-' + String(m[1]).padStart(2,'0'); if (tent < h.slice(0,7) + '-01') a++; }
+    var d = lerData(m[1] + '/' + m[2] + '/' + a); return d ? {d:d, txt:m[0]} : {d:'', txt:m[0], ruim:true};
+  }
+  function lerTextoZap(texto, o){
+    var favs = (o.favorecidos||[]).map(function(p){ return {p:p, n:semAcento(p.nome)}; }).sort(function(a,b){ return b.n.length - a.n.length; });
+    var cats = (o.categorias||[]).map(function(c){ return {c:c, n:semAcento(c)}; });
+    var linhas = texto.split(/\r?\n/).map(semPrefixoZap).filter(function(l){ return l.trim(); });
+    var comValor = linhas.filter(function(l){ return valorTexto(l.replace(RE_DOC, '').replace(RE_DATA, '')); });
+    // um valor só no texto todo = um pagamento descrito em várias linhas; senão, uma linha por pagamento
+    var blocos = comValor.length <= 1 ? [linhas.join('\n')] : comValor;
+    return blocos.map(function(b, i){
+      var limpo = b.replace(RE_DOC, ' ').replace(RE_EMAIL, ' ');
+      var dt = dataTexto(limpo.replace(RE_VALOR, ' ')), sv = limpo.replace(dt ? dt.txt : '\u0000', ' ');
+      var vl = valorTexto(sv), n = semAcento(b), doc = (b.match(RE_DOC)||[''])[0].replace(/\D/g,''), em = (b.match(RE_EMAIL)||[''])[0];
+      var pix = (b.match(/pix\s*[:\-]?\s*([^\s,;]+)/i)||[])[1] || em || '';
+      var it = {linha:i + 1, valor: vl ? vl.v : NaN, vencimento: dt ? dt.d : '', descricao: b.replace(/\s+/g, ' ').trim().slice(0, 500), problemas:[]};
+      var f = favs.filter(function(x){ return x.n && n.indexOf(x.n) >= 0; })[0];
+      if (f){ it.pessoaId = f.p.id; it.nome = f.p.nome; }
+      else {
+        var resto = sv.replace(vl ? vl.txt : '\u0000', ' ').split('\n')[0]
+          .replace(/(^|[^\wÀ-ÿ])(oi|ol[aá]|bom dia|boa tarde|boa noite|segue[m]?|preciso|precisamos|que|paguem|pague|pagar|pagamento|pgto|pix|chave|valor|vencimento|venc|vence|dia|para|pra|por favor|favor|ao|a|o|os|as|de|do|da|cpf|cnpj|boleto|transfer[eê]ncia|ted|reais|r\$)(?![\wÀ-ÿ])\.?:?/gi, ' ')
+          .replace(/(^|[^\wÀ-ÿ])(oi|ol[aá]|que|o|a|de|do|da)(?![\wÀ-ÿ])/gi, ' ')
+          .replace(/[!?]+/g, ' ')
+          .replace(/[-–—:;,*_|•]+/g, ' ').replace(/\s+/g, ' ').trim();
+        it.nome = resto.slice(0, 80);
+        if (it.nome) it.novaPessoa = {nome:it.nome, doc:doc, pix:pix.slice(0, 120)};
+        if (doc && !docValido(doc)) it.problemas.push('CPF/CNPJ inválido');
+      }
+      var nc = f ? n.split(f.n).join(' ') : semAcento(b.replace(it.nome || '\u0000', ' '));
+      var c = cats.filter(function(x){ return x.n && nc.indexOf(x.n) >= 0; })[0]; if (c) it.categoria = c.c;
+      it.forma = /boleto/i.test(b) ? 'Boleto' : /transfer|ted\b|doc\b/i.test(b) ? 'Transferência' : (o.formas||['PIX'])[0];
+      if ((o.formas||[]).indexOf(it.forma) < 0) it.forma = (o.formas||['PIX'])[0];
+      if (!it.nome) it.problemas.push('não achei o favorecido');
+      if (!(it.valor > 0)) it.problemas.push('não achei o valor');
+      if (!it.vencimento) it.problemas.push(dt && dt.ruim ? 'data inválida' : 'sem data de vencimento');
+      return it;
+    });
+  }
+  function telaColar(o){
+    var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
+    ARQS = []; PLAN = null; LOTE = {anexos:null, ok:0};
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Colar mensagem</h1><p class="intro">Copie a mensagem do WhatsApp e cole abaixo. Na próxima tela você confere o que foi entendido antes de enviar.</p>'
+      + '<form id="fm" novalidate>'
+      + '<div class="grupo">Quem está pedindo</div><div class="form">'
+      + '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
+      + '<label><span>Seu WhatsApp ou e-mail <b>*</b></span><input name="s_contato" required maxlength="120"></label>'
+      + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label></div>'
+      + '<div class="grupo">Mensagem</div>'
+      + '<label><span>Cole aqui o texto <b>*</b></span><textarea name="texto" id="txZap" required maxlength="8000" style="min-height:180px" placeholder="Exemplo:\nDJ Marcos - R$ 1.500,00 - 10/12\nGráfica Nova R$ 480 vence 15/12 pix grafica@nova.com"></textarea></label>'
+      + '<p class="ajuda" style="margin-top:8px">Um pagamento por linha, com <b>nome, valor e data</b>. Se a mensagem fala de um pagamento só, pode colar do jeito que está.</p>'
+      + '<label style="margin-top:12px">Vencimento para quem não tiver data no texto<input type="date" name="vencPadrao" min="' + hoje().slice(0,4) + '-01-01"></label>'
+      + '<div class="grupo">Anexos (opcional)</div>'
+      + '<div class="arq" id="arqBox">📎 Notas fiscais ou prints<small>PDF ou foto · até 5 arquivos de 10 MB</small></div>'
+      + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul>'
+      + '<button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
+    voltarInicio();
+    var inp = document.getElementById('arqIn');
+    document.getElementById('arqBox').onclick = function(){ inp.click(); };
+    inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(addArq); inp.value = ''; listarArqs(); });
+    document.getElementById('fm').addEventListener('submit', function(evt){
+      evt.preventDefault(); var fm = evt.target; document.getElementById('msg').style.display = 'none';
+      if (!fm.reportValidity()) return;
+      var itens = lerTextoZap(String(fm.texto.value), o), vp = fm.vencPadrao.value;
+      if (vp) itens.forEach(function(i){ if (!i.vencimento){ i.vencimento = vp; i.problemas = i.problemas.filter(function(p){ return p !== 'sem data de vencimento'; }); } });
+      if (itens.length > 100) return erro('O texto tem ' + itens.length + ' pagamentos. Para muitos pagamentos, use a opção de importar planilha.');
+      revisarLote(fm, itens, o, 'texto');
+    });
+  }
+  function revisarLote(fm, itens, o, modo){
     var d = new FormData(fm), ruins = itens.filter(function(i){ return i.problemas.length; });
     var total = itens.reduce(function(s, i){ return s + (i.valor > 0 ? i.valor : 0); }, 0), nv = {}; itens.forEach(function(i){ if (i.novaPessoa && i.nome) nv[semAcento(i.nome)] = 1; }); var novos = Object.keys(nv).length;
     var emp = (o && o.empresa) || 'a empresa', p2 = document.getElementById('passo2');
-    var tab = '<div class="tab"><table><thead><tr><th>Favorecido</th><th class="r">Valor</th><th class="r">Vencimento</th></tr></thead><tbody>'
+    var pixHtml = function(k){ return esc(k).replace(/@/g, '<wbr>@').replace(/(•+\S+)/g, '<span class="nw">$1</span>'); };
+    var pixDe = function(i){ if (i.pessoaId){ var f = (o.favorecidos||[]).filter(function(x){ return x.id === i.pessoaId; })[0]; return f && f.pix ? pixHtml(f.pix) : '<span class="av">sem PIX no cadastro</span>'; }
+      return i.novaPessoa && i.novaPessoa.pix ? pixHtml(i.novaPessoa.pix) : '<span class="av">não informado</span>'; };
+    var tab = '<div class="tab"><table><thead><tr><th>Favorecido</th><th>PIX</th><th class="r">Valor / venc.</th></tr></thead><tbody>'
       + itens.map(function(i){ return '<tr' + (i.problemas.length ? ' class="ruim"' : '') + '><td>' + esc(i.nome || '—') + (i.novaPessoa && i.nome ? ' <small class="tg">novo</small>' : '')
-        + '<div class="sub">' + (i.problemas.length ? '<span class="pb">Linha ' + i.linha + ': ⚠ ' + esc(i.problemas.join(', ')) + '</span>' : esc(i.categoria || 'sem categoria') + (i.descricao ? ' · ' + esc(i.descricao) : '') + (i.aviso ? '<br><span class="av">' + esc(i.aviso) + '</span>' : '')) + '</div>'
-        + '</td><td class="r">' + (i.valor > 0 ? brl(i.valor) : '—') + '</td><td class="r">' + (fmt(i.vencimento) || '—') + '</td></tr>'; }).join('')
-      + '</tbody><tfoot><tr><td>' + itens.length + (itens.length > 1 ? ' pagamentos' : ' pagamento') + '</td><td class="r">' + brl(total) + '</td><td></td></tr></tfoot></table></div>';
+        + '<div class="sub">' + (i.problemas.length ? '<span class="pb">' + (modo === 'texto' ? '' : 'Linha ' + i.linha + ': ') + '⚠ ' + esc(i.problemas.join(', ')) + '</span>' : esc(i.categoria || 'sem categoria') + (i.descricao && modo !== 'texto' ? ' · ' + esc(i.descricao) : '') + (i.aviso ? '<br><span class="av">' + esc(i.aviso) + '</span>' : '')) + '</div>'
+        + '</td><td class="pixc">' + pixDe(i) + '</td><td class="r"><b>' + (i.valor > 0 ? brl(i.valor) : '—') + '</b><div class="sub">' + (fmt(i.vencimento) || '—') + '</div></td></tr>'; }).join('')
+      + '</tbody><tfoot><tr><td colspan="2">' + itens.length + (itens.length > 1 ? ' pagamentos' : ' pagamento') + '</td><td class="r">' + brl(total) + '</td></tr></tfoot></table></div>';
     p2.innerHTML = '<div class="passos"><span class="on"></span><span class="on"></span></div><h1>Confira os dados</h1><p class="intro">Veja se está tudo certo antes de enviar.</p><dl class="res">'
       + '<dt>Quem está pedindo</dt><dd>' + esc(d.get('s_nome')) + ' · ' + esc(d.get('s_contato')) + '</dd>'
       + '<dt>Evento</dt><dd>' + esc(txtSel(fm, 'eventoId')) + '</dd>'
-      + '<dt>Planilha</dt><dd>📊 ' + esc(PLAN.name) + '</dd>'
-      + (ARQS.length ? '<dt>Outros anexos</dt><dd>' + ARQS.map(function(f){ return '📄 ' + esc(f.name); }).join('<br>') + '</dd>' : '')
+      + (modo === 'texto' ? '' : '<dt>Planilha</dt><dd>📊 ' + esc(PLAN.name) + '</dd>')
+      + (ARQS.length ? '<dt>' + (modo === 'texto' ? 'Anexos' : 'Outros anexos') + '</dt><dd>' + ARQS.map(function(f){ return '📄 ' + esc(f.name); }).join('<br>') + '</dd>' : '')
       + (novos ? '<dt>Favorecidos novos</dt><dd>' + novos + ' (não estão no cadastro, a equipe vai completar)</dd>' : '')
       + '</dl>' + tab
-      + (ruins.length ? '<div class="msg" style="display:block">' + ruins.length + (ruins.length > 1 ? ' linhas têm' : ' linha tem') + ' problema (em vermelho). Corrija na planilha e escolha o arquivo de novo.</div>'
+      + (ruins.length ? '<div class="msg" style="display:block">' + ruins.length + (ruins.length > 1 ? ' linhas têm' : ' linha tem') + ' problema (em vermelho). ' + (modo === 'texto' ? 'Clique em Corrigir e ajuste o texto: cada pagamento precisa de nome, valor e data.' : 'Corrija na planilha e escolha o arquivo de novo.') + '</div>'
         + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button></div>'
       : '<div class="grupo" style="margin-top:20px">Estes pagamentos…</div><div class="opc">'
         + '<label><input type="radio" name="situacao" value="solicitacao" checked><span><b style="color:var(--verde)">São solicitações de pagamento</b><small>Ainda não foram pagos. Vão para aprovação da equipe antes de serem pagos.</small></span></label>'
@@ -367,17 +459,18 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     esconde(true);
     p2.querySelectorAll('[name=situacao]').forEach(function(r){ r.onchange = function(){ document.getElementById('boxPago').style.display = p2.querySelector('[name=situacao]:checked').value === 'pago' ? '' : 'none'; }; });
     document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; esconde(false); window.scrollTo(0,0); };
-    if (!ruins.length) document.getElementById('btConf').onclick = function(){ enviarLote(d, itens); };
+    if (!ruins.length) document.getElementById('btConf').onclick = function(){ enviarLote(d, itens, modo); };
     window.scrollTo(0,0);
   }
-  function enviarLote(d, itens){
+  function enviarLote(d, itens, modo){
     var e2 = document.getElementById('msg2'); e2.style.display = 'none';
     var sit = document.querySelector('[name=situacao]:checked').value, pagoEm = document.getElementById('dataPago').value;
     if (sit === 'pago' && !pagoEm){ e2.textContent = 'Informe a data do pagamento.'; e2.style.display = 'block'; return; }
     var bt = document.getElementById('btConf'), bv = document.getElementById('btVolta'); bt.disabled = bv.disabled = true; bt.textContent = 'Enviando arquivos…';
-    var base = {solicitante:{nome:String(d.get('s_nome')).trim(), contato:String(d.get('s_contato')).trim()}, eventoId:d.get('eventoId'), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : '', importado:PLAN.name};
+    var base = {solicitante:{nome:String(d.get('s_nome')).trim(), contato:String(d.get('s_contato')).trim()}, eventoId:d.get('eventoId'), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : ''};
+    if (modo === 'texto') base.colado = true; else base.importado = PLAN.name;
     var lista = itens.map(function(i){ var x = {valor:i.valor, vencimento:i.vencimento, forma:i.forma, categoria:i.categoria || '', descricao:i.descricao}; if (i.pessoaId) x.pessoaId = i.pessoaId; else x.novaPessoa = i.novaPessoa; return x; });
-    var sobe = LOTE.anexos ? Promise.resolve(LOTE.anexos) : (ARQS.unshift(PLAN), subirArquivos().then(function(a){ ARQS.shift(); return a; }, function(e){ ARQS.shift(); throw e; }));
+    var sobe = LOTE.anexos ? Promise.resolve(LOTE.anexos) : !PLAN ? subirArquivos() : (ARQS.unshift(PLAN), subirArquivos().then(function(a){ ARQS.shift(); return a; }, function(e){ ARQS.shift(); throw e; }));
     sobe.then(function(anexos){
       LOTE.anexos = anexos; bt.textContent = 'Enviando…'; base.anexos = anexos;
       // em partes de 60 linhas, para não passar do tamanho de cada envio
