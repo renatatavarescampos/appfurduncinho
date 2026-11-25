@@ -1937,6 +1937,12 @@ function nomeEmpresa(){
 // PIX parcialmente escondido: quem tem o link confere se é a chave certa sem ver a chave inteira
 // resumo curto do CPF/CNPJ para o formulário achar cadastro repetido sem receber o número (igual ao formulario.html)
 function docResumo(d){ d = String(d||'').replace(/\D/g,''); if (!d) return ''; let h = 0x811c9dc5; for (let k = 0; k < d.length; k++){ h ^= d.charCodeAt(k); h = Math.imul(h, 16777619) >>> 0; } return ('00000' + (h >>> 8).toString(16)).slice(-6); }
+// PIX completo para quem pede conferir (ou a conta, se não tiver PIX)
+function pixCompleto(p){
+  const k = String(p.pix||'').trim();
+  if (!k) return p.banco && p.conta ? `${p.banco} · Ag ${p.agencia||'—'} · Conta ${p.conta}` : '';
+  const t = p.pixTipo || tipoPix(k); return (t ? t + ': ' : '') + k;
+}
 function pixMascarado(p){
   const k = String(p.pix||'').trim();
   if (!k) return p.banco && p.conta ? `Conta ${p.banco} ••••${String(p.conta).replace(/\D/g,'').slice(-3)}` : '';
@@ -1951,7 +1957,7 @@ function opcoesForm(tipo){
   const desde = addDias(HOJE, -120);
   return {...base,
     eventos: [...db.eventos].filter(e=>!e.data || e.data >= desde).sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(e=>({id:e.id, nome:e.nome, data:e.data||''})),
-    favorecidos: db.pessoas.filter(p=>p.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(p=>({id:p.id, nome:p.nome, pix:pixMascarado(p), dh:docResumo(p.doc)})),
+    favorecidos: db.pessoas.filter(p=>p.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(p=>({id:p.id, nome:p.nome, pix:pixCompleto(p), dh:docResumo(p.doc)})),
     categorias: [...db.categorias], formas: [...FORMAS],
     equipe: db.users.filter(u=>u.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(u=>({id:u.id, nome:u.nome}))};
 }
@@ -2698,7 +2704,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '6.6';
+const APP_VERSAO = '6.7';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
