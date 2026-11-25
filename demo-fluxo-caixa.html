@@ -889,9 +889,11 @@ function pagosEvento(id){
 }
 
 function telaEventos(){
-  return `<div class="toolbar"><h2 style="margin:0">Eventos</h2><div class="spacer"></div>${isAdmin()?'<button class="btn" data-act="centros">⚙ Centros de custo</button><button class="btn pri" data-act="formEvento">+ Novo evento</button>':''}</div>
-  <div class="panel"><table><thead><tr><th>Evento</th><th>Data do evento</th><th>Responsável</th><th>Centro de custo</th><th>Local</th><th>Links</th><th>Anotações</th><th class="right">Orçamento</th><th class="right">Pedidos</th></tr></thead><tbody>
-  ${[...db.eventos].sort((a,b)=>b.data.localeCompare(a.data)).map(e=>`<tr ${isAdmin()?`class="click" data-act="formEvento" data-id="${e.id}"`:''}><td>${h(e.nome)}</td><td>${fmt(e.data)}</td><td>${h(e.responsavel||'—')}</td><td>${h(e.centroCusto||'—')}</td><td>${h(e.local)}</td><td style="white-space:normal;min-width:140px;max-width:260px">${(e.links||[]).length&&!isProd()?linksChips(e):'<span class="meta">—</span>'}</td><td style="white-space:normal;min-width:200px;max-width:320px;font-size:13px">${notasDe(e).length&&!isProd()?notasDe(e).map(n=>`<div style="white-space:pre-wrap;padding:2px 0">${linkify(n.texto)} <span class="meta" style="font-size:11px">— ${h(user(n.quem).nome.split(' ')[0])}, ${fmt(n.quando.slice(0,10))}</span></div>`).join(''):'<span class="meta">—</span>'}</td><td class="right">${brl(e.orcamento)}</td><td class="right">${db.pedidos.filter(p=>p.eventoId===e.id).length}</td></tr>`).join('')}
+  const adm = isAdmin();
+  [...SEL].forEach(id=>{ if(!db.eventos.some(e=>e.id===id)) SEL.delete(id); });
+  return `<div class="toolbar"><h2 style="margin:0">Eventos</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSelEventos" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionados (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>${isAdmin()?'<button class="btn" data-act="centros">⚙ Centros de custo</button><button class="btn pri" data-act="formEvento">+ Novo evento</button>':''}</div>
+  <div class="panel"><table><thead><tr>${adm?'<th class="sel-col" title="Selecionar todos os eventos"><input type="checkbox" data-sel-todos></th>':''}<th>Evento</th><th>Data do evento</th><th>Responsável</th><th>Centro de custo</th><th>Local</th><th>Links</th><th>Anotações</th><th class="right">Orçamento</th><th class="right">Pedidos</th></tr></thead><tbody>
+  ${[...db.eventos].sort((a,b)=>b.data.localeCompare(a.data)).map(e=>`<tr ${adm?`class="click" data-act="formEvento" data-id="${e.id}"`:''}>${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${e.id}" ${SEL.has(e.id)?'checked':''}></td>`:''}<td>${h(e.nome)}</td><td>${fmt(e.data)}</td><td>${h(e.responsavel||'—')}</td><td>${h(e.centroCusto||'—')}</td><td>${h(e.local)}</td><td style="white-space:normal;min-width:140px;max-width:260px">${(e.links||[]).length&&!isProd()?linksChips(e):'<span class="meta">—</span>'}</td><td style="white-space:normal;min-width:200px;max-width:320px;font-size:13px">${notasDe(e).length&&!isProd()?notasDe(e).map(n=>`<div style="white-space:pre-wrap;padding:2px 0">${linkify(n.texto)} <span class="meta" style="font-size:11px">— ${h(user(n.quem).nome.split(' ')[0])}, ${fmt(n.quando.slice(0,10))}</span></div>`).join(''):'<span class="meta">—</span>'}</td><td class="right">${brl(e.orcamento)}</td><td class="right">${db.pedidos.filter(p=>p.eventoId===e.id).length}</td></tr>`).join('')}
   </tbody></table></div>`;
 }
 const mascara = d => d; // CPF/CNPJ visível para toda a equipe
@@ -2599,6 +2601,21 @@ Object.assign(acoes, {
   confirmarExcluirSelReceb: idsTxt => { if(!isAdmin()) return; const ids = String(idsTxt||'').split(',').filter(Boolean);
     db.recebimentos = (db.recebimentos||[]).filter(x=>!ids.includes(x.id));
     ids.forEach(id=>SEL.delete(id)); save(); fechar(); render(); toast(ids.length+(ids.length>1?' recebimentos excluídos':' recebimento excluído')); },
+  excluirSelEventos: () => { if(!isAdmin()) return;
+    const ids = selVisiveis().filter(c=>c.checked).map(c=>c.dataset.sel); if(!ids.length) return;
+    const usos = e => db.pedidos.filter(p=>p.eventoId===e.id).length + (db.recebimentos||[]).filter(x=>x.eventoId===e.id).length;
+    const evs = db.eventos.filter(e=>ids.includes(e.id)), livres = evs.filter(e=>!usos(e)), presos = evs.filter(e=>usos(e));
+    const linha = (e, extra) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span>${h(e.nome)} · ${fmt(e.data)}</span>${extra}</div>`;
+    modal(`<h3>Excluir ${livres.length} evento${livres.length!==1?'s':''}?</h3>
+    ${livres.length?`<p style="color:var(--muted);margin:0 0 10px">Os eventos somem da lista e dos filtros. <b>Essa ação não pode ser desfeita.</b></p>
+    <div style="max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px">${livres.map(e=>linha(e,'')).join('')}</div>`:''}
+    ${presos.length?`<p style="color:var(--muted);margin:12px 0 6px">${presos.length>1?'Estes eventos não serão excluídos porque têm':'Este evento não será excluído porque tem'} contas a pagar ou a receber. Exclua as contas antes.</p>
+    <div style="max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--muted)">${presos.map(e=>linha(e,`<span>${usos(e)} conta${usos(e)>1?'s':''}</span>`)).join('')}</div>`:''}
+    <div class="actions"><button class="btn" data-act="fechar">${livres.length?'Cancelar':'Ok'}</button>${livres.length?`<button class="btn pri" style="background:var(--recusado);border-color:var(--recusado)" data-act="confirmarExcluirSelEventos" data-id="${livres.map(e=>e.id).join(',')}">Excluir ${livres.length} evento${livres.length>1?'s':''}</button>`:''}</div>`, 520); },
+  confirmarExcluirSelEventos: idsTxt => { if(!isAdmin()) return; const ids = String(idsTxt||'').split(',').filter(Boolean)
+      .filter(id=>!db.pedidos.some(p=>p.eventoId===id) && !(db.recebimentos||[]).some(x=>x.eventoId===id));
+    db.eventos = db.eventos.filter(e=>!ids.includes(e.id));
+    ids.forEach(id=>SEL.delete(id)); save(); fechar(); render(); toast(ids.length+(ids.length>1?' eventos excluídos':' evento excluído')); },
   confirmarExcluirReceb: id => { if(!isAdmin()) return; db.recebimentos = db.recebimentos.filter(x=>x.id!==id); save(); fechar(); render(); toast(id+' excluído'); }
 });
 document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k){ FC[k] = [...e.target.selectedOptions].map(o=>o.value).filter(Boolean);
@@ -2608,7 +2625,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '6.4';
+const APP_VERSAO = '6.5';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
