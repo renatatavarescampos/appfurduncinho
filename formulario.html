@@ -75,6 +75,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
 .lkcad{color:var(--cobre);font-weight:600;font-size:12.5px;text-decoration:underline;display:inline-block;margin-top:2px}
 .lkcad.feito{color:#15803d;text-decoration:none}
 .lkcad.falta{color:#b91c1c}
+.lked{color:var(--cobre);font-weight:600;font-size:12.5px;text-decoration:underline;display:inline-block;margin-top:4px}
 #passo2.soCad > :not(.cadWrap){display:none !important}
 #passo2 .cadn{background:none;border:0;padding:0}
 .cadn.comErro{border-color:var(--erro);background:#ef44440a}
@@ -349,7 +350,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       fim();
       if (!itens.length) return erro('A planilha não tem nenhum pagamento abaixo do cabeçalho.');
       if (itens.length > 300) return erro('A planilha tem ' + itens.length + ' linhas. Envie no máximo 300 por vez.');
-      revisarLote(fm, itens, o);
+      LGPD_OK = false; revisarLote(fm, itens, o);
     }).catch(function(e){ fim(); console.warn(e); erro(/xlsx/.test(e && e.message) ? 'Não consegui abrir o leitor de planilhas. Verifique a internet e tente de novo.' : 'Não consegui ler esta planilha. Salve como .xlsx e tente de novo.'); });
   }
   // ---------- colar mensagem do WhatsApp ----------
@@ -431,7 +432,7 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       var itens = lerTextoZap(String(fm.texto.value), o), vp = fm.vencPadrao.value;
       if (vp) itens.forEach(function(i){ if (!i.vencimento){ i.vencimento = vp; i.problemas = i.problemas.filter(function(p){ return p !== 'sem data de vencimento'; }); } });
       if (itens.length > 100) return erro('O texto tem ' + itens.length + ' pagamentos. Para muitos pagamentos, use a opção de importar planilha.');
-      revisarLote(fm, itens, o, 'texto');
+      LGPD_OK = false; revisarLote(fm, itens, o, 'texto');
     });
   }
   function revisarLote(fm, itens, o, modo){
@@ -444,11 +445,11 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     var pixHtml = function(k){ return esc(k).replace(/@/g, '<wbr>@').replace(/(•+\S+)/g, '<span class="nw">$1</span>'); };
     var pixDe = function(i){ if (i.pessoaId){ var f = (o.favorecidos||[]).filter(function(x){ return x.id === i.pessoaId; })[0]; return f && f.pix ? pixHtml(f.pix) : '<span class="av">sem PIX no cadastro</span>'; }
       return '<span class="pv">' + (i.novaPessoa && i.novaPessoa.pix ? pixHtml(i.novaPessoa.pix) : '<span class="av">não informado</span>') + '</span>'
-        + (i.novaPessoa && i.nome ? '<br><a href="#" class="lkcad" data-k="' + esc(semAcento(i.nome)) + '">Cadastrar favorecido</a>' : ''); };
+        + (i.novaPessoa && i.nome ? '<br><a href="#" class="lkcad' + (i.cadOk ? ' feito' : '') + '" data-k="' + esc(semAcento(i.nome)) + '">' + (i.cadOk ? '✓ Cadastrado (editar)' : 'Cadastrar favorecido') + '</a>' : ''); };
     var tab = '<div class="tab"><table><thead><tr><th>Favorecido</th><th>PIX</th><th class="r">Valor / venc.</th></tr></thead><tbody>'
       + itens.map(function(i){ return '<tr' + (i.problemas.length ? ' class="ruim"' : '') + '><td>' + esc(i.nome || '—') + (i.novaPessoa && i.nome ? ' <small class="tg">novo</small>' : '')
         + '<div class="sub">' + (i.problemas.length ? '<span class="pb">' + (modo === 'texto' ? '' : 'Linha ' + i.linha + ': ') + '⚠ ' + esc(i.problemas.join(', ')) + '</span>' : esc(i.categoria || 'sem categoria') + (i.descricao && modo !== 'texto' ? ' · ' + esc(i.descricao) : '') + (i.aviso ? '<br><span class="av">' + esc(i.aviso) + '</span>' : '')) + '</div>'
-        + '</td><td class="pixc"' + (i.novaPessoa ? ' data-nk="' + esc(semAcento(i.nome)) + '"' : '') + '>' + pixDe(i) + '</td><td class="r"><b>' + (i.valor > 0 ? brl(i.valor) : '—') + '</b><div class="sub">' + (fmt(i.vencimento) || '—') + '</div></td></tr>'; }).join('')
+        + '</td><td class="pixc"' + (i.novaPessoa ? ' data-nk="' + esc(semAcento(i.nome)) + '"' : '') + '>' + pixDe(i) + '</td><td class="r"><b>' + (i.valor > 0 ? brl(i.valor) : '—') + '</b><div class="sub">' + (fmt(i.vencimento) || '—') + '</div><a href="#" class="lked" data-i="' + itens.indexOf(i) + '">Editar</a></td></tr>'; }).join('')
       + '</tbody><tfoot><tr><td colspan="2">' + itens.length + (itens.length > 1 ? ' pagamentos' : ' pagamento') + '</td><td class="r">' + brl(total) + '</td></tr></tfoot></table></div>';
     p2.innerHTML = '<div class="passos"><span class="on"></span><span class="on"></span></div><h1>Confira os dados</h1><p class="intro">Veja se está tudo certo antes de enviar.</p><dl class="res">'
       + '<dt>Quem está pedindo</dt><dd>' + esc(d.get('s_nome')) + (d.get('s_contato') ? ' · ' + esc(d.get('s_contato')) : '') + '</dd>'
@@ -456,10 +457,10 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
       + (modo === 'texto' ? '' : '<dt>Planilha</dt><dd>📊 ' + esc(PLAN.name) + '</dd>')
       + (ARQS.length ? '<dt>' + (modo === 'texto' ? 'Anexos' : 'Outros anexos') + '</dt><dd>' + ARQS.map(function(f){ return '📄 ' + esc(f.name); }).join('<br>') + '</dd>' : '')
       + (novos ? '<dt>Favorecidos novos</dt><dd>' + novos + ' (clique em "Cadastrar favorecido" na tabela)</dd>' : '')
-      + '</dl>' + tab
-      + (ruins.length ? '<div class="msg" style="display:block">' + ruins.length + (ruins.length > 1 ? ' linhas têm' : ' linha tem') + ' problema (em vermelho). ' + (modo === 'texto' ? 'Clique em Corrigir e ajuste o texto: cada pagamento precisa de nome, valor e data.' : 'Corrija na planilha e escolha o arquivo de novo.') + '</div>'
+      + '</dl>' + tab + caixasNovos(itens)
+      + (ruins.length ? '<div class="msg" style="display:block">' + ruins.length + (ruins.length > 1 ? ' linhas têm' : ' linha tem') + ' problema (em vermelho). Clique em <b>Editar</b> na linha para corrigir' + (modo === 'texto' ? ', ou em Corrigir para mudar o texto.' : ', ou corrija na planilha e escolha o arquivo de novo.') + '</div>'
         + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button></div>'
-      : caixasNovos(itens) + '<div class="grupo" style="margin-top:20px">Estes pagamentos…</div><div class="opc">'
+      : '<div class="grupo" style="margin-top:20px">Estes pagamentos…</div><div class="opc">'
         + '<label><input type="radio" name="situacao" value="solicitacao" checked><span><b style="color:var(--verde)">São solicitações de pagamento</b><small>Ainda não foram pagos. Vão para aprovação da equipe antes de serem pagos.</small></span></label>'
         + '<label><input type="radio" name="situacao" value="pago"><span><b style="color:var(--verde)">' + esc(emp) + ' já pagou</b><small>Só para registro e conferência, não precisam de aprovação.</small></span></label>'
         + '</div><label id="boxPago" style="display:none;margin-top:10px"><span>Data do pagamento <b>*</b></span><input type="date" id="dataPago" value="' + hoje() + '"></label>'
@@ -478,13 +479,64 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
     p2.querySelectorAll('.lkcad').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); var c = caixa(a.dataset.k); if (c) abreCad(c); }; });
     p2.querySelectorAll('.cadn .btSair').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); fechaCad(); }; });
     p2.querySelectorAll('.cadn .btPronto').forEach(function(b){ b.onclick = function(){ var c = b.closest('.cadn'); if (!validaCaixa(c)) return;
+      capturaCaixas(itens); itens.forEach(function(i){ if (i.novaPessoa && semAcento(i.nome) === c.dataset.k) i.cadOk = true; });
       p2.querySelectorAll('.lkcad').forEach(function(a){ if (a.dataset.k === c.dataset.k){ a.textContent = '✓ Cadastrado (editar)'; a.classList.add('feito'); a.classList.remove('falta'); } });
       var e2 = document.getElementById('msg2'); if (e2) e2.style.display = 'none'; fechaCad(); }; });
-    var lg = document.getElementById('lgpdLote'); if (lg) lg.onchange = function(){ document.getElementById('msg2').style.display = 'none'; };
+    var lg = document.getElementById('lgpdLote'); if (lg){ lg.checked = !!LGPD_OK; lg.onchange = function(){ LGPD_OK = lg.checked; document.getElementById('msg2').style.display = 'none'; }; }
+    p2.querySelectorAll('.lked').forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); editarItem(fm, itens, o, modo, +a.dataset.i); }; });
     if (!ruins.length) document.getElementById('btConf').onclick = function(){ if (lerNovos(itens)) enviarLote(d, itens, modo); };
     window.scrollTo(0,0);
   }
   // um bloco de cadastro para cada favorecido que não está na lista
+  // guarda o que já foi digitado nos cadastros antes de redesenhar a conferência
+  var LGPD_OK = false;
+  function capturaCaixas(itens){
+    document.querySelectorAll('.cadn').forEach(function(c){
+      var v = {}; c.querySelectorAll('[data-c]').forEach(function(e){ v[e.dataset.c] = String(e.value).trim(); });
+      itens.forEach(function(i){ if (i.novaPessoa && semAcento(i.nome) === c.dataset.k){ for (var k in v) i.novaPessoa[k] = v[k]; } });
+    });
+    var lg = document.getElementById('lgpdLote'); if (lg) LGPD_OK = lg.checked;
+  }
+  function checarItem(i){
+    i.problemas = [];
+    if (!i.nome) i.problemas.push('sem favorecido');
+    if (!(i.valor > 0)) i.problemas.push('valor inválido');
+    if (!i.vencimento) i.problemas.push('vencimento inválido');
+  }
+  // tela para editar uma linha: favorecido, valor e vencimento
+  function editarItem(fm, itens, o, modo, idx){
+    capturaCaixas(itens);
+    var i = itens[idx], p2 = document.getElementById('passo2'), y = window.scrollY;
+    var opts = (o.favorecidos||[]).map(function(f){ return '<option value="' + esc(f.id) + '"' + (f.id === i.pessoaId ? ' selected' : '') + '>' + esc(f.nome) + '</option>'; }).join('');
+    p2.innerHTML = '<a href="#" class="voltar" id="edVolta">← Voltar para a conferência</a><h1 style="margin-bottom:2px">Editar pagamento</h1><p class="intro">Mude o que precisar e salve.</p><div class="form">'
+      + '<label class="full"><span>Favorecido <b>*</b></span><select id="edFav"><option value="">Selecione…</option>' + opts + '<option value="__novo__"' + (!i.pessoaId ? ' selected' : '') + '>➕ Não está na lista (digitar o nome)</option></select></label>'
+      + '<label class="full" id="edNomeBox"><span>Nome do favorecido <b>*</b></span><input id="edNome" maxlength="150" value="' + esc(i.pessoaId ? '' : i.nome) + '"></label>'
+      + '<label><span>Valor (R$) <b>*</b></span><input id="edValor" type="number" step="0.01" min="0.01" inputmode="decimal" value="' + (i.valor > 0 ? i.valor : '') + '"></label>'
+      + '<label><span>Vencimento <b>*</b></span><input id="edVenc" type="date" value="' + esc(i.vencimento || '') + '"></label>'
+      + '</div><div class="lado"><button class="btn sec" id="edRemove" type="button">🗑 Tirar esta linha</button><button class="btn" id="edSalva" type="button">Salvar</button></div><div class="msg" id="msgEd"></div>';
+    window.scrollTo(0,0);
+    var sel = document.getElementById('edFav'), nb = document.getElementById('edNomeBox');
+    var mostra = function(){ nb.style.display = sel.value === '__novo__' ? '' : 'none'; }; sel.onchange = mostra; mostra();
+    var volta = function(){ revisarLote(fm, itens, o, modo); setTimeout(function(){ window.scrollTo(0, y); }, 0); };
+    document.getElementById('edVolta').onclick = function(ev){ ev.preventDefault(); volta(); };
+    document.getElementById('edRemove').onclick = function(){
+      if (itens.length === 1){ var m = document.getElementById('msgEd'); m.textContent = 'É o único pagamento. Para desistir, use Voltar e Corrigir.'; m.style.display = 'block'; return; }
+      itens.splice(idx, 1); volta(); };
+    document.getElementById('edSalva').onclick = function(){
+      var m = document.getElementById('msgEd'), v = lerValor(document.getElementById('edValor').value), dt = document.getElementById('edVenc').value, nome = document.getElementById('edNome').value.trim();
+      var err = !sel.value ? 'Escolha o favorecido.' : sel.value === '__novo__' && !nome ? 'Digite o nome do favorecido.' : !(v > 0) ? 'Informe um valor maior que zero.' : !/^\d{4}-\d{2}-\d{2}$/.test(dt) ? 'Informe o vencimento.' : '';
+      if (err){ m.textContent = err; m.style.display = 'block'; return; }
+      if (sel.value === '__novo__'){
+        var k = semAcento(nome), outro = itens.filter(function(x){ return x !== i && x.novaPessoa && semAcento(x.nome) === k; })[0];
+        var mesmo = i.novaPessoa && semAcento(i.nome || '') === k;
+        delete i.pessoaId; i.nome = nome.slice(0, 150);
+        if (outro){ i.novaPessoa = JSON.parse(JSON.stringify(outro.novaPessoa)); i.cadOk = !!outro.cadOk; }
+        else if (!mesmo){ i.novaPessoa = {nome:i.nome, doc:'', pix:''}; i.cadOk = false; }
+        i.novaPessoa.nome = i.nome;
+      } else { var f = (o.favorecidos||[]).filter(function(x){ return x.id === sel.value; })[0]; i.pessoaId = f.id; i.nome = f.nome; delete i.novaPessoa; delete i.cadOk; }
+      i.valor = v; i.vencimento = dt; checarItem(i); volta();
+    };
+  }
   function caixasNovos(itens){
     var vistos = {}, html = '';
     itens.forEach(function(i){
