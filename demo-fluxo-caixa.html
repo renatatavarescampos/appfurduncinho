@@ -5,6 +5,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="nuvem.js"></script>
 <title>Pagamentos de Eventos</title>
 <style>
 :root{
@@ -418,6 +419,8 @@ function filtrar(lista, {status=true, periodo=true}={}){
 function render(){
   const app = document.getElementById('app');
   if (cadastroPor){ app.innerHTML = demoBar() + telaAutocadastro(); turbinarSelects(app); return; }
+  // com login real: a pessoa do cliente entra direto no perfil cadastrado com o e-mail dela
+  if (!me && window.NUVEM && !window.NUVEM.gestora){ const meus = usuariosDoLogin(); if (meus.length === 1){ me = meus[0]; view = 'dashboard'; } }
   if (!me){ app.innerHTML = demoBar() + telaLogin(); return; }
   const abas = [['dashboard','Dashboard'],['lista', isProd()?'Meus pedidos':'Contas a pagar']];
   if (!isProd()) abas.splice(2,0,['aprovacoes','Aprovações ('+db.pedidos.filter(p=>p.status==='aguardando').length+')']);
@@ -430,7 +433,7 @@ function render(){
   const emb = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
   app.innerHTML = (emb ? '' : demoBar()) + `
   <header class="${emb?'emb':''}">
-    ${emb ? `<div class="demo-mini" title="Dados fictícios, salvos só neste navegador">🧪 Demonstração · v${APP_VERSAO} <button data-act="reset" title="Restaurar dados de exemplo">↺ Restaurar exemplo</button></div>`
+    ${emb ? (window.NUVEM ? `<div class="demo-mini">☁ Dados na nuvem · v${APP_VERSAO}</div>` : `<div class="demo-mini" title="Dados fictícios, salvos só neste navegador">🧪 Demonstração · v${APP_VERSAO} <button data-act="reset" title="Restaurar dados de exemplo">↺ Restaurar exemplo</button></div>`)
           : `<div class="logo"><span class="marca">$</span>Pagamentos de Eventos <small class="meta" style="font-weight:400" title="Versão do app">v${APP_VERSAO}</small></div>`}
     <div class="who"><div class="av">${iniciais(me.nome)}</div><div class="nm">${h(me.nome)}<br><span class="badge">${PERFIS[me.perfil]}</span></div>
     <button class="btn sm" data-act="sair">Sair</button></div>
@@ -440,15 +443,26 @@ function render(){
   turbinarSelects(app); filtrosDeColuna(app);
 }
 function demoBar(){
+  if (window.NUVEM) return '';   // versão real (com login): sem faixa de demonstração
   return `<div class="demo-bar">🧪 Versão de demonstração — dados fictícios, salvos só neste navegador.
     <button data-act="reset">Restaurar dados de exemplo</button>${cadastroPor?'<button data-act="sairAuto">Sair do formulário de autocadastro</button>':''}</div>`;
 }
+function usuariosDoLogin(){
+  const ativos = db.users.filter(u=>u.ativo!==false);
+  if (!window.NUVEM || window.NUVEM.gestora) return ativos;
+  const em = String(window.NUVEM.email||'').toLowerCase();
+  return ativos.filter(u => String(u.email||'').trim().toLowerCase() === em);
+}
 function telaLogin(){
+  const lista = usuariosDoLogin(), nuvem = !!window.NUVEM;
+  if (nuvem && !lista.length) return `<div class="login"><h1>Pagamentos de Eventos</h1>
+    <p>Você entrou como <b>${h(window.NUVEM.email)}</b>, mas este e-mail ainda não está cadastrado na equipe deste app.</p>
+    <p>Peça para a gestora cadastrar o seu e-mail em <b>Equipe</b> e escolher o seu perfil.</p></div>`;
   return `<div class="login">
     <h1>Pagamentos de Eventos</h1>
     ${linkAprovar?`<div class="note" style="margin:0 0 12px;background:#00262012;border-color:#00262033;color:#002620">🔗 Você abriu o link de aprovação de pagamentos. Entre como sócio para ver a lista completa e aprovar.</div>`:''}
-    <p>Na versão real aqui terá e-mail e senha. Na demonstração, escolha com qual perfil entrar para ver o que cada pessoa enxerga:</p>
-    <div class="ulist">${db.users.filter(u=>u.ativo!==false).map(u=>`
+    <p>${nuvem ? 'Escolha com qual perfil entrar:' : 'Na versão real aqui terá e-mail e senha. Na demonstração, escolha com qual perfil entrar para ver o que cada pessoa enxerga:'}</p>
+    <div class="ulist">${lista.map(u=>`
       <button class="ubtn" data-act="entrar" data-id="${u.id}"><div class="av">${iniciais(u.nome)}</div>
       <div><b>${h(u.nome)}</b> <span class="badge">${PERFIS[u.perfil]}</span>
       <small>${{admin:'Vê e altera tudo, marca como pago',dono:'Vê tudo, aprova ou recusa pedidos',produtor:'Cria pedidos e vê só os próprios'}[u.perfil]}</small></div></button>`).join('')}
@@ -1999,7 +2013,7 @@ const acoes = {
     db.pedidos.filter(p=>p.status==='aguardando' && passa(F.produtor,p.criadoPor)).forEach(p=>{ p.status='aprovado'; p.historico.push({quando:agora(),quem:me.id,acao:'Aprovou o pedido'}); n++; });
     save(); fechar(); render(); toast(n+' pedido(s) aprovado(s)'); },
   sair: () => { me=null; render(); },
-  reset: () => { try{localStorage.removeItem(KEY)}catch(e){} db=seed(); if(me) me=user(me.id); fechar(); render(); toast('Dados de exemplo restaurados'); },
+  reset: () => { if (window.NUVEM) return; try{localStorage.removeItem(KEY)}catch(e){} db=seed(); if(me) me=user(me.id); fechar(); render(); toast('Dados de exemplo restaurados'); },
   aba: id => { view=id; render(); },
   limpar: () => { for (const k in CFS) delete CFS[k]; F={ano:F.ano,mes:[],evento:[],categoria:[],status:[],produtor:[]}; render(); },
   mes: id => { F.mes = F.mes.includes(id) ? F.mes.filter(m=>m!==id) : [...F.mes, id]; render(); },
@@ -2430,7 +2444,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '5.4';
+const APP_VERSAO = '6.0';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
