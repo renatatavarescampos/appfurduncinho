@@ -1951,9 +1951,12 @@ function pixMascarado(p){
   if (dig.length >= 8 && dig.length === k.replace(/[\s().\/-]/g,'').length) return (tipoPix(k) || 'Chave') + ' ••••' + dig.slice(-4);
   return k.slice(0, 4) + '•••' + k.slice(-4);
 }
+// id do cliente deste app (para o link de aprovação abrir o app certo)
+function clienteAtual(){ const m = String(window.__P||'').match(/^cli_(.+)::$/); return m ? m[1] : (new URLSearchParams(location.search).get('c') || window.NUVEM?.cliente || ''); }
 function opcoesForm(tipo){
   const base = {empresa: nomeEmpresa()};
   if (tipo !== 'pedido') return base;
+  base.cliente = clienteAtual();
   const desde = addDias(HOJE, -120);
   return {...base,
     eventos: [...db.eventos].filter(e=>!e.data || e.data >= desde).sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(e=>({id:e.id, nome:e.nome, data:e.data||''})),
@@ -2173,7 +2176,7 @@ const acoes = {
   adiarVersao: () => { document.getElementById('avisoVersao')?.remove(); avisoAdiadoAte = Date.now() + 10*60000; },   // volta a avisar em 10 minutos
   entrar: id => { me = user(id); view='dashboard';
     if (linkAprovar && !isProd()){ view='aprovacoes'; F.produtor=[]; }
-    if (linkAprovar){ linkAprovar=null; try{ history.replaceState(null,'',location.pathname); }catch(e){} }
+    if (linkAprovar){ linkAprovar=null; try{ const q=new URLSearchParams(location.search); q.delete('aprovar'); history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:'')); }catch(e){} }
     render(); },
   compartilhar: () => compartilhar(false),
   exportar: () => exportarPagamentos(),
@@ -2704,7 +2707,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '6.7';
+const APP_VERSAO = '6.8';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar

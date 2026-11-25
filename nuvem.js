@@ -286,7 +286,8 @@
   }
 
   /* ---------- começo ---------- */
-  function linkApp(a){ return 'demo-fluxo-caixa.html?c=' + encodeURIComponent(a.cliente_id); }
+  // mantém o pedido de abrir em Aprovações (link enviado pelo formulário)
+  function linkApp(a){ return 'demo-fluxo-caixa.html?c=' + encodeURIComponent(a.cliente_id) + (params.get('aprovar') ? '&aprovar=1' : ''); }
   function telaSemAcesso(){
     mostrar(TOPO + '<p>Você entrou como <b>' + esc(sessao.email) + '</b>, mas este e-mail ainda não tem acesso a nenhum app.</p><p>Peça para a gestora liberar o seu e-mail em "Controle de acessos".</p><button class="pri" id="nvSair">Sair</button>');
     noBody(function(){ tela.querySelector('#nvSair').onclick = sair; });
