@@ -2683,8 +2683,10 @@ function fcAjustar(){
   const pl = document.querySelector('.fc-plan'), t = pl && pl.querySelector('table'); if (!t) return;
   t.style.zoom = 1; pl.classList.remove('compacto');
   if (t.scrollWidth > pl.clientWidth) pl.classList.add('compacto');   // primeiro aperta as colunas; se ainda não couber, diminui a escala
-  const z = Math.max(0.5, Math.min(1, (pl.clientWidth - 16) / t.scrollWidth));
-  t.style.zoom = z < 0.999 ? z.toFixed(3) : '';
+  const auto = Math.max(0.5, Math.min(1, (pl.clientWidth - 16) / t.scrollWidth));
+  const z = FC.zoom || auto;   // FC.zoom: escolhido nos botões − / +; vazio = ajustar à tela
+  t.style.zoom = Math.abs(z-1) > 0.001 ? z.toFixed(3) : '';
+  const lb = document.getElementById('fcZoomTxt'); if (lb) lb.textContent = Math.round(z*100)+'%' + (FC.zoom ? '' : ' (ajustado)');
 }
 addEventListener('resize', () => { clearTimeout(fcAjustar._t); fcAjustar._t = setTimeout(fcAjustar, 120); });
 function fluxoDiario(base){
@@ -2712,7 +2714,7 @@ function fluxoDiario(base){
     <div class="toolbar" style="margin:0 0 8px"><button class="btn sm" data-act="fcMesVoltar">← Mês a mês</button>
       <button class="btn sm" data-act="fcMes" data-id="${ymOf(prev)}" title="Mês anterior">◀</button><b style="font-size:15px">Diário — ${MESES[+m-1]}/${a}</b><button class="btn sm" data-act="fcMes" data-id="${ymOf(prox)}" title="Próximo mês">▶</button>
       <div class="spacer"></div><span class="meta">Centro de custo:</span>${filtroFC('evento','Todos os centros de custo',[...db.eventos].sort((p,q)=>q.data.localeCompare(p.data)).map(e=>[e.id,e.nome+' · '+fmt(e.data)]))}
-      <button class="btn sm" data-act="fcCsvDiario">⬇ Excel (CSV)</button><button class="btn sm ${FC.cheia?'pri':''}" data-act="fcCheia" title="Abrir o diário ocupando a tela toda (Esc para sair)">${FC.cheia?'✕ Sair da tela cheia':'⛶ Tela cheia'}</button></div>
+      <button class="btn sm" data-act="fcCsvDiario">⬇ Excel (CSV)</button><span style="display:inline-flex;align-items:center;gap:4px"><button class="btn sm" data-act="fcZoom" data-id="-" title="Diminuir">−</button><button class="btn sm" data-act="fcZoom" data-id="auto" title="Ajustar à tela" id="fcZoomTxt" style="min-width:92px">${FC.zoom?Math.round(FC.zoom*100)+'%':'ajustado'}</button><button class="btn sm" data-act="fcZoom" data-id="+" title="Aumentar">＋</button></span><button class="btn sm ${FC.cheia?'pri':''}" data-act="fcCheia" title="Abrir o diário ocupando a tela toda (Esc para sair)">${FC.cheia?'✕ Sair da tela cheia':'⛶ Tela cheia'}</button></div>
     ${FC.evento.length?`<div class="note" style="margin:0 0 8px;background:var(--brand-soft);border-color:#efbb3c;color:var(--brand)">Mostrando só <b>${FC.evento.map(id=>h(evento(id).nome)).join(', ')}</b>: entradas e saídas desse centro de custo em ${MESES[+m-1]}/${a}. O saldo inicial também considera só esse centro de custo.</div>`:''}
     <div class="fc-plan"><table>
       <thead><tr><th class="fc-rot click" data-act="formSaldoInicial" title="Clique para informar o saldo inicial">Saldo inicial ✏️<br><b style="font-size:14px;color:${saldoIni<0?'var(--recusado)':'var(--text)'}">${fcSaldo(saldoIni)}</b></th>
@@ -2805,6 +2807,8 @@ function csvFluxo(){
 
 Object.assign(acoes, {
   fcAba: id => { FC.aba = id; render(); },
+  fcZoom: d => { const t = document.querySelector('.fc-plan table'); const atual = FC.zoom || (t && parseFloat(t.style.zoom)) || 1;
+    FC.zoom = d==='auto' ? null : Math.round(Math.min(1.5, Math.max(0.4, atual + (d==='+'?0.1:-0.1)))*10)/10; fcAjustar(); },
   fcCheia: () => { FC.cheia = !FC.cheia; const d = document.documentElement;
     try{ if (FC.cheia){ if (d.requestFullscreen && !document.fullscreenElement) d.requestFullscreen().catch(()=>{}); } else if (document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }catch(e){}
     render(); },
@@ -2914,7 +2918,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.1';
+const APP_VERSAO = '9.2';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
