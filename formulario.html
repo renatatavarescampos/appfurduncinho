@@ -234,7 +234,7 @@ label.cb{position:relative}
     var o = F.opcoes || {}, ev = (o.eventos||[]).filter(function(e){ return e.id === eventoId; })[0];
     var favN = function(i){ if (i.novaPessoa) return i.novaPessoa.nome + ' (cadastro novo)'; var f = (o.favorecidos||[]).filter(function(x){ return x.id === i.pessoaId; })[0]; return f ? f.nome : ''; };
     var total = itens.reduce(function(t, i){ return t + (Number(i.valor) || 0); }, 0);
-    return 'Olá! Enviei ' + (itens.length > 1 ? itens.length + ' pedidos de pagamento' : '1 pedido de pagamento') + (o.empresa ? ' da ' + o.empresa : '') + (ev ? ', evento ' + ev.nome : '') + ', e preciso da sua aprovação:\n\n'
+    return 'Olá! Enviei ' + (itens.length > 1 ? itens.length + ' pedidos de pagamento' : '1 pedido de pagamento') + (o.empresa ? ' da ' + o.empresa : '') + (ev ? (ev.id === '_empresa' ? ', despesa da empresa (sem evento)' : ', evento ' + ev.nome) : '') + ', e preciso da sua aprovação:\n\n'
       + itens.slice(0, 30).map(function(i){ return '• ' + favN(i) + ': ' + brl(i.valor) + (i.vencimento ? ', vence ' + fmt(i.vencimento) : ''); }).join('\n')
       + (itens.length > 30 ? '\n• … e mais ' + (itens.length - 30) : '') + (itens.length > 1 ? '\n\nTotal: ' + brl(total) : '') + '\n\nPedido por ' + sol + '. Para ver tudo o que está esperando aprovação e aprovar, abra:\n' + linkAprovacao();
   }

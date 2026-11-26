@@ -310,7 +310,7 @@ const agora = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimez
 const addDias = (s,n) => { const d=new Date(s+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
 const uid = p => p + Math.random().toString(36).slice(2,8);
 const user = id => db.users.find(u=>u.id===id) || {nome:'—'};
-const evento = id => db.eventos.find(e=>e.id===id) || {nome:'—'};
+const evento = id => db.eventos.find(e=>e.id===id) || {nome: id ? '—' : 'Despesa da empresa'};   // pedido sem evento = despesa da empresa
 const pessoa = id => db.pessoas.find(p=>p.id===id) || {nome:'—'};
 const iniciais = n => n.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase();
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
@@ -718,6 +718,8 @@ function telaDash(){
   const posMax = Math.max(0,...lucroEv.map(x=>x.lucro)), negMax = Math.max(0,...lucroEv.map(x=>-x.lucro));
   const escala = Math.max(1, posMax+negMax), topo = !negMax ? 100 : !posMax ? 12 : posMax/escala*100;   // só prejuízo: deixa um espaço acima da linha do zero
   const lucroTotal = lucroEv.reduce((a,x)=>a+x.lucro,0);
+  // despesas sem evento (aluguel, contador…): ficam fora do lucro dos eventos, mas entram no resultado geral
+  const despEmp = LF.serie || LF.cc || F.evento.length ? 0 : visiveis().filter(p=>!p.eventoId && !['recusado','cancelado'].includes(p.status) && anosSel.includes(p.vencimento.slice(0,4)) && passa(F.mes,p.vencimento.slice(5,7))).reduce((a,p)=>a+p.valor,0);
   const graficoLucro = lucroEv.length ? `<div class="graf-rola"><div style="display:flex;gap:0;height:240px;padding-top:18px;justify-content:center;min-width:${lucroEv.length*62}px">${lucroEv.map(x=>{
       const pos = x.lucro>=0, alt = Math.abs(x.lucro)/escala*(negMax && !posMax ? 76 : 88);
       return `<div data-act="pagosEvento" data-id="${x.e.id}" style="flex:1;min-width:62px;max-width:170px;display:flex;flex-direction:column;cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Receita: ${brl(x.receita)}&#10;Custo: ${brl(x.custo)}&#10;Lucro: ${brl(x.lucro)}">
@@ -791,7 +793,7 @@ function telaDash(){
     <select data-lf="serie" title="Evento (todas as edições)" style="padding:5px 8px;border:1px solid var(--line);border-radius:8px"><option value="">Todos os eventos</option>${[...new Set(db.eventos.map(serieDe))].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(x=>{const n=db.eventos.filter(e=>serieDe(e)===x).length;return `<option value="${h(x)}" ${LF.serie===x?'selected':''}>${h(x)}${n>1?' ('+n+' edições)':''}</option>`;}).join('')}</select>
     ${LF.cc||LF.serie?'<button class="btn sm" data-act="lucroLimpar">✕ Limpar</button>':''}<div class="spacer"></div>
     ${DASH_VIS==='lucro'
-      ? `<div class="legend"><span><i class="dot" style="background:#002620"></i>Lucro</span><span><i class="dot" style="background:#ef4444"></i>Prejuízo</span><span>Total do período: <b style="color:${lucroTotal>=0?'#002620':'#ef4444'}">${brl(lucroTotal)}</b></span></div></div>`
+      ? `<div class="legend"><span><i class="dot" style="background:#002620"></i>Lucro</span><span><i class="dot" style="background:#ef4444"></i>Prejuízo</span><span>${despEmp?'Lucro dos eventos':'Total do período'}: <b style="color:${lucroTotal>=0?'#002620':'#ef4444'}">${brl(lucroTotal)}</b></span>${despEmp?`<span>Despesas da empresa (sem evento): <b style="color:#ef4444">-${brl(despEmp)}</b></span><span>Resultado geral: <b style="color:${lucroTotal-despEmp>=0?'#002620':'#ef4444'}">${brl(lucroTotal-despEmp)}</b></span>`:''}</div></div>`
       : `<div class="legend"><span><i class="dot" style="background:var(--pago)"></i>Pago</span><span><i class="dot" style="background:var(--aprovado)"></i>A pagar</span><span><i class="dot" style="background:var(--aguardando)"></i>Aguardando aprovação</span></div></div>`}
     ${DASH_VIS==='lucro'
       ? `${F.mes.length&&!LF.serie?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 0">${MESES.map((m,i)=>{const mm=String(i+1).padStart(2,'0');return `<button class="btn sm ${F.mes.includes(mm)?'pri':''}" data-act="lucroMesSel" data-id="${mm}">${m}</button>`;}).join('')}</div>`:''}${graficoLucro}<div class="meta">Lucro = receitas do evento (recebidas e a receber) − custos (pedidos válidos). ${LF.serie?'Mostrando todas as edições deste evento, de todos os anos.':'Escolha o ano e o mês nos filtros de cima: no mês, entram só os eventos daquele mês.'} Filtre por centro de custo ou por evento para comparar edições. Clique em um evento para ver as movimentações.</div>${linhaLucro}`
@@ -1322,7 +1324,7 @@ function formPedido(id){
   const evs = db.eventos.filter(e=>e.data>=addDias(HOJE,-60) || e.id===v.eventoId).sort((a,b)=>a.data.localeCompare(b.data));
   modal(`<h3>${p?'Editar pedido '+p.id:'Novo pedido de pagamento'}</h3>
   <form class="form" id="fPedido">
-    <label class="full">Evento *<select name="eventoId" required><option value="">Selecione…</option>${evs.map(e=>`<option value="${e.id}" ${v.eventoId===e.id?'selected':''}>${h(e.nome)} — ${fmt(e.data)}</option>`).join('')}</select></label>
+    <label class="full">Evento *<select name="eventoId" required><option value="">Selecione…</option>${evs.map(e=>`<option value="${e.id}" ${v.eventoId===e.id?'selected':''}>${h(e.nome)} — ${fmt(e.data)}</option>`).join('')}<option value="_empresa" ${p && !v.eventoId?'selected':''}>— Sem evento (despesa da empresa) —</option></select></label>
     <label class="full">Favorecido *<select name="pessoaId" required><option value="">Selecione…</option>${[...db.pessoas].filter(x=>x.ativo!==false || x.id===v.pessoaId).sort((a,b)=>a.nome.localeCompare(b.nome)).map(x=>`<option value="${x.id}" ${v.pessoaId===x.id?'selected':''}>${h(x.nome)} — ${h(x.funcao)}</option>`).join('')}</select>
       <a href="#" data-act="formPessoa" style="font-size:12px">Não encontrou? Cadastrar nova pessoa</a></label>
     <label>Categoria (plano de contas) *<select name="categoria" required><option value="">Selecione…</option>${db.categorias.map(c=>`<option ${v.categoria===c?'selected':''}>${h(c)}</option>`).join('')}</select>
@@ -1374,7 +1376,7 @@ function formCentros(){
 function salvarPedido(id){
   const f = document.getElementById('fPedido'); if(!f.reportValidity()) return;
   const d = Object.fromEntries(new FormData(f));
-  const dados = {eventoId:d.eventoId,pessoaId:d.pessoaId,categoria:d.categoria,valor:Number(d.valor),vencimento:d.vencimento,forma:d.forma,descricao:d.descricao.trim(),link:urlOk(d.link),centroCusto:(d.centroCusto||'').trim(),
+  const dados = {eventoId:d.eventoId==='_empresa'?'':d.eventoId,pessoaId:d.pessoaId,categoria:d.categoria,valor:Number(d.valor),vencimento:d.vencimento,forma:d.forma,descricao:d.descricao.trim(),link:urlOk(d.link),centroCusto:(d.centroCusto||'').trim(),
     extras:Object.fromEntries(extras().map(c=>[c.id,(d['cx_'+c.id]??'').trim()]).filter(([,v])=>v!==''))};
   // opções novas digitadas nas listas suspensas entram na lista para as próximas vezes
   if (dados.centroCusto && !centrosDeCusto().includes(dados.centroCusto)) db.centrosCusto = [...centrosDeCusto(), dados.centroCusto];
@@ -1965,7 +1967,7 @@ function opcoesForm(tipo){
   base.cliente = clienteAtual();
   const desde = addDias(HOJE, -120);
   return {...base,
-    eventos: [...db.eventos].filter(e=>!e.data || e.data >= desde).sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(e=>({id:e.id, nome:e.nome, data:e.data||''})),
+    eventos: [...db.eventos].filter(e=>!e.data || e.data >= desde).sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(e=>({id:e.id, nome:e.nome, data:e.data||''})).concat([{id:'_empresa', nome:'Sem evento (despesa da empresa)', data:''}]),
     favorecidos: db.pessoas.filter(p=>p.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(p=>({id:p.id, nome:p.nome, pix:pixCompleto(p), dh:docResumo(p.doc)})),
     categorias: [...db.categorias], formas: [...FORMAS],
     equipe: db.users.filter(u=>u.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).map(u=>({id:u.id, nome:u.nome}))};
@@ -2719,7 +2721,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '7.2';
+const APP_VERSAO = '7.3';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
