@@ -176,22 +176,22 @@ tr.click:hover td{background:#f4efeb}
 .fc-plan{overflow:auto;max-height:75vh;border:1px solid var(--line);border-radius:8px}
 .fc-plan table{border-collapse:separate;border-spacing:0;font-size:12px}
 .fc-plan th,.fc-plan td{padding:4px 8px;border-bottom:1px solid #f4efeb;border-right:1px solid #f4efeb;min-width:92px}
-.fc-plan thead th{position:sticky;top:0;z-index:2;background:#c37f3626;color:var(--text);font-weight:500;text-align:center;font-size:11px;line-height:1.35}
-.fc-plan thead th.fds{background:#efbb3c33}
+.fc-plan thead th{position:sticky;top:0;z-index:2;background:#f6ece1;color:var(--text);font-weight:500;text-align:center;font-size:11px;line-height:1.35}
+.fc-plan thead th.fds{background:#fcf1d8}
 .fc-plan .fc-rot{position:sticky;left:0;z-index:1;background:#fff;text-align:left;min-width:220px;max-width:260px;white-space:normal;font-weight:400;color:var(--text);font-size:12px}
-.fc-plan thead .fc-rot{z-index:3;background:#c37f3626;text-align:center}
+.fc-plan thead .fc-rot{z-index:3;background:#f6ece1;text-align:center}
 .fc-plan td.hj{background:#f4efeb}
 .fc-plan td.tot,.fc-plan th.tot{background:#f4efeb;font-weight:700}
 .fc-plan td.click{cursor:pointer}
 .fc-plan td.click:hover{outline:2px solid var(--brand);outline-offset:-2px}
 .fc-plan tr.r-ini td,.fc-plan tr.r-ini th{color:var(--muted)}
 .fc-plan tr.r-sec th,.fc-plan tr.r-sec td{background:#f4efeb;font-weight:700}
-.fc-plan tr.r-pag th,.fc-plan tr.r-pag td{background:#ef444426;font-weight:700}
+.fc-plan tr.r-pag th,.fc-plan tr.r-pag td{background:#fde3e3;font-weight:700}
 .fc-plan tr.r-atr th{font-style:italic}
 .fc-plan tr.r-saldo th,.fc-plan tr.r-saldo td{background:#002620;color:#fff;font-weight:700}
 .fc-plan tr.r-saldo td.neg{background:#ef4444}
-.fc-plan tr.r-ent th,.fc-plan tr.r-ent td{background:#00262012}
-.fc-plan tr.r-sai th,.fc-plan tr.r-sai td{background:#ef444414}
+.fc-plan tr.r-ent th,.fc-plan tr.r-ent td{background:#edf0ef}
+.fc-plan tr.r-sai th,.fc-plan tr.r-sai td{background:#fef0f0}
 .fc-mes .lab{font-size:11px;color:var(--muted);text-align:center;margin-top:4px}
 @media (max-width:760px){
   table.cards thead{display:block}
@@ -2386,6 +2386,14 @@ const acoes = {
   concDesfazer: id => { if(!isAdmin()) return; desfazerConc(id); save(); render(); toast('Conciliação de '+id+' desfeita'); },
   concManualTx: id => concManualTx(id),
   concManualPed: id => concManualPed(id),
+  formSaldoInicial: () => formSaldoInicial(),
+  saldoIniOk: () => { const d=lerForm('fSaldo'); if(!d) return; const num=v=>{ v=String(v||'').trim(); if(!v) return null; v=v.replace(/[R$\s]/g,''); if(v.includes(',')) v=v.replace(/\./g,'').replace(',','.'); const n=+v; return isNaN(n)?NaN:n; };
+    const contas={}; let erro=false;
+    document.querySelectorAll('#fSaldo [data-conta]').forEach(i=>{ const n=num(i.value); if(Number.isNaN(n)) erro=true; else if(n!==null) contas[i.dataset.conta]=n; });
+    if (d.novaNome && d.novaNome.trim()){ const n=num(d.novaValor); if(Number.isNaN(n)) erro=true; else { contas[d.novaNome.trim()]=n||0; lembrarBanco(d.novaNome); } }
+    if (erro) return toast('Confira os valores: use só números, ex.: 12.345,67');
+    db.saldoInicial={data:d.data, contas, quem:me.id, quando:new Date().toISOString()}; save(); fechar(); render(); toast('Saldo inicial salvo'); },
+  saldoIniLimpar: () => { delete db.saldoInicial; save(); fechar(); render(); toast('Saldo inicial removido'); },
   concConfirmarManual: txId => { const d=lerForm('fConc'); if(!d) return; if (conciliar(txId,d.pid,'manual')){ save(); fechar(); render(); toast(d.pid+' conciliado manualmente'); } },
   concPedTx: pid => { const d=lerForm('fConcTx'); if(!d || !d.tid) return toast('Escolha o lançamento do extrato.'); if (conciliar(d.tid,pid,'manual')){ save(); fechar(); render(); toast(pid+' conciliado manualmente'); } },
   concSemExtrato: pid => { if(!isAdmin()) return; const d=lerForm('fConcSem'); if(!d) return; const p=db.pedidos.find(x=>x.id===pid); if(!p || p.conc) return;
@@ -2509,7 +2517,7 @@ function telaFluxo(){
   const abas = [['resumo','📊 Resumo'],['pagamentos','💸 Pagamentos ('+lista.filter(m=>m.tipo==='saida').length+')'],['recebimentos','💰 Recebimentos ('+lista.filter(m=>m.tipo==='entrada').length+')']];
   const periodoTxt = (FC.ano.length?[...FC.ano].sort().join(' + '):'Todos os anos') + (FC.mes.length?' · '+[...FC.mes].sort().map(m=>MESES[+m-1]).join(', '):'');
   return `<div class="toolbar"><h2 style="margin:0">💵 Fluxo de caixa</h2><span class="meta">${h(periodoTxt)}${FC.evento.length?' · '+FC.evento.map(id=>h(evento(id).nome)).join(', '):''}</span><div class="spacer"></div>
-    <button class="btn" data-act="fcCsv">⬇ Exportar Excel (CSV)</button><button class="btn pri" data-act="formReceb">+ Novo recebimento</button></div>
+    <button class="btn" data-act="formSaldoInicial" title="Saldo das contas no começo de uma data">🏦 Saldo inicial${saldoInfo()?': '+brl(saldoInfo().valor)+' em '+fmt(db.saldoInicial.data):''}</button><button class="btn" data-act="fcCsv">⬇ Exportar Excel (CSV)</button><button class="btn pri" data-act="formReceb">+ Novo recebimento</button></div>
   <div class="toolbar">
     ${filtroFC('ano','Todos os anos',anos.map(a=>[a,a]))}${filtroFC('mes','Todos os meses',MESES.map((m,i)=>[String(i+1).padStart(2,'0'),m]))}
     ${filtroFC('evento','Todos os eventos',[...db.eventos].sort((a,b)=>b.data.localeCompare(a.data)).map(e=>[e.id,e.nome+' · '+fmt(e.data)]))}
@@ -2536,9 +2544,8 @@ function fluxoResumo(lista, todos){
     meses.push({a, mm, nome:m+(anosSel.length>1?'/'+a.slice(2):''), entR:s('entrada',true), entP:s('entrada',false), saiR:s('saida',true), saiP:s('saida',false)}); }));
   // saldo acumulado começa com tudo o que aconteceu antes do 1º mês mostrado
   const ini = anosSel[0]+'-01';
-  let acum = base.filter(x=>x.data.slice(0,7)<ini).reduce((q,x)=>q+(x.tipo==='entrada'?x.valor:-x.valor),0);
-  const saldoInicial = acum;
-  meses.forEach(x=>{ x.saldo = x.entR+x.entP-x.saiR-x.saiP; acum += x.saldo; x.acum = acum; });
+  const saldoInicial = saldoAntes(base, ini);
+  meses.forEach(x=>{ x.saldo = x.entR+x.entP-x.saiR-x.saiP; const pm=new Date(+x.a, +x.mm, 1); x.acum = saldoAntes(base, pm.getFullYear()+'-'+String(pm.getMonth()+1).padStart(2,'0')+'-01'); });
   const max = Math.max(1,...meses.map(x=>Math.max(x.entR+x.entP, x.saiR+x.saiP)));
   const col = (r,p,cor,t) => `<div class="fc-col" title="${t}"><div class="seg" style="height:${p/max*100}%;background:${cor};opacity:.35"></div><div class="seg" style="height:${r/max*100}%;background:${cor}"></div></div>`;
   // Por evento: eventos que têm movimento no período filtrado, com o resultado COMPLETO do evento (todas as datas)
@@ -2587,17 +2594,32 @@ function fcLinha(key){
 }
 const fcNum = v => v ? v.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}) : '-';
 const fcSaldo = v => (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+// Saldo inicial informado pela gestora: saldo das contas no começo do dia "data".
+// A partir dessa data o saldo parte dele; o que aconteceu antes não entra mais na conta.
+const saldoInfo = () => { const x=db.saldoInicial; if(!x||!x.data||FC.evento.length) return null; return {data:x.data, valor:Object.values(x.contas||{}).reduce((a,v)=>a+(+v||0),0)}; };
+const saldoAntes = (movs, dia) => { const si=saldoInfo(); const de = si && si.data<=dia ? si.data : '';
+  return (de?si.valor:0) + movs.filter(x=>x.data<dia && x.data>=de).reduce((q,x)=>q+(x.tipo==='entrada'?x.valor:-x.valor),0); };
+function formSaldoInicial(){
+  const x = db.saldoInicial||{}, contas = [...new Set([...contasBanco(), ...Object.keys(x.contas||{})])];
+  if (!contas.length) contas.push('Conta principal');
+  modal(`<h3>🏦 Saldo inicial</h3>
+  <p class="meta" style="margin-top:0">Informe quanto havia em cada conta no <b>começo do dia</b> escolhido. O fluxo de caixa passa a partir desse saldo; o que aconteceu antes dessa data não entra mais na conta.</p>
+  <form class="form" id="fSaldo"><label class="full">Saldo no início do dia *<input type="date" name="data" required value="${x.data||HOJE.slice(0,8)+'01'}"></label>
+  ${contas.map((c,i)=>`<label class="full">${h(c)}<input name="c${i}" data-conta="${h(c)}" inputmode="decimal" placeholder="0,00" value="${x.contas&&x.contas[c]!=null?String(x.contas[c]).replace('.',','):''}"></label>`).join('')}
+  <label class="full">Outra conta ou caixa (nome)<input name="novaNome" placeholder="Ex.: Caixa da empresa"></label><label class="full">Valor dessa conta<input name="novaValor" inputmode="decimal" placeholder="0,00"></label></form>
+  <div class="actions">${db.saldoInicial?'<button class="btn bad" data-act="saldoIniLimpar">Remover saldo inicial</button>':''}<div class="spacer"></div><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="saldoIniOk">Salvar</button></div>`, 520);
+}
 function fluxoDiario(base){
   const ym = FC.diario, [a,m] = ym.split('-');
   const doMes = base.filter(x=>x.data.slice(0,7)===ym);
   const conta = x => x.sit!=='atrasado';                     // atrasados não entram no saldo
-  const saldoIni = base.filter(x=>x.data.slice(0,7)<ym && conta(x)).reduce((q,x)=>q+(x.tipo==='entrada'?x.valor:-x.valor),0);
+  const saldoIni = saldoAntes(base.filter(conta), ym+'-01'), si = saldoInfo();
   const nDias = new Date(+a, +m, 0).getDate();
   const dias = Array.from({length:nDias}, (_,i)=>ym+'-'+String(i+1).padStart(2,'0'));
   const soma = (f, dt) => doMes.filter(x=>(!dt || x.data===dt) && f(x)).reduce((q,x)=>q+x.valor,0);
   // saldo inicial / final de cada dia
   let s = saldoIni; const ini = {}, fim = {};
-  dias.forEach(d=>{ ini[d]=s; s += soma(FC_LINHAS.trec.f,d) - soma(FC_LINHAS.tpag.f,d); fim[d]=s; });
+  dias.forEach(d=>{ if (si && d===si.data) s = si.valor; ini[d]=s; s += soma(FC_LINHAS.trec.f,d) - soma(FC_LINHAS.tpag.f,d); fim[d]=s; });
   const cel = (key, f, cls='') => dias.map(d=>{ const v=soma(f,d); return `<td class="right ${cls} ${d===HOJE?'hj':''} ${v?'click':''}" ${v?`data-act="fcCel" data-id="${d}" data-arg="${h(key)}"`:''}>${fcNum(v)}</td>`; }).join('')
     + (()=>{ const v=soma(f); return `<td class="right tot ${v?'click':''}" ${v?`data-act="fcCel" data-id="${ym}" data-arg="${h(key)}"`:''}>${fcNum(v)}</td>`; })();
   const linha = (key, cls='', nome) => { const L=fcLinha(key); return `<tr class="${cls}"><th class="fc-rot">${h(nome||L.nome)}</th>${cel(key,L.f)}</tr>`; };
@@ -2615,7 +2637,7 @@ function fluxoDiario(base){
       <button class="btn sm" data-act="fcCsvDiario">⬇ Excel (CSV)</button></div>
     ${FC.evento.length?`<div class="note" style="margin:0 0 8px;background:var(--brand-soft);border-color:#efbb3c;color:var(--brand)">Mostrando só <b>${FC.evento.map(id=>h(evento(id).nome)).join(', ')}</b>: entradas e saídas desse centro de custo em ${MESES[+m-1]}/${a}. O saldo inicial também considera só esse centro de custo.</div>`:''}
     <div class="fc-plan"><table>
-      <thead><tr><th class="fc-rot">Saldo inicial<br><b style="font-size:14px;color:${saldoIni<0?'var(--recusado)':'var(--text)'}">${fcSaldo(saldoIni)}</b></th>
+      <thead><tr><th class="fc-rot click" data-act="formSaldoInicial" title="Clique para informar o saldo inicial">Saldo inicial ✏️<br><b style="font-size:14px;color:${saldoIni<0?'var(--recusado)':'var(--text)'}">${fcSaldo(saldoIni)}</b></th>
         ${dias.map(d=>{ const dd=new Date(d+'T12:00:00'); return `<th class="right ${d===HOJE?'hj':''} ${[0,6].includes(dd.getDay())?'fds':''}">${DSEM[dd.getDay()]}<br><b>${fmt(d)}</b>${d===HOJE?'<br><span class="tag" style="background:var(--brand)">hoje</span>':''}</th>`; }).join('')}
         <th class="right tot">Total<br><b>${MESES[+m-1]}/${a}</b></th></tr></thead>
       <tbody>
@@ -2808,7 +2830,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.3';
+const APP_VERSAO = '8.4';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
