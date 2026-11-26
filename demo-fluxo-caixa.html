@@ -271,6 +271,16 @@ header .av{background:#f4efeb!important;color:#002620!important}
 .cf-aviso a{font-weight:600;margin-left:4px}
 .fc-cheia{position:fixed;inset:0;z-index:9;background:var(--bg,#f4efeb);margin:0!important;border:0!important;padding:12px 14px!important;overflow:auto}
 .fc-cheia .fc-plan{max-height:calc(100vh - 110px)}
+.fc-cheia{display:flex;flex-direction:column;overflow:hidden!important}
+.fc-cheia .fc-plan{flex:1;min-height:0;max-height:none}
+.fc-cheia>p.meta{margin:6px 0 0;font-size:11px}
+.fc-plan.compacto th,.fc-plan.compacto td{min-width:0;padding:3px 5px;white-space:nowrap}
+.fc-plan.compacto .fc-rot{min-width:150px;max-width:190px}
+.fc-plan.compacto thead th{font-size:10.5px}
+.fc-plan .dc{display:none}
+.fc-plan.compacto .dc{display:inline}
+.fc-plan.compacto .dl{display:none}
+.fc-plan.compacto .c0{display:none}
 </style>
 </head>
 <body>
@@ -460,7 +470,7 @@ function render(){
   </header>
   <nav>${abas.map(([k,n])=>`<button class="${view===k?'on':''}" data-act="aba" data-id="${k}">${n}</button>`).join('')}</nav>
   <main>${({kanban:telaKanban,conciliacao:telaConciliacao,aprovacoes:telaAprovacoes,lista:telaLista,receber:telaReceber,dashboard:telaDash,fluxo:telaFluxo,eventos:telaEventos,pessoas:telaPessoas,usuarios:telaUsuarios})[view]()}</main>`;
-  turbinarSelects(app); filtrosDeColuna(app);
+  turbinarSelects(app); filtrosDeColuna(app); fcAjustar();
 }
 function demoBar(){
   if (window.NUVEM) return '';   // versão real (com login): sem faixa de demonstração
@@ -2650,8 +2660,9 @@ function fcLinha(key){
   if (key.startsWith('cat|')) return {nome:'Saídas — '+key.slice(4), f:m=>m.tipo==='saida' && m.sit!=='atrasado' && m.ref.categoria===v};
   return null;
 }
-const fcNum = v => v ? v.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}) : '-';
-const fcSaldo = v => (v||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});
+const fcC0 = t => t.replace(/,00$/, '<span class="c0">,00</span>');   // na visão compacta o ",00" some (o valor continua exato)
+const fcNum = v => v ? fcC0(v.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2})) : '-';
+const fcSaldo = v => fcC0((v||0).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}));
 // Saldo inicial informado pela gestora: saldo das contas no começo do dia "data".
 // A partir dessa data o saldo parte dele; o que aconteceu antes não entra mais na conta.
 const saldoInfo = () => { const x=db.saldoInicial; if(!x||!x.data||FC.evento.length) return null; return {data:x.data, valor:Object.values(x.contas||{}).reduce((a,v)=>a+(+v||0),0)}; };
@@ -2667,6 +2678,15 @@ function formSaldoInicial(){
   <label class="full">Outra conta ou caixa (nome)<input name="novaNome" placeholder="Ex.: Caixa da empresa"></label><label class="full">Valor dessa conta<input name="novaValor" inputmode="decimal" placeholder="0,00"></label></form>
   <div class="actions">${db.saldoInicial?'<button class="btn bad" data-act="saldoIniLimpar">Remover saldo inicial</button>':''}<div class="spacer"></div><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="saldoIniOk">Salvar</button></div>`, 520);
 }
+// Diário: a tabela diminui sozinha para caber na largura da tela (sem rolar para o lado); em tela cheia ocupa toda a altura
+function fcAjustar(){
+  const pl = document.querySelector('.fc-plan'), t = pl && pl.querySelector('table'); if (!t) return;
+  t.style.zoom = 1; pl.classList.remove('compacto');
+  if (t.scrollWidth > pl.clientWidth) pl.classList.add('compacto');   // primeiro aperta as colunas; se ainda não couber, diminui a escala
+  const z = Math.max(0.5, Math.min(1, (pl.clientWidth - 16) / t.scrollWidth));
+  t.style.zoom = z < 0.999 ? z.toFixed(3) : '';
+}
+addEventListener('resize', () => { clearTimeout(fcAjustar._t); fcAjustar._t = setTimeout(fcAjustar, 120); });
 function fluxoDiario(base){
   const ym = FC.diario, [a,m] = ym.split('-');
   const doMes = base.filter(x=>x.data.slice(0,7)===ym);
@@ -2696,7 +2716,7 @@ function fluxoDiario(base){
     ${FC.evento.length?`<div class="note" style="margin:0 0 8px;background:var(--brand-soft);border-color:#efbb3c;color:var(--brand)">Mostrando só <b>${FC.evento.map(id=>h(evento(id).nome)).join(', ')}</b>: entradas e saídas desse centro de custo em ${MESES[+m-1]}/${a}. O saldo inicial também considera só esse centro de custo.</div>`:''}
     <div class="fc-plan"><table>
       <thead><tr><th class="fc-rot click" data-act="formSaldoInicial" title="Clique para informar o saldo inicial">Saldo inicial ✏️<br><b style="font-size:14px;color:${saldoIni<0?'var(--recusado)':'var(--text)'}">${fcSaldo(saldoIni)}</b></th>
-        ${dias.map(d=>{ const dd=new Date(d+'T12:00:00'); return `<th class="right ${d===HOJE?'hj':''} ${[0,6].includes(dd.getDay())?'fds':''}">${DSEM[dd.getDay()]}<br><b>${fmt(d)}</b>${d===HOJE?'<br><span class="tag" style="background:var(--brand)">hoje</span>':''}</th>`; }).join('')}
+        ${dias.map(d=>{ const dd=new Date(d+'T12:00:00'); return `<th class="right ${d===HOJE?'hj':''} ${[0,6].includes(dd.getDay())?'fds':''}"><span class="dl">${DSEM[dd.getDay()]}</span><span class="dc">${DSEM[dd.getDay()].slice(0,3)}</span><br><b><span class="dl">${fmt(d)}</span><span class="dc">${fmt(d).slice(0,5)}</span></b>${d===HOJE?'<br><span class="tag" style="background:var(--brand)">hoje</span>':''}</th>`; }).join('')}
         <th class="right tot">Total<br><b>${MESES[+m-1]}/${a}</b></th></tr></thead>
       <tbody>
         <tr class="r-ini"><th class="fc-rot">Saldo inicial do dia</th>${dias.map(d=>`<td class="right ${d===HOJE?'hj':''}">${fcSaldo(ini[d])}</td>`).join('')}<td class="right tot">${fcSaldo(saldoIni)}</td></tr>
@@ -2728,6 +2748,7 @@ function fcCelula(id, key){
 function csvDiario(){
   const ym = FC.diario; if (!ym) return;
   const div = document.createElement('div'); div.innerHTML = fluxoDiario(movimentosFluxo().filter(m=>passaFC(m,{periodo:false})));
+  div.querySelectorAll('.dc').forEach(e=>e.remove()); div.querySelectorAll('br').forEach(e=>e.replaceWith(' '));   // no Excel vai o cabeçalho completo
   const linhas = [...div.querySelectorAll('.fc-plan tr')].map(tr=>[...tr.cells].map(c=>c.innerText.replace(/\s*\n\s*/g,' ').trim()));
   const csv = '﻿'+linhas.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
@@ -2893,7 +2914,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.0';
+const APP_VERSAO = '9.1';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
