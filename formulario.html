@@ -213,6 +213,8 @@ label.cb{position:relative}
           lista.push({nome:f.name, caminho:caminho, tipo:f.type||'', tamanho:f.size}); return lista; });
     }); }, Promise.resolve([]));
   }
+  // junto com o id vão o nome, o resumo do CPF/CNPJ e o PIX: se o app não achar o id, acha pelo nome
+  function favRef(x, id){ var f = (F.opcoes.favorecidos||[]).filter(function(y){ return y.id === id; })[0] || {}; x.pessoaId = id; x.pessoaNome = f.nome || ''; x.pessoaDh = f.dh || ''; x.pessoaPix = f.pix || ''; return x; }
   function enviarPedido(fm, d){
     var e2 = document.getElementById('msg2'); e2.style.display = 'none';
     var sit = document.querySelector('[name=situacao]:checked').value, pagoEm = document.getElementById('dataPago').value;
@@ -220,7 +222,7 @@ label.cb{position:relative}
     var conteudo = {solicitante:{nome:String(d.get('s_nome')||'').trim(), contato:String(d.get('s_contato')||'').trim(), usuarioId:String(d.get('s_usuario')||'')},
       eventoId:d.get('eventoId'), categoria:d.get('categoria')||'', valor:Number(d.get('valor')), vencimento:d.get('vencimento'), forma:d.get('forma'),
       descricao:String(d.get('descricao')||'').trim(), link:String(d.get('link')||'').trim(), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : ''};
-    if (d.get('pessoaId') === '__novo__') conteudo.novaPessoa = pessoaDoForm(d); else conteudo.pessoaId = d.get('pessoaId');
+    if (d.get('pessoaId') === '__novo__') conteudo.novaPessoa = pessoaDoForm(d); else favRef(conteudo, d.get('pessoaId'));
     var bt = document.getElementById('btConf'), bv = document.getElementById('btVolta'); bt.disabled = bv.disabled = true; bt.textContent = ARQS.length ? 'Enviando arquivos…' : 'Enviando…';
     subirArquivos().then(function(anexos){ conteudo.anexos = anexos; bt.textContent = 'Enviando…'; return rpc('enviar_formulario', {p_token: TOKEN, p_conteudo: conteudo}); })
       .then(function(){ ARQS = []; sucesso(conteudo.solicitante.nome, sit, 0, textoAprovacao(conteudo.solicitante.nome, conteudo.eventoId, [conteudo])); }, function(e){
@@ -703,7 +705,7 @@ label.cb{position:relative}
     var bt = document.getElementById('btConf'), bv = document.getElementById('btVolta'); bt.disabled = bv.disabled = true; bt.textContent = 'Enviando arquivos…';
     var base = {solicitante:{nome:String(d.get('s_nome')||'').trim(), contato:String(d.get('s_contato')||'').trim(), usuarioId:String(d.get('s_usuario')||'')}, eventoId:d.get('eventoId'), situacao:sit, pagoEm: sit === 'pago' ? pagoEm : ''};
     if (modo === 'texto') base.colado = true; else base.importado = PLAN.name;
-    var lista = itens.map(function(i){ var x = {valor:i.valor, vencimento:i.vencimento, forma:i.forma, categoria:i.categoria || '', descricao:i.descricao}; if (i.pessoaId) x.pessoaId = i.pessoaId; else x.novaPessoa = i.novaPessoa; return x; });
+    var lista = itens.map(function(i){ var x = {valor:i.valor, vencimento:i.vencimento, forma:i.forma, categoria:i.categoria || '', descricao:i.descricao}; if (i.pessoaId) favRef(x, i.pessoaId); else x.novaPessoa = i.novaPessoa; return x; });
     var sobe = LOTE.anexos ? Promise.resolve(LOTE.anexos) : !PLAN ? subirArquivos() : (ARQS.unshift(PLAN), subirArquivos().then(function(a){ ARQS.shift(); return a; }, function(e){ ARQS.shift(); throw e; }));
     sobe.then(function(anexos){
       LOTE.anexos = anexos; bt.textContent = 'Enviando…'; base.anexos = anexos;
@@ -784,7 +786,7 @@ label.cb{position:relative}
         eventoId:d.get('eventoId'), categoria:d.get('categoria'), valor:valor, vencimento:d.get('vencimento'), forma:d.get('forma'),
         descricao:String(d.get('descricao')||'').trim(), link:String(d.get('link')||'').trim()};
       if (d.get('pessoaId') === '__novo__'){ var np = pessoaDoForm(d); if (typeof np === 'string') return erro(np); conteudo.novaPessoa = np; }
-      else conteudo.pessoaId = d.get('pessoaId');
+      else favRef(conteudo, d.get('pessoaId'));
     }
     var bt = document.getElementById('btEnv'); bt.disabled = true; bt.textContent = 'Enviando…';
     rpc('enviar_formulario', {p_token: TOKEN, p_conteudo: conteudo}).then(function(){

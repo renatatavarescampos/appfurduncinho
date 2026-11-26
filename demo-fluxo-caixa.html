@@ -2055,7 +2055,12 @@ async function puxarEnvios(){
       const lista = Array.isArray(c.itens) ? c.itens.slice(0, 300).map(it=>({...c, ...(it||{}), itens:undefined})) : [c];
       lista.forEach(c=>{
       const t = k => String(c[k] ?? '').trim().slice(0, 500);
-      const pes = (c.pessoaId && db.pessoas.find(p=>p.id===c.pessoaId)) || pessoaDe(c.novaPessoa);
+      // favorecido escolhido na lista: pelo id; se o id não existir aqui (lista do link de outra cópia), pelo CPF/CNPJ resumido ou pelo nome; em último caso cadastra com o nome e o PIX
+      const nomeF = String(c.pessoaNome||'').trim().slice(0,200), kN = x => semAcento(String(x||'')).replace(/\s+/g,' ').trim();
+      const pes = (c.pessoaId && db.pessoas.find(p=>p.id===c.pessoaId))
+        || (c.pessoaDh && db.pessoas.find(p=>p.doc && docResumo(p.doc)===c.pessoaDh))
+        || (nomeF && db.pessoas.find(p=>kN(p.nome)===kN(nomeF)))
+        || pessoaDe(c.novaPessoa || (nomeF ? {nome:nomeF, pix:String(c.pessoaPix||'')} : null));
       const valor = Math.max(0, Math.round(Number(c.valor)*100)/100) || 0;
       const jaPago = c.situacao === 'pago', pagoEm = /^\d{4}-\d{2}-\d{2}$/.test(t('pagoEm')) ? t('pagoEm') : HOJE;
       const anexos = (Array.isArray(c.anexos) ? c.anexos : []).slice(0, 5).filter(a=>a && typeof a.caminho==='string' && a.caminho.indexOf(N.dadosId()+'/')===0)
@@ -2748,7 +2753,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '7.5';
+const APP_VERSAO = '7.6';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
