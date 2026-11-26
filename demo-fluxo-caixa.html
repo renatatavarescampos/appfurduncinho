@@ -713,7 +713,8 @@ function telaDash(){
     .sort((a,b)=>a.data.localeCompare(b.data)).map(e=>{
       const receita = (db.recebimentos||[]).filter(r=>r.eventoId===e.id && r.status!=='cancelado').reduce((a,r)=>a+r.valor,0);
       const custo = visiveis().filter(p=>p.eventoId===e.id && !['recusado','cancelado'].includes(p.status)).reduce((a,p)=>a+p.valor,0);
-      return {e, receita, custo, lucro: receita-custo}; });
+      return {e, receita, custo, lucro: receita-custo}; })
+    .filter(x=>x.receita || x.custo);   // evento sem nenhum lançamento ainda não entra (não é lucro zero)
   const posMax = Math.max(0,...lucroEv.map(x=>x.lucro)), negMax = Math.max(0,...lucroEv.map(x=>-x.lucro));
   const escala = Math.max(1, posMax+negMax), topo = negMax ? posMax/escala*100 : 100;
   const lucroTotal = lucroEv.reduce((a,x)=>a+x.lucro,0);
@@ -2707,7 +2708,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '6.8';
+const APP_VERSAO = '6.9';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
