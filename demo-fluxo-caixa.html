@@ -652,7 +652,7 @@ function selAtualizar(){
   const vis = selVisiveis(), marcadas = vis.filter(c=>c.checked);
   const todos = document.querySelector('input[data-sel-todos]');
   if (todos){ todos.checked = vis.length>0 && marcadas.length===vis.length; todos.indeterminate = marcadas.length>0 && marcadas.length<vis.length; }
-  const b = document.getElementById('btnExclSel'); if (b){ b.style.display = marcadas.length?'':'none'; b.querySelector('[data-sel-n]').textContent = marcadas.length; }
+  ['btnExclSel','btnEditSel'].forEach(idb=>{ const b = document.getElementById(idb); if (b){ b.style.display = marcadas.length?'':'none'; b.querySelector('[data-sel-n]').textContent = marcadas.length; } });
   document.querySelectorAll('input[data-sel]').forEach(c=>c.closest('tr').classList.toggle('sel-on', c.checked));
 }
 document.addEventListener('change', e => {
@@ -667,7 +667,7 @@ function telaLista(){
   const tot = lista.filter(p=>!inativo(p)).reduce((a,p)=>a+p.valor,0);
   const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0), iv = cols.findIndex(c=>c.id==='valor');
   [...SEL].forEach(id=>{ if(!db.pedidos.some(p=>p.id===id)) SEL.delete(id); });
-  return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
+  return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn pri" id="btnEditSel" data-act="editarSel" style="${SEL.size?'':'display:none'}">✏️ Alterar selecionadas (<span data-sel-n>${SEL.size}</span>)</button><button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
     ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkForm" title="Link para quem não tem acesso ao sistema enviar um pedido">🔗 Link do formulário</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
   <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}<th>Pagamento</th></tr></thead>
@@ -1212,21 +1212,23 @@ function multiCombo(sel){
 // ================= FILTRO POR COLUNA NAS TABELAS =================
 // Em toda tabela com a classe "filtravel" aparece, embaixo dos títulos, um campo por coluna.
 // É só digitar: o sistema sugere os nomes daquela coluna e esconde as linhas que não combinam.
-const CFS = {};   // lembra o que foi digitado em cada tabela, mesmo quando a tela é redesenhada
+const CFS = {};
+const VAZIO = '\u2205vazio';   // valor do filtro de coluna para células em branco   // lembra o que foi digitado em cada tabela, mesmo quando a tela é redesenhada
 function filtrosDeColuna(root){
   root.querySelectorAll('table.filtravel:not([data-cf])').forEach(tb => {
     tb.dataset.cf = '1';
     const key = tb.dataset.key, st = CFS[key] || (CFS[key] = {});
     const linhas = () => [...tb.tBodies[0].rows].filter(r => !r.querySelector('.empty'));
     // valor "principal" da célula (data-v quando existir, senão a 1ª linha do texto)
-    const valor = (r, i) => { const c = r.cells[i]; return c ? (c.dataset.v ?? (c.innerText||'').split('\n')[0].trim()) : ''; };
+    const valor = (r, i) => { const c = r.cells[i]; const v = c ? (c.dataset.v ?? (c.innerText||'').split('\n')[0].trim()) : ''; return /^[—–-]?$/.test(v) ? VAZIO : v; };
     const linha = document.createElement('tr'); linha.className = 'cf-row';
     [...tb.tHead.rows[0].cells].forEach((th, i) => {
       const c = document.createElement('th');
       const titulo = th.textContent.trim();
       if (titulo){
-        const valores = [...new Set(linhas().map(r => valor(r,i)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR',{numeric:true}));
-        c.innerHTML = `<select multiple data-col="${i}" data-live="1" data-ph="🔍 ${h(titulo)}">${valores.map(v=>`<option value="${h(v)}" ${(st[i]||[]).includes(v)?'selected':''}>${h(v)}</option>`).join('')}</select>`;
+        const todos = linhas().map(r => valor(r,i)), valores = [...new Set(todos.filter(v=>v!==VAZIO))].sort((a,b)=>a.localeCompare(b,'pt-BR',{numeric:true}));
+        if (todos.includes(VAZIO)) valores.unshift(VAZIO);
+        c.innerHTML = `<select multiple data-col="${i}" data-live="1" data-ph="🔍 ${h(titulo)}">${valores.map(v=>`<option value="${h(v)}" ${(st[i]||[]).includes(v)?'selected':''}>${v===VAZIO?'(vazio)':h(v)}</option>`).join('')}</select>`;
       }
       linha.appendChild(c);
     });
@@ -1250,7 +1252,7 @@ function filtrosDeColuna(root){
       if (fs.length){
         if (!av){ av = document.createElement('div'); av.className = 'cf-aviso'; tb.parentNode.insertBefore(av, tb); }
         const nomes = [...tb.tHead.rows[0].cells].map(th=>th.textContent.trim());
-        av.innerHTML = `🔎 Filtrando por <b>${fs.map(([c,v])=>h(nomes[c]||'coluna')+': '+h(v.length>2?v.slice(0,2).join(', ')+' +'+(v.length-2):v.join(', '))).join('</b> e <b>')}</b> — mostrando ${n} de ${linhas().length}. <a href="#" data-cflimpa="1">Limpar filtros das colunas</a>`;
+        av.innerHTML = `🔎 Filtrando por <b>${fs.map(([c,v])=>h(nomes[c]||'coluna')+': '+h((x=>x.length>2?x.slice(0,2).join(', ')+' +'+(x.length-2):x.join(', '))(v.map(y=>y===VAZIO?'(vazio)':y)))).join('</b> e <b>')}</b> — mostrando ${n} de ${linhas().length}. <a href="#" data-cflimpa="1">Limpar filtros das colunas</a>`;
         av.querySelector('[data-cflimpa]').onclick = e => { e.preventDefault(); delete CFS[key]; render(); };
       } else if (av) av.remove();
     };
@@ -1404,6 +1406,43 @@ function formCentros(){
   setTimeout(()=>document.getElementById('novoCC')?.focus(), 30);
 }
 const somaMeses = (iso, k) => { const [y,m,d]=iso.split('-').map(Number); const t=new Date(Date.UTC(y,m-1+k,1)); const ult=new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,0)).getUTCDate(); t.setUTCDate(Math.min(d,ult)); return t.toISOString().slice(0,10); };
+// Alterar várias contas de uma vez: só os campos preenchidos mudam; o resto fica como está
+function formLote(){
+  const ids = selVisiveis().filter(c=>c.checked).map(c=>c.dataset.sel), ps = db.pedidos.filter(p=>ids.includes(p.id) && podeEditar(p));
+  if (!ps.length) return toast('Nenhuma conta selecionada pode ser alterada.');
+  const NA = '<option value="">— não alterar —</option>';
+  const evs = [...db.eventos].sort((a,b)=>b.data.localeCompare(a.data));
+  modal(`<h3>✏️ Alterar ${ps.length} conta${ps.length>1?'s':''}</h3>
+  <p class="meta" style="margin-top:0">Preencha só o que quer mudar. Os campos deixados em "não alterar" ficam como estão em cada conta. Total selecionado: <b>${brl(ps.reduce((a,p)=>a+p.valor,0))}</b>.</p>
+  <form class="form" id="fLote">
+    <label class="full">Evento<select name="eventoId">${NA}${evs.map(e=>`<option value="${e.id}">${h(e.nome)} — ${fmt(e.data)}</option>`).join('')}<option value="_empresa">— Sem evento (despesa da empresa) —</option></select></label>
+    <label>Categoria<select name="categoria">${NA}${db.categorias.map(c=>`<option>${h(c)}</option>`).join('')}</select></label>
+    <label>Vencimento<input name="vencimento" type="date"></label>
+    <label>Forma de pagamento<select name="forma">${NA}${FORMAS.map(f=>`<option>${f}</option>`).join('')}</select></label>
+    <label>Centro de custo<select name="centroCusto">${NA}${centrosDeCusto().map(c=>`<option>${h(c)}</option>`).join('')}<option value="_limpar">— o mesmo do evento (limpar) —</option></select></label>
+    <label class="full">Favorecido<select name="pessoaId">${NA}${[...db.pessoas].filter(x=>x.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome)).map(x=>`<option value="${x.id}">${h(x.nome)} — ${h(x.funcao)}</option>`).join('')}</select></label>
+    <label class="full">Descrição<input name="descricao" placeholder="— não alterar —"></label>
+  </form>
+  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="salvarLote" data-id="${ps.map(p=>p.id).join(',')}">Alterar ${ps.length} conta${ps.length>1?'s':''}</button></div>`, 620);
+}
+function salvarLote(lista){
+  const d = Object.fromEntries(new FormData(document.getElementById('fLote')));
+  const novo = {};
+  if (d.eventoId) novo.eventoId = d.eventoId==='_empresa' ? '' : d.eventoId;
+  ['categoria','vencimento','forma','pessoaId'].forEach(k=>{ if (d[k]) novo[k] = d[k]; });
+  if (d.centroCusto) novo.centroCusto = d.centroCusto==='_limpar' ? '' : d.centroCusto;
+  if ((d.descricao||'').trim()) novo.descricao = d.descricao.trim();
+  if (!Object.keys(novo).length) return toast('Preencha pelo menos um campo para alterar.');
+  const rot = {eventoId:['Evento',v=>evento(v).nome||'sem evento'],pessoaId:['Favorecido',v=>pessoa(v).nome],categoria:['Categoria',v=>v||'—'],vencimento:['Vencimento',v=>fmt(v)],forma:['Forma',v=>v],descricao:['Descrição',v=>v||'—'],centroCusto:['Centro de custo',v=>v||'—']};
+  let n = 0;
+  db.pedidos.filter(p=>lista.includes(p.id) && podeEditar(p)).forEach(p=>{
+    const difs = Object.keys(novo).filter(k=>String(p[k]??'')!==String(novo[k])).map(k=>`${rot[k][0]}: ${rot[k][1](p[k])} → ${rot[k][1](novo[k])}`);
+    if (!difs.length) return;
+    Object.keys(novo).forEach(k=>{ p[k] = novo[k]; });
+    p.historico.push({quando:agora(), quem:me.id, acao:'Alterou em lote — '+difs.join('; ')}); n++;
+  });
+  save(); fechar(); SEL.clear(); render(); toast(n ? n+' conta(s) alterada(s)' : 'Nada mudou: as contas já tinham esses dados');
+}
 function salvarPedido(id){
   const f = document.getElementById('fPedido'); if(!f.reportValidity()) return;
   const d = Object.fromEntries(new FormData(f));
@@ -2783,6 +2822,8 @@ Object.assign(acoes, {
     modal(`<h3>Excluir ${x.id}?</h3><p style="color:var(--muted)">${h(x.descricao)} · ${brl(x.valor)} · ${h(evento(x.eventoId).nome)}<br>O recebimento sai do fluxo de caixa. Essa ação não pode ser desfeita.</p>
     <div class="actions"><button class="btn" data-act="formReceb" data-id="${id}">Voltar</button><button class="btn bad" data-act="confirmarExcluirReceb" data-id="${id}">Excluir</button></div>`); },
   selCel: () => {},
+  editarSel: () => { if(isAdmin()) formLote(); },
+  salvarLote: lista => salvarLote(String(lista||'').split(',')),
   excluirSel: () => { if(!isAdmin()) return;
     const ids = selVisiveis().filter(c=>c.checked).map(c=>c.dataset.sel); if(!ids.length) return;
     const ps = db.pedidos.filter(p=>ids.includes(p.id)), tot = ps.reduce((a,p)=>a+p.valor,0);
@@ -2843,7 +2884,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.6';
+const APP_VERSAO = '8.8';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
