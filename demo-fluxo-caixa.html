@@ -1666,19 +1666,29 @@ const PALAVRAS_VAZIAS = ['ltda','pix','ted','doc','pagamento','pgto','pag','tran
 const tokens = s => semAcento(s).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w => w.length>=3 && !PALAVRAS_VAZIAS.includes(w));
 const simNome = (desc, nome) => { const a = new Set(tokens(desc)); return tokens(nome).filter(w => a.has(w)).length; };
 
+// nome do favorecido no banco × cadastro: o primeiro nome e pelo menos mais um nome precisam bater (aceita 1 letra de diferença, ex.: Herreira × Herrera)
+const PARTICULAS = ['da','de','do','das','dos','e'];
+const nomesDe = s => semAcento(s).replace(/[^a-z ]/g,' ').split(/\s+/).filter(w => w.length>=2 && !PARTICULAS.includes(w));
+function quaseIgual(a, b){ if (a===b) return true; const tol = Math.min(a.length,b.length) >= 6 ? 1 : 0; if (!tol || Math.abs(a.length-b.length) > tol) return false;
+  const d = Array.from({length:a.length+1},(_,i)=>[i]); for (let j=1;j<=b.length;j++) d[0][j]=j;
+  for (let i=1;i<=a.length;i++) for (let j=1;j<=b.length;j++) d[i][j]=Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[a.length][b.length] <= tol; }
+function mesmoFavorecido(t, pe){
+  const doc = (pe.doc||'').replace(/\D/g,''); if (doc.length>=11 && String(t.desc||'').replace(/\D/g,'').includes(doc)) return true;
+  const cad = nomesDe(pe.nome), banco = nomesDe(t.fav || t.desc); if (!cad.length || !banco.length) return false;
+  const tem = w => banco.some(x => quaseIgual(w, x));
+  if (!tem(cad[0])) return false;
+  return cad.length === 1 || cad.slice(1).some(tem);
+}
+// sugestão só quando bate tudo: mesmo favorecido, mesmo valor e mesma data de pagamento
+// (data do banco = data em que o pedido foi pago; se ainda não foi marcado como pago, a data de vencimento)
 function sugestoes(){
   const usados = new Set(), out = [], cands = pedidosConciliaveis();
   txPendentes().sort((a,b)=>a.data.localeCompare(b.data)).forEach(t => {
     const v = Math.round(-t.valor*100);
-    const ops = cands.filter(p => !usados.has(p.id) && Math.round(p.valor*100)===v && !(t.rejeitados||[]).includes(p.id))
-      .map(p => { const pe = pessoa(p.pessoaId), ref = (dataPagamento(p)||'').slice(0,10) || p.vencimento;
-        const d = diasEntre(t.data, ref), n = simNome(t.desc, pe.nome);
-        const doc = (pe.doc||'').replace(/\D/g,''), temDoc = doc.length>=11 && t.desc.replace(/\D/g,'').includes(doc);
-        return {p, d, n, temDoc, score: (temDoc?100:0) + n*10 - d}; })
-      .filter(x => x.d <= CONC_TOL_DIAS || x.n || x.temDoc)
-      .sort((a,b) => b.score - a.score);
-    if (ops.length){ const m = ops[0]; usados.add(m.p.id);
-      out.push({t, p:m.p, motivo:[ 'mesmo valor', m.d<=CONC_TOL_DIAS ? (m.d===0?'mesma data':`${Math.round(m.d)} dia(s) de diferença`) : '', m.n?'nome do favorecido':'', m.temDoc?'CPF/CNPJ':'' ].filter(Boolean).join(' · ')}); }
+    const m = cands.find(p => !usados.has(p.id) && Math.round(p.valor*100)===v && !(t.rejeitados||[]).includes(p.id)
+      && ((dataPagamento(p)||'').slice(0,10) || p.vencimento) === t.data && mesmoFavorecido(t, pessoa(p.pessoaId)));
+    if (m){ usados.add(m.id); out.push({t, p:m, motivo:'mesmo favorecido · mesmo valor · mesma data'}); }
   });
   return out;
 }
@@ -1834,7 +1844,8 @@ function confirmarMapa(){
     if (d.inverter) valor = -valor;
     if (isNaN(valor) || !valor) return;
     const desc = [ci('desc')>=0 ? String(r[ci('desc')]??'').trim() : '', ci('extra')>=0 && ci('extra')!==ci('desc') ? String(r[ci('extra')]??'').replace(/\s+/g,' ').trim() : ''].filter(x=>x && x!=='-').join(' — ');
-    txs.push({data, valor:Math.round(valor*100)/100, desc});
+    const fav = ci('extra')>=0 && ci('desc')>=0 && ci('extra')!==ci('desc') ? String(r[ci('desc')]??'').replace(/\s+/g,' ').trim() : '';
+    txs.push({data, valor:Math.round(valor*100)/100, desc, ...(fav && fav!=='-' ? {fav} : {})});
   });
   fechar(); adicionarTx(txs, IMP.nomeArq); IMP = null;
 }
@@ -1848,13 +1859,20 @@ function adicionarTx(txs, origem){
   <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="txBancoOk">Importar</button></div>`, 520);
 }
 function gravarTx(txs, origem, banco){
-  const chave = t => t.fitid ? 'f:'+t.fitid : `${t.data}|${t.valor}|${semAcento(t.desc)}`;
-  const existentes = new Set(db.extrato.map(chave));
-  let novos = 0, rep = 0;
-  txs.forEach(t => { if (existentes.has(chave(t))){ rep++; return; } existentes.add(chave(t));
+  const esp = x => semAcento(String(x||'')).replace(/\s+/g,' ').trim();
+  const chave = t => t.fitid ? 'f:'+t.fitid : `${t.data}|${t.valor}|${esp(t.desc)}`;
+  // quantas vezes cada lançamento já existe (a mesma pessoa pode receber duas vezes no mesmo dia com o mesmo valor)
+  const ja = {}; db.extrato.forEach(x => { const k = chave(x); ja[k] = (ja[k]||0) + 1; });
+  let novos = 0, rep = 0, atu = 0;
+  txs.forEach(t => { const k = chave(t);
+    if (ja[k]){ ja[k]--; rep++; return; }
+    // o mesmo lançamento importado antes sem o nome do favorecido: só completa a descrição (e a data de pagamento)
+    const velho = !t.fitid && db.extrato.find(x => !x.fav && !x._completo && x.valor===t.valor && x.desc && diasEntre(x.data, t.data) <= 3 && esp(t.desc).includes(esp(x.desc)) && esp(t.desc) !== esp(x.desc));
+    if (velho){ velho.desc = t.desc; velho.data = t.data; if (t.fav) velho.fav = t.fav; velho._completo = true; atu++; return; }
     db.extrato.push({id:uid('t'), ...t, banco, origem, importadoEm:agora(), importadoPor:me.id}); novos++; });
+  db.extrato.forEach(x => delete x._completo);
   save(); view = 'conciliacao'; render();
-  toast(`${novos} lançamento(s) importado(s) de ${origem}${rep?` · ${rep} repetido(s) ignorado(s)`:''}`);
+  toast(`${novos} lançamento(s) importado(s) de ${origem}${atu?` · ${atu} completado(s) com o favorecido`:''}${rep?` · ${rep} repetido(s) ignorado(s)`:''}`);
 }
 
 // ---- tela ----
@@ -1863,7 +1881,7 @@ function telaConciliacao(){
   const peds = pedidosConciliaveis().sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
   const conc = db.pedidos.filter(p=>p.conc).sort((a,b)=>(b.conc.quando||'').localeCompare(a.conc.quando||''));
   const saidas = db.extrato.filter(t=>t.valor<0), ign = db.extrato.filter(t=>t.ignorado);
-  const tx = t => `<td>${fmt(t.data)}</td><td style="white-space:normal;min-width:180px">${h(t.desc||'—')}</td><td class="right" style="color:var(--recusado);font-weight:600">${brl(t.valor)}</td>`;
+  const tx = t => `<td>${fmt(t.data)}</td><td style="white-space:normal;min-width:180px">${t.fav?`<b>${h(t.fav)}</b>${t.desc&&t.desc!==t.fav?`<br><span class="meta">${h(t.desc.replace(t.fav,'').replace(/^\s*—\s*/,''))}</span>`:''}`:h(t.desc||'—')}</td><td class="right" style="color:var(--recusado);font-weight:600">${brl(t.valor)}</td>`;
   const ped = p => `<td><b>${p.id}</b></td><td style="white-space:normal">${h(pessoa(p.pessoaId).nome)}<br><span class="meta">${h(evento(p.eventoId).nome)}</span></td><td class="right"><b>${brl(p.valor)}</b></td><td data-v="${STATUS[p.status].nome}"><span class="tag" style="background:${atrasadoPag(p)?'var(--recusado)':STATUS[p.status].cor}">${atrasadoPag(p)?'⏰ Atrasado · '+(p.status==='aguardando'?'aguardando aprovação':'a pagar'):STATUS[p.status].nome}</span><br><span class="meta">venc. ${fmt(p.vencimento)}</span></td>`;
   return `<div class="toolbar"><h2 style="margin:0">🏦 Conciliação bancária</h2><div class="spacer"></div>
     <label class="btn pri" style="cursor:pointer">📥 Importar extrato (OFX, CSV ou Excel)<input type="file" id="arqExtrato" accept=".ofx,.csv,.txt,.xlsx" multiple hidden></label>
@@ -1876,7 +1894,7 @@ function telaConciliacao(){
   </div>
   ${!db.extrato.length?`<div class="panel" style="margin-bottom:12px"><b>Como funciona</b>
     <ol class="meta" style="margin:8px 0 0;padding-left:18px;line-height:1.7"><li>Baixe o extrato no site/app do banco em <b>OFX</b> (recomendado), <b>CSV</b> ou <b>Excel</b> e clique em <b>📥 Importar extrato</b>.</li>
-    <li>O app procura, para cada saída do banco, o pedido com <b>mesmo valor</b>, <b>data próxima</b> (até ${CONC_TOL_DIAS} dias) e <b>nome/CPF/CNPJ do favorecido</b> na descrição.</li>
+    <li>O app só sugere quando bate tudo: <b>mesmo favorecido</b> (nome ou CPF/CNPJ), <b>mesmo valor</b> e <b>mesma data de pagamento</b>. O resto você concilia manualmente.</li>
     <li>Você confere as sugestões e confirma. Pedidos "Aprovado · a pagar" que aparecem no banco viram <b>Pago</b> automaticamente, com a data do banco.</li>
     <li>O que não bater, você concilia <b>manualmente</b> — escolhendo o lançamento, ou informando a data de pagamento sem extrato.</li></ol></div>`:''}
   ${sug.length?`<div class="panel" style="margin-bottom:12px;border-color:#00262033"><div class="toolbar" style="margin:0 0 6px"><b>✨ Sugestões automáticas (${sug.length})</b><div class="spacer"></div><button class="btn sm ok" data-act="concTodas">Confirmar todas</button></div>
@@ -2777,7 +2795,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.0';
+const APP_VERSAO = '8.1';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
