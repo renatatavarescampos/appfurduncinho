@@ -926,8 +926,8 @@ function pagosEvento(id){
 function telaEventos(){
   const adm = isAdmin();
   [...SEL].forEach(id=>{ if(!db.eventos.some(e=>e.id===id)) SEL.delete(id); });
-  return `<div class="toolbar"><h2 style="margin:0">Eventos</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSelEventos" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionados (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>${isAdmin()?'<button class="btn" data-act="centros">⚙ Centros de custo</button><button class="btn pri" data-act="formEvento">+ Novo evento</button>':''}</div>
-  <div class="panel"><table><thead><tr>${adm?'<th class="sel-col" title="Selecionar todos os eventos"><input type="checkbox" data-sel-todos></th>':''}<th>Evento</th><th>Data do evento</th><th>Responsável</th><th>Centro de custo</th><th>Local</th><th>Links</th><th>Anotações</th><th class="right">Orçamento</th><th class="right">Pedidos</th></tr></thead><tbody>
+  return `<div class="toolbar"><h2 style="margin:0">Eventos</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSelEventos" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionados (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>${isAdmin()?'<button class="btn" data-act="centros">⚙ Centros de custo</button><button class="btn" data-act="importarEventos">📊 Importar planilha</button><button class="btn pri" data-act="formEvento">+ Novo evento</button>':''}</div>
+  <div class="panel"><table class="filtravel" data-key="eventos"><thead><tr>${adm?'<th class="sel-col" title="Selecionar todos os eventos"><input type="checkbox" data-sel-todos></th>':''}<th>Evento</th><th>Data do evento</th><th>Responsável</th><th>Centro de custo</th><th>Local</th><th>Links</th><th>Anotações</th><th class="right">Orçamento</th><th class="right">Pedidos</th></tr></thead><tbody>
   ${[...db.eventos].sort((a,b)=>b.data.localeCompare(a.data)).map(e=>`<tr ${adm?`class="click" data-act="formEvento" data-id="${e.id}"`:''}>${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${e.id}" ${SEL.has(e.id)?'checked':''}></td>`:''}<td>${h(e.nome)}</td><td>${fmt(e.data)}</td><td>${h(e.responsavel||'—')}</td><td>${h(e.centroCusto||'—')}</td><td>${h(e.local)}</td><td style="white-space:normal;min-width:140px;max-width:260px">${(e.links||[]).length&&!isProd()?linksChips(e):'<span class="meta">—</span>'}</td><td style="white-space:normal;min-width:200px;max-width:320px;font-size:13px">${notasDe(e).length&&!isProd()?notasDe(e).map(n=>`<div style="white-space:pre-wrap;padding:2px 0">${linkify(n.texto)} <span class="meta" style="font-size:11px">— ${h(user(n.quem).nome.split(' ')[0])}, ${fmt(n.quando.slice(0,10))}</span></div>`).join(''):'<span class="meta">—</span>'}</td><td class="right">${brl(e.orcamento)}</td><td class="right">${db.pedidos.filter(p=>p.eventoId===e.id).length}</td></tr>`).join('')}
   </tbody></table></div>`;
 }
@@ -1058,6 +1058,67 @@ function escolherCadastro(){
   <div class="actions"><button class="btn" data-act="fechar">Cancelar</button></div>`);
 }
 // ===== Cadastro de várias pessoas por planilha =====
+let IMP_EV = null;
+// ---- Importar eventos por planilha (mesma ideia da importação de pessoas: confere antes, não duplica) ----
+const COLS_EV = [['nome',/^(evento|nome)/],['data',/^(data|dia)/],['local',/^local/],['responsavel',/^respons/],['centroCusto',/^centro/],['orcamento',/^(orcamento|verba|budget)/],['serie',/^(serie|recorrente)/]];
+function importarEventos(){
+  modal(`<h3>📊 Importar eventos por planilha</h3>
+  <p class="meta" style="margin:-6px 0 12px">Um evento por linha. Colunas: <b>Evento</b> e <b>Data</b> (obrigatórias), Local, Responsável, Centro de custo, Orçamento e Evento recorrente. Antes de cadastrar, você confere tudo; evento com o mesmo nome e a mesma data fica de fora.</p>
+  <div class="btns" style="margin:0"><label class="btn pri" style="cursor:pointer">📥 Escolher planilha (Excel ou CSV)<input type="file" id="arqEventos" accept=".xlsx,.csv,.txt" hidden></label><button class="btn" data-act="modeloEventos">⬇️ Baixar modelo</button></div>
+  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button></div>`, 620);
+}
+function modeloEventos(){
+  const blob = xlsx(['Evento','Data','Local','Responsável','Centro de custo','Orçamento','Evento recorrente'],
+    [['Bar Fua','19/11/2026','Fua','Renata','Bar Fua','15000','Bar Fua'],['Show Ferrão Furduncinho','22/11/2026','','','Ferrão','','']], [32,14,20,20,20,14,24]);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'modelo_eventos.xlsx'; a.click();
+}
+async function lerPlanilhaEventos(file){
+  const nome = file.name.toLowerCase();
+  try {
+    const linhas = nome.endsWith('.xlsx') ? await lerXLSX(await file.arrayBuffer()) : (nome.endsWith('.csv') || nome.endsWith('.txt')) ? lerCSV(await lerTexto(file)) : null;
+    if (!linhas) return toast('Formato não suportado. Use Excel (.xlsx) ou CSV.');
+    const hdr = linhas.slice(0,15).findIndex(r => r.some(c=>/^(evento|nome)/.test(semAcento(String(c||'')).trim())));
+    if (hdr < 0) return toast('Não achei a coluna "Evento" na planilha. Use o modelo.');
+    const cab = linhas[hdr].map(c=>semAcento(String(c||'')).trim()), col = {};
+    COLS_EV.forEach(([k,re]) => { const i = cab.findIndex((c,j)=>c && re.test(c) && !Object.values(col).includes(j)); if (i>=0) col[k] = i; });
+    if (col.data === undefined) return toast('Não achei a coluna "Data" na planilha. Use o modelo.');
+    const chave = (n,d) => semAcento(n).replace(/\s+/g,' ').trim()+'|'+d;
+    const jaApp = {}; db.eventos.forEach(e=>{ jaApp[chave(e.nome,e.data)] = e; });
+    const vistos = {}, itens = [];
+    linhas.slice(hdr+1).forEach((r, n) => {
+      const v = k => col[k]===undefined ? '' : String(r[col[k]]??'').trim();
+      if (!Object.values(col).some(i=>String(r[i]??'').trim())) return;
+      const bruto = col.data===undefined ? '' : r[col.data];
+      const data = bruto instanceof Date && !isNaN(bruto) ? bruto.toISOString().slice(0,10) : parseData(bruto);
+      const orc = parseValor(v('orcamento'));
+      const e = {nome:v('nome'), data, local:v('local'), responsavel:v('responsavel'), centroCusto:v('centroCusto'), orcamento: isNaN(orc) ? 0 : Math.abs(orc), serie:v('serie')};
+      const it = {linha: hdr+n+2, e, status:'ok', motivo:''}, k = chave(e.nome, e.data);
+      if (!e.nome) { it.status='erro'; it.motivo='sem nome do evento'; }
+      else if (!/^\d{4}-\d{2}-\d{2}$/.test(e.data)) { it.status='erro'; it.motivo='data inválida (use dd/mm/aaaa)'; }
+      else if (jaApp[k]) { it.status='ja'; it.motivo='já cadastrado'; }
+      else if (vistos[k]) { it.status='ja'; it.motivo='repetido na planilha (linha '+vistos[k]+')'; }
+      if (e.nome && !vistos[k]) vistos[k] = it.linha;
+      itens.push(it);
+    });
+    if (!itens.length) return toast('A planilha não tem nenhum evento.');
+    IMP_EV = itens; conferirEventos(file.name);
+  } catch(err){ console.error(err); toast('Não consegui ler o arquivo: ' + err.message); }
+}
+function conferirEventos(nomeArq){
+  const it = IMP_EV, ok = it.filter(i=>i.status==='ok'), ja = it.filter(i=>i.status==='ja'), er = it.filter(i=>i.status==='erro');
+  const tag = i => i.status==='ok' ? '<span class="tag" style="background:var(--pago)">Novo</span>' : i.status==='ja' ? `<span class="tag" style="background:var(--cancelado)">Fica de fora</span><br><small style="color:var(--muted)">${h(i.motivo)}</small>` : `<span class="tag" style="background:var(--recusado)">Erro</span><br><small style="color:#b91c1c">${h(i.motivo)}</small>`;
+  modal(`<h3>📊 ${h(nomeArq)}: confira antes de cadastrar</h3>
+  <p class="meta" style="margin:-6px 0 12px"><b>${ok.length}</b> ${ok.length===1?'evento novo':'eventos novos'}${ja.length?` · <b>${ja.length}</b> já ${ja.length===1?'cadastrado':'cadastrados'} (não serão duplicados)`:''}${er.length?` · <b style="color:#b91c1c">${er.length}</b> com erro (corrija na planilha e importe de novo)`:''}</p>
+  <div style="max-height:52vh;overflow:auto"><table><thead><tr><th>Linha</th><th>Evento</th><th>Data</th><th>Local</th><th>Responsável</th><th>Centro de custo</th><th class="right">Orçamento</th><th style="min-width:180px">Situação</th></tr></thead><tbody>
+  ${it.map(i=>`<tr style="${i.status==='ok'?'':'opacity:.75'}"><td>${i.linha}</td><td><b>${h(i.e.nome||'—')}</b></td><td>${i.e.data?fmt(i.e.data):'—'}</td><td>${h(i.e.local||'—')}</td><td>${h(i.e.responsavel||'—')}</td><td>${h(i.e.centroCusto||'—')}</td><td class="right">${i.e.orcamento?brl(i.e.orcamento):'—'}</td><td>${tag(i)}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="confirmarImpEventos" ${ok.length?'':'disabled'}>Cadastrar ${ok.length} ${ok.length===1?'evento':'eventos'}</button></div>`, 980);
+}
+function confirmarImpEventos(){
+  if (!IMP_EV) return; const ok = IMP_EV.filter(i=>i.status==='ok');
+  ok.forEach(i => { db.eventos.push({id:uid('e'), ...i.e}); if (i.e.centroCusto && !centrosDeCusto().includes(i.e.centroCusto)) db.centrosCusto = [...centrosDeCusto(), i.e.centroCusto]; });
+  IMP_EV = null; save(); fechar(); render(); toast(ok.length + (ok.length===1 ? ' evento cadastrado' : ' eventos cadastrados'));
+}
 let IMP_PES = null;
 const COLS_PES = [['nome',/^(nome|razao|favorecido|fornecedor|pessoa)/],['doc',/(cpf|cnpj|documento|^doc)/],['funcao',/(funcao|servico|cargo|atividade)/],
   ['tel',/(telefone|whats|celular|^fone|^tel)/],['email',/(e-?mail)/],['pixTipo',/tipo.*(pix|chave)/],['pix',/(pix|chave)/],['banco',/^banco/],
@@ -2421,6 +2482,9 @@ const acoes = {
     if(sel){ sel.value=ja; const ci=sel.parentNode.querySelector('.combo-in'); if(ci) ci.value=ja; }
     inp.value=''; document.getElementById('boxNovaCat').style.display='none'; },
   importarPessoas: () => importarPessoas(),
+  importarEventos: () => importarEventos(),
+  modeloEventos: () => modeloEventos(),
+  confirmarImpEventos: () => confirmarImpEventos(),
   modeloPessoas: () => modeloPessoas(),
   confirmarImpPessoas: () => confirmarImpPessoas(),
   escolherAtualizar: () => escolherAtualizar(),
@@ -2503,7 +2567,7 @@ document.addEventListener('click', e => {
   e.stopPropagation();
   acoes[t.dataset.act]?.(t.dataset.id, t.dataset.arg);
 });
-document.addEventListener('change', e => { if (e.target.id==='arqExtrato'){ [...e.target.files].forEach(importarArquivo); e.target.value=''; return; } if (e.target.id==='arqPessoas'){ const f=e.target.files[0]; e.target.value=''; if (f) lerPlanilhaPessoas(f); return; } const k=e.target.dataset?.f; if(k){ F[k]=[...e.target.selectedOptions].map(o=>o.value).filter(Boolean); render(); } });
+document.addEventListener('change', e => { if (e.target.id==='arqExtrato'){ [...e.target.files].forEach(importarArquivo); e.target.value=''; return; } if (e.target.id==='arqPessoas'){ const f=e.target.files[0]; e.target.value=''; if (f) lerPlanilhaPessoas(f); return; } if (e.target.id==='arqEventos'){ const f=e.target.files[0]; e.target.value=''; if (f) lerPlanilhaEventos(f); return; } const k=e.target.dataset?.f; if(k){ F[k]=[...e.target.selectedOptions].map(o=>o.value).filter(Boolean); render(); } });
 // Tela de exportação Zig: filtros e plano de contas por categoria
 document.addEventListener('change', e => {
   const ds = e.target.dataset || {};
@@ -2714,7 +2778,7 @@ function fluxoDiario(base){
     <div class="toolbar" style="margin:0 0 8px"><button class="btn sm" data-act="fcMesVoltar">← Mês a mês</button>
       <button class="btn sm" data-act="fcMes" data-id="${ymOf(prev)}" title="Mês anterior">◀</button><b style="font-size:15px">Diário — ${MESES[+m-1]}/${a}</b><button class="btn sm" data-act="fcMes" data-id="${ymOf(prox)}" title="Próximo mês">▶</button>
       <div class="spacer"></div><span class="meta">Centro de custo:</span>${filtroFC('evento','Todos os centros de custo',[...db.eventos].sort((p,q)=>q.data.localeCompare(p.data)).map(e=>[e.id,e.nome+' · '+fmt(e.data)]))}
-      <button class="btn sm" data-act="fcCsvDiario">⬇ Excel (CSV)</button><span style="display:inline-flex;align-items:center;gap:4px"><button class="btn sm" data-act="fcZoom" data-id="-" title="Diminuir">−</button><button class="btn sm" data-act="fcZoom" data-id="auto" title="Ajustar à tela" id="fcZoomTxt" style="min-width:92px">${FC.zoom?Math.round(FC.zoom*100)+'%':'ajustado'}</button><button class="btn sm" data-act="fcZoom" data-id="+" title="Aumentar">＋</button></span><button class="btn sm ${FC.cheia?'pri':''}" data-act="fcCheia" title="Abrir o diário ocupando a tela toda (Esc para sair)">${FC.cheia?'✕ Sair da tela cheia':'⛶ Tela cheia'}</button></div>
+      <button class="btn sm" data-act="fcCsvDiario" title="Planilha com fórmulas e formatação">⬇ Excel</button><span style="display:inline-flex;align-items:center;gap:4px"><button class="btn sm" data-act="fcZoom" data-id="-" title="Diminuir">−</button><button class="btn sm" data-act="fcZoom" data-id="auto" title="Ajustar à tela" id="fcZoomTxt" style="min-width:92px">${FC.zoom?Math.round(FC.zoom*100)+'%':'ajustado'}</button><button class="btn sm" data-act="fcZoom" data-id="+" title="Aumentar">＋</button></span><button class="btn sm ${FC.cheia?'pri':''}" data-act="fcCheia" title="Abrir o diário ocupando a tela toda (Esc para sair)">${FC.cheia?'✕ Sair da tela cheia':'⛶ Tela cheia'}</button></div>
     ${FC.evento.length?`<div class="note" style="margin:0 0 8px;background:var(--brand-soft);border-color:#efbb3c;color:var(--brand)">Mostrando só <b>${FC.evento.map(id=>h(evento(id).nome)).join(', ')}</b>: entradas e saídas desse centro de custo em ${MESES[+m-1]}/${a}. O saldo inicial também considera só esse centro de custo.</div>`:''}
     <div class="fc-plan"><table>
       <thead><tr><th class="fc-rot click" data-act="formSaldoInicial" title="Clique para informar o saldo inicial">Saldo inicial ✏️<br><b style="font-size:14px;color:${saldoIni<0?'var(--recusado)':'var(--text)'}">${fcSaldo(saldoIni)}</b></th>
@@ -2747,14 +2811,89 @@ function fcCelula(id, key){
   </tbody><tfoot><tr><td colspan="5"><b>${xs.length} lançamento(s)</b></td><td class="right"><b>${brl(tot)}</b></td></tr></tfoot></table></div>
   <div class="actions"><button class="btn" data-act="fechar">Fechar</button></div>`, 820);
 }
-function csvDiario(){
+// Planilha do diário em Excel de verdade: com fórmulas (saldo, totais) e formatação parecida com a tela
+function xlsxFolha(nomeAba, linhas, larguras, alturas){
+  const esc = s => String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const rowsXml = linhas.map((l,r)=>`<row r="${r+1}"${alturas[r+1]?` ht="${alturas[r+1]}" customHeight="1"`:''}>${l.map((c,i)=>{
+    if (!c) return ''; const ref = colXL(i)+(r+1), s = c.s||0;
+    if (c.f) return `<c r="${ref}" s="${s}"><f>${esc(c.f)}</f><v>${+c.v||0}</v></c>`;
+    if (typeof c.v==='number') return `<c r="${ref}" s="${s}"><v>${c.v}</v></c>`;
+    if (c.v===undefined||c.v==='') return `<c r="${ref}" s="${s}"/>`;
+    return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${esc(c.v)}</t></is></c>`; }).join('')}</row>`).join('');
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" zoomScale="90"><pane xSplit="1" ySplit="2" topLeftCell="B3" activePane="bottomRight" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="16"/><cols>${larguras.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rowsXml}</sheetData><pageSetup orientation="landscape"/></worksheet>`;
+  const NUM = '#,##0.00;[Red]-#,##0.00;"-"', SAL = '#,##0.00;[Red]-#,##0.00;0.00';
+  const fill = rgb => `<fill><patternFill patternType="solid"><fgColor rgb="FF${rgb}"/><bgColor indexed="64"/></patternFill></fill>`;
+  const fn = (b,sz,cor,it) => `<font>${b?'<b/>':''}${it?'<i/>':''}<sz val="${sz}"/><color rgb="FF${cor}"/><name val="Calibri"/></font>`;
+  // fontes: 0 normal, 1 negrito, 2 título, 3 branco negrito, 4 nota, 5 vermelho
+  const fonts = [fn(0,11,'1F2A27'),fn(1,11,'002620'),fn(1,14,'002620'),fn(1,11,'FFFFFF'),fn(0,10,'6B7570',1),fn(0,11,'B42318')];
+  // preenchimentos: 0 none, 1 gray125, 2 verde escuro, 3 bege seção, 4 amarelo saldo inicial, 5 verde claro saldo, 6 rosa atrasado, 7 cinza total, 8 verde fim de semana
+  const fills = ['<fill><patternFill patternType="none"/></fill>','<fill><patternFill patternType="gray125"/></fill>',fill('002620'),fill('F6ECE1'),fill('FCF1D8'),fill('E3EBE7'),fill('FDE3E3'),fill('EFEFEF'),fill('335149')];
+  const borda = '<border><left style="thin"><color rgb="FFE3DDD5"/></left><right style="thin"><color rgb="FFE3DDD5"/></right><top style="thin"><color rgb="FFE3DDD5"/></top><bottom style="thin"><color rgb="FFE3DDD5"/></bottom><diagonal/></border>';
+  // estilos: [numFmt, font, fill, border, alinhamento]
+  const X = [[0,0,0,0],[0,2,0,0],[165,3,2,1,'center'],[0,3,2,1,'left'],[0,0,0,1],[166,0,0,1],[0,1,3,1],[0,0,3,1],[0,1,5,1],[167,1,5,1],[167,1,4,1],[166,1,7,1],[166,5,6,1],[0,5,6,1],[165,3,8,1,'center'],[0,4,0,0],[167,1,7,1],[0,3,2,1,'center']];
+  const xfs = X.map(([n,f,fi,b,al])=>`<xf numFmtId="${n}" fontId="${f}" fillId="${fi}" borderId="${b}" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"${al?` applyAlignment="1"><alignment horizontal="${al}" vertical="center" wrapText="1"/></xf>`:'/>'}`).join('');
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="3"><numFmt numFmtId="165" formatCode="ddd dd/mm"/><numFmt numFmtId="166" formatCode="${esc(NUM)}"/><numFmt numFmtId="167" formatCode="${esc(SAL)}"/></numFmts><fonts count="${fonts.length}">${fonts.join('')}</fonts><fills count="${fills.length}">${fills.join('')}</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${borda}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${X.length}">${xfs}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const aba = esc(nomeAba.replace(/[\\\/?*\[\]:]/g,'-').slice(0,31));
+  return zipar([
+    {name:'[Content_Types].xml', data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+    {name:'_rels/.rels', data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+    {name:'xl/workbook.xml', data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${aba}" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels', data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+    {name:'xl/worksheets/sheet1.xml', data:sheet},
+    {name:'xl/styles.xml', data:styles}
+  ]);
+}
+const colXL = i => { let s=''; i++; while(i>0){ const r=(i-1)%26; s=String.fromCharCode(65+r)+s; i=Math.floor((i-1)/26); } return s; };
+
+function excelDiario(){
   const ym = FC.diario; if (!ym) return;
-  const div = document.createElement('div'); div.innerHTML = fluxoDiario(movimentosFluxo().filter(m=>passaFC(m,{periodo:false})));
-  div.querySelectorAll('.dc').forEach(e=>e.remove()); div.querySelectorAll('br').forEach(e=>e.replaceWith(' '));   // no Excel vai o cabeçalho completo
-  const linhas = [...div.querySelectorAll('.fc-plan tr')].map(tr=>[...tr.cells].map(c=>c.innerText.replace(/\s*\n\s*/g,' ').trim()));
-  const csv = '﻿'+linhas.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download = 'diario '+ym+(FC.evento.length?' - '+FC.evento.map(id=>evento(id).nome).join(', '):'')+'.csv'; a.click();
+  const base = movimentosFluxo().filter(m=>passaFC(m,{periodo:false}));
+  const [a,m] = ym.split('-'), doMes = base.filter(x=>x.data.slice(0,7)===ym);
+  const saldoIni = saldoAntes(base.filter(x=>x.sit!=='atrasado'), ym+'-01'), si = saldoInfo();
+  const nDias = new Date(+a, +m, 0).getDate();
+  const dias = Array.from({length:nDias}, (_,i)=>ym+'-'+String(i+1).padStart(2,'0'));
+  const soma = (f, dt) => Math.round(doMes.filter(x=>(!dt || x.data===dt) && f(x)).reduce((q,x)=>q+x.valor,0)*100)/100;
+  const evs = [...new Set(doMes.filter(x=>x.tipo==='entrada').map(x=>x.eventoId).concat(FC.evento))].map(id=>evento(id)).filter(e=>e.id).sort((p,q)=>p.nome.localeCompare(q.nome,'pt-BR'));
+  const cats = [...new Set(db.categorias.concat(doMes.filter(x=>x.tipo==='saida').map(x=>x.ref.categoria)))].sort((p,q)=>p.localeCompare(q,'pt-BR'));
+  const T = nDias+1, cT = colXL(T), cD = i => colXL(i+1);             // coluna do total / do dia i
+  const serial = d => Math.round((Date.UTC(+d.slice(0,4), +d.slice(5,7)-1, +d.slice(8,10)) - Date.UTC(1899,11,30))/864e5);
+  const L = [];   // linhas da planilha (índice 0 = linha 1 do Excel)
+  const R = {};   // número da linha no Excel de cada chave
+  const add = (k, cells) => { L.push(cells); if (k) R[k] = L.length; return L.length; };
+  const vazia = s => Array.from({length:T}, ()=>({s}));
+  const filtro = FC.evento.length ? ' — '+FC.evento.map(id=>evento(id).nome).join(', ') : '';
+  add(null, [{v:`Fluxo de caixa diário — ${MESES[+m-1]}/${a}${filtro}`, s:1}]);
+  add(null, [{v:'Saldo inicial', s:3}, ...dias.map(d=>({v:serial(d), s:[0,6].includes(new Date(d+'T12:00:00').getDay())?14:2})), {v:'Total '+MESES[+m-1]+'/'+a, s:17}]);
+  // valores por dia + total com SOMA
+  const linhaValores = (k, nome, f, sl=4, sn=5) => { const r = L.length+1; const vs = dias.map(d=>soma(f,d));
+    return add(k, [{v:nome, s:sl}, ...vs.map(v=>({v, s:sn})), {f:`SUM(B${r}:${cD(nDias-1)}${r})`, v:soma(f), s:11}]); };
+  const secao = (nome) => add(null, [{v:nome, s:6}, ...vazia(7)]);
+  const rIni = L.length+1, rFim = rIni+8;
+  let s = saldoIni; const ini = {}, fim = {};
+  dias.forEach(d=>{ if (si && d===si.data) s = si.valor; ini[d]=s; s += soma(FC_LINHAS.trec.f,d) - soma(FC_LINHAS.tpag.f,d); fim[d]=s; });
+  add('ini', [{v:'Saldo inicial do dia', s:8}, ...dias.map((d,i)=> i===0 || (si && d===si.data) ? {v:Math.round(ini[d]*100)/100, s:10} : {f:`${cD(i-1)}${rFim}`, v:ini[d], s:9}), {f:`B${rIni}`, v:saldoIni, s:16}]);
+  secao('Total previsão');
+  linhaValores('av', 'A vencer', FC_LINHAS.av.f);
+  linhaValores('rec', 'Recebido', FC_LINHAS.rec.f);
+  linhaValores('atr', 'Atrasado', FC_LINHAS.atr.f, 13, 12);
+  const rTrec = add('trec', [{v:'Total de recebimentos', s:6}, ...dias.map((d,i)=>({f:`${cD(i)}${R.av}+${cD(i)}${R.rec}`, v:soma(FC_LINHAS.trec.f,d), s:11})), {f:`${cT}${R.av}+${cT}${R.rec}`, v:soma(FC_LINHAS.trec.f), s:11}]);
+  const rTpag = add('tpag', []);   // preenchida depois (soma das categorias)
+  linhaValores('patr', 'Pagamentos atrasados', FC_LINHAS.patr.f, 13, 12);
+  add('fim', [{v:'Saldo final', s:8}, ...dias.map((d,i)=>({f:`${cD(i)}${rIni}+${cD(i)}${rTrec}-${cD(i)}${rTpag}`, v:fim[d], s:9})), {f:`${cT}${rIni}+${cT}${rTrec}-${cT}${rTpag}`, v:saldoIni+soma(FC_LINHAS.trec.f)-soma(FC_LINHAS.tpag.f), s:9}]);
+  secao('▲ Entradas por centro de custo');
+  evs.forEach(e=>linhaValores(null, e.nome, fcLinha('ev|'+e.id).f));
+  if (!evs.length) add(null, [{v:'Nenhuma entrada no mês', s:15}]);
+  secao('▼ Saídas por categoria');
+  const c0 = L.length+1; cats.forEach(c=>linhaValores(null, c||'(sem categoria)', fcLinha('cat|'+c).f)); const c1 = L.length;
+  // Total pagamentos = soma das categorias (confere com o app; se não bater, usa o valor)
+  const confere = Math.abs(cats.reduce((q,c)=>q+soma(fcLinha('cat|'+c).f),0) - soma(FC_LINHAS.tpag.f)) < 0.005;
+  L[rTpag-1] = [{v:'Total pagamentos', s:6}, ...dias.map((d,i)=> confere && cats.length ? {f:`SUM(${cD(i)}${c0}:${cD(i)}${c1})`, v:soma(FC_LINHAS.tpag.f,d), s:11} : {v:soma(FC_LINHAS.tpag.f,d), s:11}),
+    confere && cats.length ? {f:`SUM(${cT}${c0}:${cT}${c1})`, v:soma(FC_LINHAS.tpag.f), s:11} : {v:soma(FC_LINHAS.tpag.f), s:11}];
+  add(null, []);
+  add(null, [{v:'Saldo inicial do dia = saldo final do dia anterior (as células amarelas são o saldo informado e podem ser alteradas). Saldo final = saldo inicial + total de recebimentos − total pagamentos. Atrasados não entram nos totais nem no saldo. Pagamentos feitos entram na data em que foram pagos; os previstos, na data de vencimento.', s:15}]);
+  const blob = xlsxFolha('Diário '+MESES[+m-1]+'-'+a, L, [26, ...dias.map(()=>12.5), 15], {1:24, 2:32});
+  const el = document.createElement('a'); el.href = URL.createObjectURL(blob);
+  el.download = 'diario '+ym+filtro.replace(/^ — /,' - ')+'.xlsx'; el.click();
 }
 
 function fluxoPagamentos(lista){
@@ -2818,7 +2957,7 @@ Object.assign(acoes, {
     document.querySelector('.fc-chart')?.scrollIntoView({behavior:'smooth', block:'start'}); },
   fcMesVoltar: () => { if (FC.cheia && document.fullscreenElement) document.exitFullscreen().catch(()=>{}); FC.cheia = false; FC.diario = null; FC.dia = null; FC.mes = []; render(); },
   fcCel: (id,key) => fcCelula(id,key),
-  fcCsvDiario: () => csvDiario(),
+  fcCsvDiario: () => excelDiario(),
   fcEvento: id => { FC.evento = FC.evento.includes(id) ? FC.evento.filter(e=>e!==id) : [id]; render(); window.scrollTo(0,0); },
   fcCsv: () => csvFluxo(),
   formReceb: id => formReceb(id),
@@ -2918,7 +3057,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.2';
+const APP_VERSAO = '9.4';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
