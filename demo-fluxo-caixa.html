@@ -262,6 +262,11 @@ nav button.on{color:#002620;border-color:var(--cobre)}
 .badge{background:#efbb3c33;color:#702b16}
 header .badge,.appbar .badge{background:#efbb3c!important;color:#002620!important}
 header .av{background:#f4efeb!important;color:#002620!important}
+.concPar tr.achou td{background:#e9f7ef}
+.concPar td.meio{text-align:center;border-left:2px solid var(--line);border-right:2px solid var(--line);white-space:nowrap;width:1%}
+.concPar td.meio .btn{display:block;margin:3px auto 0}
+.achouTag{display:inline-block;font-size:11px;font-weight:600;color:#1a7f45;background:#d3f2df;border-radius:6px;padding:1px 6px}
+.concPar td.procurar{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1657,7 +1662,7 @@ function zipar(arquivos){
 // ================= CONCILIAÇÃO BANCÁRIA (só gestora) =================
 // Importa o extrato do banco (OFX, CSV ou Excel), sugere automaticamente qual pedido corresponde a cada
 // saída (mesmo valor + data próxima + nome do favorecido) e permite conciliar manualmente.
-const CONC_TOL_DIAS = 10;
+const CONC_TOL_DIAS = 0;   // regra da gestora: sugestão só com a mesma data
 let IMP = null;   // planilha aguardando a escolha das colunas
 const diasEntre = (a,b) => Math.abs((new Date(a+'T12:00:00') - new Date(b+'T12:00:00'))/864e5);
 const pedidosConciliaveis = () => db.pedidos.filter(p => ['aprovado','pago'].includes(p.status) && !p.conc);
@@ -1675,20 +1680,21 @@ function quaseIgual(a, b){ if (a===b) return true; const tol = Math.min(a.length
   return d[a.length][b.length] <= tol; }
 function mesmoFavorecido(t, pe){
   const doc = (pe.doc||'').replace(/\D/g,''); if (doc.length>=11 && String(t.desc||'').replace(/\D/g,'').includes(doc)) return true;
-  const cad = nomesDe(pe.nome), banco = nomesDe(t.fav || t.desc); if (!cad.length || !banco.length) return false;
+  const cad = nomesDe(pe.nome), banco = nomesDe([t.fav, t.desc].filter(Boolean).join(' ')); if (!cad.length || !banco.length) return false;
   const tem = w => banco.some(x => quaseIgual(w, x));
   if (!tem(cad[0])) return false;
   return cad.length === 1 || cad.slice(1).some(tem);
 }
-// sugestão só quando bate tudo: mesmo favorecido, mesmo valor e mesma data de pagamento
-// (data do banco = data em que o pedido foi pago; se ainda não foi marcado como pago, a data de vencimento)
+// sugestão: mesmo favorecido e mesmo valor são obrigatórios; a data (pagamento ou, se ainda não foi pago, vencimento)
+// pode ter até CONC_TOL_DIAS dias de diferença — quando há mais de um pedido possível, fica o de data mais próxima
 function sugestoes(){
   const usados = new Set(), out = [], cands = pedidosConciliaveis();
   txPendentes().sort((a,b)=>a.data.localeCompare(b.data)).forEach(t => {
     const v = Math.round(-t.valor*100);
-    const m = cands.find(p => !usados.has(p.id) && Math.round(p.valor*100)===v && !(t.rejeitados||[]).includes(p.id)
-      && ((dataPagamento(p)||'').slice(0,10) || p.vencimento) === t.data && mesmoFavorecido(t, pessoa(p.pessoaId)));
-    if (m){ usados.add(m.id); out.push({t, p:m, motivo:'mesmo favorecido · mesmo valor · mesma data'}); }
+    const ops = cands.filter(p => !usados.has(p.id) && Math.round(p.valor*100)===v && !(t.rejeitados||[]).includes(p.id) && mesmoFavorecido(t, pessoa(p.pessoaId)))
+      .map(p => ({p, d: diasEntre(t.data, (dataPagamento(p)||'').slice(0,10) || p.vencimento)})).filter(x => x.d <= CONC_TOL_DIAS).sort((a,b) => a.d - b.d);
+    if (ops.length){ const m = ops[0]; usados.add(m.p.id);
+      out.push({t, p:m.p, motivo:'mesmo favorecido · mesmo valor · ' + (m.d===0 ? 'mesma data' : `${Math.round(m.d)} dia(s) de diferença na data`)}); }
   });
   return out;
 }
@@ -1844,7 +1850,8 @@ function confirmarMapa(){
     if (d.inverter) valor = -valor;
     if (isNaN(valor) || !valor) return;
     const desc = [ci('desc')>=0 ? String(r[ci('desc')]??'').trim() : '', ci('extra')>=0 && ci('extra')!==ci('desc') ? String(r[ci('extra')]??'').replace(/\s+/g,' ').trim() : ''].filter(x=>x && x!=='-').join(' — ');
-    const fav = ci('extra')>=0 && ci('desc')>=0 && ci('extra')!==ci('desc') ? String(r[ci('desc')]??'').replace(/\s+/g,' ').trim() : '';
+    const cFav = [ci('desc'), ci('extra')].find(i => i>=0 && /favorecido|benefici|recebedor|destinat|^nome/.test(semAcento(String((IMP.linhas[IMP.hdr]||[])[i]||''))));
+    const fav = cFav !== undefined ? String(r[cFav]??'').replace(/\s+/g,' ').trim() : '';
     txs.push({data, valor:Math.round(valor*100)/100, desc, ...(fav && fav!=='-' ? {fav} : {})});
   });
   fechar(); adicionarTx(txs, IMP.nomeArq); IMP = null;
@@ -1860,12 +1867,12 @@ function adicionarTx(txs, origem){
 }
 function gravarTx(txs, origem, banco){
   const esp = x => semAcento(String(x||'')).replace(/\s+/g,' ').trim();
-  const chave = t => t.fitid ? 'f:'+t.fitid : `${t.data}|${t.valor}|${esp(t.desc)}`;
+  const chave = t => t.fitid ? 'f:'+t.fitid : `${t.data}|${t.valor}|${esp(t.desc).split(' — ').map(x=>x.trim()).sort().join('|')}`;
   // quantas vezes cada lançamento já existe (a mesma pessoa pode receber duas vezes no mesmo dia com o mesmo valor)
-  const ja = {}; db.extrato.forEach(x => { const k = chave(x); ja[k] = (ja[k]||0) + 1; });
+  const ja = {}; db.extrato.forEach(x => { const k = chave(x); (ja[k] = ja[k] || []).push(x); });
   let novos = 0, rep = 0, atu = 0;
   txs.forEach(t => { const k = chave(t);
-    if (ja[k]){ ja[k]--; rep++; return; }
+    if (ja[k] && ja[k].length){ const x = ja[k].shift(); if (t.fav && x.fav !== t.fav){ x.fav = t.fav; x.desc = t.desc; } rep++; return; }
     // o mesmo lançamento importado antes sem o nome do favorecido: só completa a descrição (e a data de pagamento)
     const velho = !t.fitid && db.extrato.find(x => !x.fav && !x._completo && x.valor===t.valor && x.desc && diasEntre(x.data, t.data) <= 3 && esp(t.desc).includes(esp(x.desc)) && esp(t.desc) !== esp(x.desc));
     if (velho){ velho.desc = t.desc; velho.data = t.data; if (t.fav) velho.fav = t.fav; velho._completo = true; atu++; return; }
@@ -1894,23 +1901,22 @@ function telaConciliacao(){
   </div>
   ${!db.extrato.length?`<div class="panel" style="margin-bottom:12px"><b>Como funciona</b>
     <ol class="meta" style="margin:8px 0 0;padding-left:18px;line-height:1.7"><li>Baixe o extrato no site/app do banco em <b>OFX</b> (recomendado), <b>CSV</b> ou <b>Excel</b> e clique em <b>📥 Importar extrato</b>.</li>
-    <li>O app só sugere quando bate tudo: <b>mesmo favorecido</b> (nome ou CPF/CNPJ), <b>mesmo valor</b> e <b>mesma data de pagamento</b>. O resto você concilia manualmente.</li>
+    <li>O app sugere quando batem o <b>mesmo favorecido</b> (nome ou CPF/CNPJ) e o <b>mesmo valor</b>, na <b>mesma data de pagamento</b>. Confira e clique em <b>Confirmar todas</b>.</li>
     <li>Você confere as sugestões e confirma. Pedidos "Aprovado · a pagar" que aparecem no banco viram <b>Pago</b> automaticamente, com a data do banco.</li>
     <li>O que não bater, você concilia <b>manualmente</b> — escolhendo o lançamento, ou informando a data de pagamento sem extrato.</li></ol></div>`:''}
-  ${sug.length?`<div class="panel" style="margin-bottom:12px;border-color:#00262033"><div class="toolbar" style="margin:0 0 6px"><b>✨ Sugestões automáticas (${sug.length})</b><div class="spacer"></div><button class="btn sm ok" data-act="concTodas">Confirmar todas</button></div>
-    <table class="cards"><thead><tr><th>Data banco</th><th>Extrato</th><th class="right">Valor</th><th>Pedido</th><th>Favorecido</th><th class="right">Valor</th><th>Status</th><th>Por quê</th><th></th></tr></thead><tbody>
-    ${sug.map(s=>`<tr>${tx(s.t)}${ped(s.p)}<td class="meta" style="white-space:normal">${s.motivo}</td><td><div class="btns" style="margin:0;flex-wrap:nowrap"><button class="btn sm ok" data-act="concConfirmar" data-id="${s.t.id}" data-arg="${s.p.id}">Confirmar</button><button class="btn sm" data-act="concRejeitar" data-id="${s.t.id}" data-arg="${s.p.id}">Não é este</button></div></td></tr>`).join('')}
+  ${pend.length?`<div class="panel" style="margin-bottom:12px"><div class="toolbar" style="margin:0 0 6px"><b>Lançamentos do banco sem conciliação (${pend.length})</b><span class="meta">${sug.length} encontrado(s) automaticamente</span><div class="spacer"></div>${sug.length?`<button class="btn sm ok" data-act="concTodas">Conciliar todos os encontrados (${sug.length})</button>`:''}</div>
+    <table class="cards filtravel concPar" data-key="concTx"><thead><tr><th>Data banco</th><th>Favorecido no banco</th><th class="right">Valor</th><th></th><th>Pedido</th><th>Favorecido</th><th class="right">Valor</th><th>Vencimento</th><th></th></tr></thead><tbody>
+    ${[...sug.map(s=>({t:s.t,s})), ...semSug.map(t=>({t}))].sort((x,y)=>x.t.data.localeCompare(y.t.data)).map(({t,s})=>`<tr class="${s?'achou':''}">${tx(t)}
+      ${s?`<td class="meio"><span class="achouTag" title="${h(s.motivo)}">✨ Encontramos</span><button class="btn sm ok" data-act="concConfirmar" data-id="${t.id}" data-arg="${s.p.id}">Conciliar</button></td>
+        <td><b>${s.p.id}</b></td><td style="white-space:normal"><b>${h(pessoa(s.p.pessoaId).nome)}</b><br><span class="meta">${h(evento(s.p.eventoId).nome)}</span></td><td class="right"><b>${brl(s.p.valor)}</b></td><td>${fmt(s.p.vencimento)}</td>
+        <td><button class="btn sm" data-act="concRejeitar" data-id="${t.id}" data-arg="${s.p.id}" title="Não é este pedido">Desvincular</button></td>`
+      :`<td class="meio"></td><td colspan="4" class="procurar"><button class="btn sm pri" data-act="concManualTx" data-id="${t.id}">🔍 Procurar pedido</button></td>
+        <td><button class="btn sm" data-act="concIgnorar" data-id="${t.id}" title="Ex.: tarifas, impostos, transferência entre contas">Ignorar</button></td>`}</tr>`).join('')}
     </tbody></table></div>`:''}
-  <div class="grid2">
-    <div class="panel"><b>Lançamentos do banco sem conciliação (${semSug.length})</b>
-      <table class="cards filtravel" data-key="concTx" style="margin-top:6px"><thead><tr><th>Data</th><th>Descrição</th><th class="right">Valor</th><th></th></tr></thead><tbody>
-      ${semSug.map(t=>`<tr>${tx(t)}<td><div class="btns" style="margin:0;flex-wrap:nowrap"><button class="btn sm pri" data-act="concManualTx" data-id="${t.id}">Conciliar</button><button class="btn sm" data-act="concIgnorar" data-id="${t.id}" title="Ex.: tarifas, impostos, transferência entre contas">Ignorar</button></div></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Nada pendente</td></tr>'}
-      </tbody></table></div>
-    <div class="panel"><b>Pedidos sem conciliação (${peds.length})</b>
-      <table class="cards filtravel" data-key="concPed" style="margin-top:6px"><thead><tr><th>Nº</th><th>Favorecido</th><th class="right">Valor</th><th>Status</th><th></th></tr></thead><tbody>
-      ${peds.map(p=>`<tr>${ped(p)}<td><button class="btn sm" data-act="concManualPed" data-id="${p.id}">Conciliar manual</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Tudo conciliado 🎉</td></tr>'}
-      </tbody></table></div>
-  </div>
+  <details class="panel" ${pend.length?'':'open'}><summary style="cursor:pointer"><b>Pedidos sem lançamento do banco (${peds.length})</b> <span class="meta">— para conciliar sem extrato ou procurar o lançamento pelo pedido</span></summary>
+    <table class="cards filtravel" data-key="concPed" style="margin-top:6px"><thead><tr><th>Nº</th><th>Favorecido</th><th class="right">Valor</th><th>Status</th><th></th></tr></thead><tbody>
+    ${peds.map(p=>`<tr>${ped(p)}<td><button class="btn sm" data-act="concManualPed" data-id="${p.id}">Conciliar manual</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Tudo conciliado 🎉</td></tr>'}
+    </tbody></table></details>
   <details class="panel" style="margin-top:12px" ${conc.length&&!sug.length&&!pend.length?'open':''}><summary style="cursor:pointer"><b>✅ Conciliados (${conc.length})</b></summary>
     <table class="cards filtravel" data-key="concOk" style="margin-top:6px"><thead><tr><th>Nº</th><th>Favorecido</th><th class="right">Valor</th><th>Pago no banco</th><th>Como</th><th>Por</th><th></th></tr></thead><tbody>
     ${conc.map(p=>`<tr><td><b>${p.id}</b></td><td>${h(pessoa(p.pessoaId).nome)}</td><td class="right">${brl(p.valor)}</td><td>${fmt(p.conc.data)}</td>
@@ -1923,21 +1929,28 @@ function telaConciliacao(){
 }
 function concManualTx(txId){
   const t = db.extrato.find(x=>x.id===txId); if (!t) return;
-  const ops = pedidosConciliaveis().sort((a,b) => Math.abs(a.valor+t.valor)-Math.abs(b.valor+t.valor) || diasEntre(a.vencimento,t.data)-diasEntre(b.vencimento,t.data));
+  // primeiro os pedidos do mesmo favorecido com o mesmo valor (o mais provável já vem escolhido)
+  const igual = p => Math.round(p.valor*100)===Math.round(-t.valor*100), dele = p => mesmoFavorecido(t, pessoa(p.pessoaId));
+  const nota = p => (dele(p)&&igual(p)?3:0) + (igual(p)?1:0) + (dele(p)?1:0);
+  const ops = pedidosConciliaveis().sort((a,b) => nota(b)-nota(a) || Math.abs(a.valor+t.valor)-Math.abs(b.valor+t.valor) || diasEntre(a.vencimento,t.data)-diasEntre(b.vencimento,t.data));
+  const pre = ops[0] && dele(ops[0]) && igual(ops[0]) ? ops[0].id : '';
   modal(`<h3>Conciliar lançamento do banco</h3>
-  <div class="kpi" style="margin-bottom:12px"><div class="l">${fmt(t.data)} · ${h(t.desc||'—')}</div><div class="v" style="color:var(--recusado)">${brl(t.valor)}</div></div>
+  <div class="kpi" style="margin-bottom:12px"><div class="l">${fmt(t.data)} · ${t.fav?'<b>'+h(t.fav)+'</b> · ':''}${h((t.fav?t.desc.replace(t.fav,'').replace(/^\s*—\s*/,''):t.desc)||'—')}</div><div class="v" style="color:var(--recusado)">${brl(t.valor)}</div></div>
   <form class="form" id="fConc"><label class="full">Qual pedido foi pago com este lançamento? *<select name="pid" required><option value="">Digite o nome, número ou valor…</option>
-    ${ops.map(p=>`<option value="${p.id}">${p.id} · ${h(pessoa(p.pessoaId).nome)} · ${brl(p.valor)} · venc. ${fmt(p.vencimento)}${Math.round(p.valor*100)===Math.round(-t.valor*100)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
-  <div class="note">Os pedidos com o mesmo valor aparecem primeiro. Se o valor for diferente, a diferença fica registrada no histórico do pedido.</div>
+    ${ops.map(p=>`<option value="${p.id}" ${p.id===pre?'selected':''}>${p.id} · ${h(pessoa(p.pessoaId).nome)} · ${brl(p.valor)} · venc. ${fmt(p.vencimento)}${dele(p)&&igual(p)?' ✓ mesmo favorecido e valor':igual(p)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
+  <div class="note">${pre?'Já deixei escolhido o pedido do mesmo favorecido com o mesmo valor. Confira e clique em Conciliar.':'Os pedidos com o mesmo valor aparecem primeiro.'} Se o valor for diferente, a diferença fica registrada no histórico do pedido.</div>
   <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="concConfirmarManual" data-id="${txId}">Conciliar</button></div>`, 620);
 }
 function concManualPed(pid){
   const p = db.pedidos.find(x=>x.id===pid); if (!p) return;
-  const ops = txPendentes().sort((a,b) => Math.abs(p.valor+a.valor)-Math.abs(p.valor+b.valor) || diasEntre(a.data,p.vencimento)-diasEntre(b.data,p.vencimento));
+  const pe = pessoa(p.pessoaId), igual = t => Math.round(p.valor*100)===Math.round(-t.valor*100), dele = t => mesmoFavorecido(t, pe);
+  const nota = t => (dele(t)&&igual(t)?3:0) + (igual(t)?1:0) + (dele(t)?1:0);
+  const ops = txPendentes().sort((a,b) => nota(b)-nota(a) || Math.abs(p.valor+a.valor)-Math.abs(p.valor+b.valor) || diasEntre(a.data,p.vencimento)-diasEntre(b.data,p.vencimento));
+  const pre = ops[0] && dele(ops[0]) && igual(ops[0]) ? ops[0].id : '';
   modal(`<h3>Conciliar ${p.id} manualmente</h3>
   <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evento(p.eventoId).nome)} · venc. ${fmt(p.vencimento)}</div><div class="v">${brl(p.valor)}</div></div>
   ${ops.length?`<form class="form" id="fConcTx"><label class="full">Opção 1 — escolher o lançamento do extrato<select name="tid"><option value="">Digite a descrição, data ou valor…</option>
-    ${ops.map(t=>`<option value="${t.id}">${fmt(t.data)} · ${h(t.desc||'—')} · ${brl(t.valor)}${Math.round(p.valor*100)===Math.round(-t.valor*100)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
+    ${ops.map(t=>`<option value="${t.id}" ${t.id===pre?'selected':''}>${fmt(t.data)} · ${h(t.desc||'—')} · ${brl(t.valor)}${dele(t)&&igual(t)?' ✓ mesmo favorecido e valor':igual(t)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
     <div class="actions" style="margin-top:8px"><button class="btn pri" data-act="concPedTx" data-id="${pid}">Conciliar com este lançamento</button></div>
     <div style="border-top:1px solid var(--line);margin:14px 0 10px"></div>`:''}
   <form class="form" id="fConcSem"><div class="full" style="font-weight:600">${ops.length?'Opção 2 — ':''}Sem extrato: informar o pagamento</div>
@@ -2795,7 +2808,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.1';
+const APP_VERSAO = '8.3';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
