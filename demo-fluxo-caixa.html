@@ -100,6 +100,8 @@ tr.click:hover td{background:#f4efeb}
 .evitem small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
 .legend span{display:flex;align-items:center;gap:4px}
+.legend .lucro-tots{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.legend .lucro-tots span{justify-content:flex-end}
 /* modal */
 .overlay{position:fixed;inset:0;background:#0006;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:10}
 .modal{background:var(--card);border-radius:14px;width:100%;max-width:560px;padding:20px}
@@ -745,6 +747,7 @@ function telaDash(){
   const posMax = Math.max(0,...lucroEv.map(x=>x.lucro)), negMax = Math.max(0,...lucroEv.map(x=>-x.lucro));
   const escala = Math.max(1, posMax+negMax), topo = !negMax ? 100 : !posMax ? 0 : Math.min(85, Math.max(15, posMax/escala*100));   // lucro e prejuízo sempre com pelo menos 15% do espaço cada
   const lucroTotal = lucroEv.reduce((a,x)=>a+x.lucro,0);
+  const recTotal = lucroEv.reduce((a,x)=>a+x.receita,0), pagTotal = lucroEv.reduce((a,x)=>a+x.custo,0);   // somam o mesmo que o lucro (recebimentos − pagamentos)
   // despesas sem evento (aluguel, contador…): ficam fora do lucro dos eventos, mas entram no resultado geral
   const despEmp = LF.serie || LF.cc || F.evento.length ? 0 : visiveis().filter(p=>!p.eventoId && !['recusado','cancelado'].includes(p.status) && anosSel.includes(p.vencimento.slice(0,4)) && passa(F.mes,p.vencimento.slice(5,7))).reduce((a,p)=>a+p.valor,0);
   const graficoLucro = lucroEv.length ? `<div class="graf-rola"><div style="display:flex;gap:0;padding-top:4px;justify-content:center;min-width:${lucroEv.length*62}px">${lucroEv.map(x=>{
@@ -822,7 +825,7 @@ function telaDash(){
     <select data-lf="serie" title="Evento (todas as edições)" style="padding:5px 8px;border:1px solid var(--line);border-radius:8px"><option value="">Todos os eventos</option>${[...new Set(db.eventos.map(serieDe))].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(x=>{const n=db.eventos.filter(e=>serieDe(e)===x).length;return `<option value="${h(x)}" ${LF.serie===x?'selected':''}>${h(x)}${n>1?' ('+n+' edições)':''}</option>`;}).join('')}</select>
     ${LF.cc||LF.serie?'<button class="btn sm" data-act="lucroLimpar">✕ Limpar</button>':''}<div class="spacer"></div>
     ${DASH_VIS==='lucro'
-      ? `<div class="legend"><span><i class="dot" style="background:#002620"></i>Lucro</span><span><i class="dot" style="background:#ef4444"></i>Prejuízo</span><span>${despEmp?'Lucro dos eventos':'Total do período'}: <b style="color:${lucroTotal>=0?'#002620':'#ef4444'}">${brl(lucroTotal)}</b></span>${despEmp?`<span>Despesas da empresa (sem evento): <b style="color:#ef4444">-${brl(despEmp)}</b></span><span>Resultado geral: <b style="color:${lucroTotal-despEmp>=0?'#002620':'#ef4444'}">${brl(lucroTotal-despEmp)}</b></span>`:''}</div></div>`
+      ? `<div class="legend" style="margin-left:auto;align-items:center"><span><i class="dot" style="background:#002620"></i>Lucro</span><span><i class="dot" style="background:#ef4444"></i>Prejuízo</span><span class="lucro-tots"><span>Total de recebimentos: <b style="color:#002620">${brl(recTotal)}</b></span><span>Total de pagamentos: <b style="color:#ef4444">${brl(pagTotal)}</b></span><span>${despEmp?'Lucro dos eventos':'Total do período'}: <b style="color:${lucroTotal>=0?'#002620':'#ef4444'}">${brl(lucroTotal)}</b></span>${despEmp?`<span>Despesas da empresa (sem evento): <b style="color:#ef4444">-${brl(despEmp)}</b></span><span>Resultado geral: <b style="color:${lucroTotal-despEmp>=0?'#002620':'#ef4444'}">${brl(lucroTotal-despEmp)}</b></span>`:''}</span></div></div>`
       : `<div class="legend"><span><i class="dot" style="background:var(--pago)"></i>Pago</span><span><i class="dot" style="background:var(--aprovado)"></i>A pagar</span><span><i class="dot" style="background:var(--aguardando)"></i>Aguardando aprovação</span></div></div>`}
     ${DASH_VIS==='lucro'
       ? `${F.mes.length&&!LF.serie?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 0">${MESES.map((m,i)=>{const mm=String(i+1).padStart(2,'0');return `<button class="btn sm ${F.mes.includes(mm)?'pri':''}" data-act="lucroMesSel" data-id="${mm}">${m}</button>`;}).join('')}</div>`:''}${graficoLucro}<div class="meta">Lucro = receitas do evento (recebidas e a receber) − custos (pedidos válidos). ${LF.serie?'Mostrando todas as edições deste evento, de todos os anos.':'Escolha o ano e o mês nos filtros de cima: no mês, entram só os eventos daquele mês.'} Filtre por centro de custo ou por evento para comparar edições. Clique em um evento para ver as movimentações.</div>${linhaLucro}`
@@ -3057,7 +3060,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.4';
+const APP_VERSAO = '9.5';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
