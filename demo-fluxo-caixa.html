@@ -394,6 +394,14 @@ function seed(){
   return {users,eventos,pessoas,categorias,pedidos,seq:n,zigMap:{...ZIG_PADRAO},alteracoes,extrato:[],recebimentos:seedRecebimentos(eventos,pedidos)};
 }
 function load(){ try{ db = JSON.parse(localStorage.getItem(KEY)); }catch(e){ db=null; } if(!db) db = seed(); if(!db.zigMap) db.zigMap = {...ZIG_PADRAO}; if(!db.alteracoes) db.alteracoes = []; if(!db.extrato) db.extrato = []; if(!db.recebimentos) db.recebimentos = seedRecebimentos(db.eventos,db.pedidos); if(db.colsLista && !db.migBanco){ const i=db.colsLista.indexOf('status'); if(!db.colsLista.includes('bancoConc')) db.colsLista.splice(i>=0?i+1:db.colsLista.length,0,'bancoConc'); } db.migBanco = true; if(db.colsLista && !db.colsLista.includes('valor')){ const i=db.colsLista.indexOf('cc'); db.colsLista.splice(i>=0?i:db.colsLista.length,0,'valor'); } db.eventos.forEach(e=>{ if(e.infos){ (e.notas=e.notas||[]).push({id:'n'+Math.random().toString(36).slice(2,8), texto:e.infos, quem:(db.users.find(u=>u.perfil==='admin')||db.users[0]).id, quando:new Date().toISOString().slice(0,19)}); delete e.infos; } }); }
+// outra aba salvou e a nuvem juntou as versões: relê os dados
+// outra aba deste navegador salvou: relê para esta aba não ficar com uma cópia velha
+window.addEventListener('storage', e=>{ if (!e.key || !e.key.endsWith(KEY) || e.newValue == null) return; try{ if (e.newValue === localStorage.getItem(KEY) && JSON.stringify(db) !== e.newValue){ load(); if (me) me = db.users.find(u=>u.id===me.id) || me; if (!document.getElementById('ov')) render(); } }catch(err){} });
+window.addEventListener('nuvem-dados', ()=>{
+  load(); if (me) me = db.users.find(u=>u.id===me.id) || me;
+  if (!document.getElementById('ov')) render();
+  toast('🔄 Dados atualizados com o que foi salvo em outra aba');
+});
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} if (typeof atualizarOpcoesForm==='function') atualizarOpcoesForm(); }
 
 // ================= PERMISSÕES =================
@@ -2753,7 +2761,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '7.6';
+const APP_VERSAO = '7.7';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
