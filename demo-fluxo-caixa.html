@@ -731,9 +731,9 @@ function telaDash(){
   const graficoLucro = lucroEv.length ? `<div class="graf-rola"><div style="display:flex;gap:0;height:240px;padding-top:18px;justify-content:center;min-width:${lucroEv.length*62}px">${lucroEv.map(x=>{
       const pos = x.lucro>=0, alt = Math.abs(x.lucro)/escala*(negMax && !posMax ? 76 : 88);
       return `<div data-act="pagosEvento" data-id="${x.e.id}" style="flex:1;min-width:62px;max-width:170px;display:flex;flex-direction:column;cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Receita: ${brl(x.receita)}&#10;Custo: ${brl(x.custo)}&#10;Lucro: ${brl(x.lucro)}">
-        <div style="height:${topo}%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;padding:0 5px">${pos?`<div style="font-size:10px;color:#002620;text-align:center;font-weight:600">${brlK(x.lucro)}</div><div style="height:${alt/topo*100}%;background:#002620;border-radius:4px 4px 0 0;min-height:2px"></div>`:''}</div>
+        <div style="height:${topo}%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;padding:0 5px">${pos?`<div style="font-size:10px;color:#002620;text-align:center;font-weight:600">${brl(x.lucro)}</div><div style="height:${alt/topo*100}%;background:#002620;border-radius:4px 4px 0 0;min-height:2px"></div>`:''}</div>
         <div style="border-top:2px solid #002620"></div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;padding:0 5px">${!pos?`<div style="height:${alt/(100-topo||1)*100}%;background:#ef4444;border-radius:0 0 4px 4px"></div><div style="font-size:10px;color:#ef4444;text-align:center;font-weight:600">-${brlK(-x.lucro)}</div>`:''}</div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;padding:0 5px">${!pos?`<div style="height:${alt/(100-topo||1)*100}%;background:#ef4444;border-radius:0 0 4px 4px"></div><div style="font-size:10px;color:#ef4444;text-align:center;font-weight:600">-${brl(-x.lucro)}</div>`:''}</div>
         <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h(x.e.nome)}</div>
         <div style="font-size:10px;color:var(--muted);text-align:center">${(LF.serie?fmt(x.e.data):fmt(x.e.data).slice(0,5))}</div></div>`; }).join('')}</div></div>${lucroEv.length>5?'<div class="dica-rola">↔ Deslize o gráfico para o lado para ver todos os eventos</div>':''}`
     : '<div class="empty">Nenhum evento neste período</div>';
@@ -764,13 +764,13 @@ function telaDash(){
         ${um?'':`<line x1="${X(0)}" y1="${Y(t0)}" x2="${X(n-1)}" y2="${Y(t1)}" stroke="${sobe?'#002620':'#ef4444'}" stroke-width="2" stroke-dasharray="6 5" opacity=".7"/>`}
         <polyline fill="none" stroke="#002620" stroke-width="3" stroke-linejoin="round" points="${vs.map((v,i)=>X(i)+','+Y(v)).join(' ')}"/>
         ${lucroEv.map((x,i)=>`<g data-act="pagosEvento" data-id="${x.e.id}" style="cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Lucro: ${brl(x.lucro)}"><circle cx="${X(i)}" cy="${Y(x.lucro)}" r="6" fill="${x.lucro>=0?'#002620':'#ef4444'}" stroke="#fff" stroke-width="2"/>
-          <text x="${X(i)}" y="${Y(x.lucro)-10}" text-anchor="middle" font-size="11" font-weight="600" fill="${x.lucro>=0?'#002620':'#ef4444'}">${brlK(x.lucro)}</text>
+          <text x="${X(i)}" y="${Y(x.lucro)-10}" text-anchor="middle" font-size="11" font-weight="600" fill="${x.lucro>=0?'#002620':'#ef4444'}">${brl(x.lucro)}</text>
           <text x="${X(i)}" y="${H-12}" text-anchor="middle" font-size="11" fill="#002620b3">${h(x.e.nome.length>(estreito?11:16)?x.e.nome.slice(0,estreito?10:15)+'…':x.e.nome)}</text></g>`).join('')}
       </svg></div>
       <div class="meta">${um?'Por enquanto só um evento tem lançamentos. A linha e a tendência (subindo ou descendo) aparecem a partir do segundo evento com lançamentos.':`Linha escura: lucro de cada evento, em ordem de data. Linha tracejada: tendência (${prej ? (sobe?'prejuízo diminuindo':'prejuízo aumentando') : (sobe?'lucro subindo':'lucro descendo')} em média ${brl(Math.abs(slope))} por evento).`}</div></div>`;
   })();
   const barra = (t, x, mx, act, id, lab, on, tip) => `<div class="bar" title="${h(tip)}: ${brl(t)}" data-act="${act}" data-id="${id}" style="cursor:pointer">
-      <div class="tot">${t?brlK(t):''}</div>
+      <div class="tot">${t?brl(t):''}</div>
       <div class="seg" style="height:${x.aguardando/mx*85}%;background:var(--aguardando)"></div>
       <div class="seg" style="height:${x.aprovado/mx*85}%;background:var(--aprovado)"></div>
       <div class="seg" style="height:${x.pago/mx*85}%;background:var(--pago)"></div>
@@ -1792,9 +1792,17 @@ function mapearColunas(linhas, nomeArq){
   const larg = Math.max(...linhas.map(r=>r.length));
   const cab = Array.from({length:larg}, (_,i) => hdr>=0 && String(linhas[hdr][i]||'').trim() ? String(linhas[hdr][i]).trim() : 'Coluna '+String.fromCharCode(65+i));
   const acha = (re, fora=[]) => cab.findIndex((c,i) => !fora.includes(i) && re.test(semAcento(c)));
-  const cData = acha(/data|date|dt/), cValor = acha(/valor|amount|montante|quantia/, [cData]);
+  // data do pagamento de fato (quando a planilha tem data do pedido e data do pagamento)
+  let cData = acha(/data.*(pagamento|liquida|efetiv|credito|debito)|pago em|paid/); if (cData < 0) cData = acha(/data|date|dt/);
+  const cValor = acha(/valor|amount|montante|quantia/, [cData]);
+  const cSit = acha(/^status|situacao|estado/, [cData]), cExtra = acha(/motivo da solic|motivo|referencia|observ|descri/, [cData]);
   const cDeb = acha(/debito|saida/, [cData]), cCred = acha(/credito|entrada/, [cData]);
   let cDesc = acha(/descri|historico|memo/, [cData]); if (cDesc < 0) cDesc = acha(/lancamento|detalhe|favorecido|nome/, [cData]);
+  // relatório de saques/pagamentos (ex.: histórico de carteira): os valores vêm positivos, mas são saídas
+  const vals = linhas.slice(hdr+1).map(r=>parseValor(r[cValor>=0?cValor:cDeb])).filter(v=>!isNaN(v) && v);
+  const topo = semAcento(linhas.slice(0, Math.max(hdr,0)+1).flat().join(' ') + ' ' + linhas.slice(hdr+1, hdr+30).map(r=>r.join(' ')).join(' '));
+  const saidas = cValor>=0 && vals.length && vals.every(v=>v>0) && /saque|pagamento|transferencia enviada|pix enviado|debito/.test(topo);
+  if (cDesc >= 0 && cDesc === cExtra) cDesc = acha(/favorecido|nome|beneficiario/, [cData]);
   IMP = {linhas, hdr, nomeArq};
   const sel = (nome, atual, opcional) => `<select name="${nome}">${opcional?'<option value="-1">— nenhuma —</option>':''}${cab.map((c,i)=>`<option value="${i}" ${i===atual?'selected':''}>${h(c)}</option>`).join('')}</select>`;
   const ex = linhas.slice(hdr+1, hdr+6);
@@ -1805,7 +1813,9 @@ function mapearColunas(linhas, nomeArq){
     <label>Descrição / histórico${sel('desc', cDesc, true)}</label>
     <label>Valor (ou Débito/Saída) *${sel('valor', cValor>=0?cValor:cDeb)}</label>
     <label>Crédito/Entrada (se for coluna separada)${sel('cred', cValor>=0?-1:cCred, true)}</label>
-    <label class="full" style="flex-direction:row;align-items:center;gap:8px;color:var(--text)"><input type="checkbox" name="inverter"> As saídas aparecem com valor positivo nesta planilha (inverter o sinal)</label>
+    <label>Complemento da descrição${sel('extra', cExtra === cDesc ? -1 : cExtra, true)}</label>
+    <label>Situação (linhas recusadas ou canceladas ficam de fora)${sel('sit', cSit, true)}</label>
+    <label class="full" style="flex-direction:row;align-items:center;gap:8px;color:var(--text)"><input type="checkbox" name="inverter" ${saidas?'checked':''}><span>As saídas aparecem com valor positivo nesta planilha (inverter o sinal)${saidas?'<br><span class="meta">Marquei porque é um relatório de saques/pagamentos.</span>':''}</span></label>
   </form>
   <div style="overflow-x:auto;margin-top:10px"><table><thead><tr>${cab.map(c=>`<th>${h(c)}</th>`).join('')}</tr></thead><tbody>
     ${ex.map(r=>`<tr>${cab.map((_,i)=>`<td>${h(r[i]??'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
@@ -1815,6 +1825,7 @@ function confirmarMapa(){
   const d = lerForm('fMapa'); if (!d || !IMP) return;
   const ci = k => +d[k], txs = [];
   IMP.linhas.slice(IMP.hdr+1).forEach(r => {
+    if (ci('sit') >= 0 && /recusad|cancelad|estornad|falh|negad|rejeitad|pendente|em analise|aguardando/.test(semAcento(String(r[ci('sit')]??'')))) return;
     const data = parseData(r[ci('data')]); if (!data) return;
     let valor;
     if (ci('cred') >= 0){ const deb = parseValor(r[ci('valor')]), cred = parseValor(r[ci('cred')]);
@@ -1822,7 +1833,8 @@ function confirmarMapa(){
     else valor = parseValor(r[ci('valor')]);
     if (d.inverter) valor = -valor;
     if (isNaN(valor) || !valor) return;
-    txs.push({data, valor:Math.round(valor*100)/100, desc: ci('desc')>=0 ? String(r[ci('desc')]??'').trim() : ''});
+    const desc = [ci('desc')>=0 ? String(r[ci('desc')]??'').trim() : '', ci('extra')>=0 && ci('extra')!==ci('desc') ? String(r[ci('extra')]??'').replace(/\s+/g,' ').trim() : ''].filter(x=>x && x!=='-').join(' — ');
+    txs.push({data, valor:Math.round(valor*100)/100, desc});
   });
   fechar(); adicionarTx(txs, IMP.nomeArq); IMP = null;
 }
@@ -2761,7 +2773,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '7.7';
+const APP_VERSAO = '7.9';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
