@@ -1325,7 +1325,9 @@ function formPedido(id){
     <label class="full">Evento *<select name="eventoId" required><option value="">Selecione…</option>${evs.map(e=>`<option value="${e.id}" ${v.eventoId===e.id?'selected':''}>${h(e.nome)} — ${fmt(e.data)}</option>`).join('')}</select></label>
     <label class="full">Favorecido *<select name="pessoaId" required><option value="">Selecione…</option>${[...db.pessoas].filter(x=>x.ativo!==false || x.id===v.pessoaId).sort((a,b)=>a.nome.localeCompare(b.nome)).map(x=>`<option value="${x.id}" ${v.pessoaId===x.id?'selected':''}>${h(x.nome)} — ${h(x.funcao)}</option>`).join('')}</select>
       <a href="#" data-act="formPessoa" style="font-size:12px">Não encontrou? Cadastrar nova pessoa</a></label>
-    <label>Categoria (plano de contas) *<select name="categoria" required><option value="">Selecione…</option>${db.categorias.map(c=>`<option ${v.categoria===c?'selected':''}>${h(c)}</option>`).join('')}</select></label>
+    <label>Categoria (plano de contas) *<select name="categoria" required><option value="">Selecione…</option>${db.categorias.map(c=>`<option ${v.categoria===c?'selected':''}>${h(c)}</option>`).join('')}</select>
+      <a href="#" data-act="novaCategoria" style="font-size:12px">＋ Cadastrar nova categoria</a>
+      <span id="boxNovaCat" style="display:none;gap:6px;align-items:center"><input id="inNovaCat" maxlength="60" placeholder="Nome da nova categoria" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();document.querySelector('[data-act=salvarCategoria]').click()}"><button type="button" class="btn sm pri" data-act="salvarCategoria">Adicionar</button></span></label>
     <label>Valor (R$) *<input name="valor" type="number" step="0.01" min="0.01" required value="${v.valor}"></label>
     <label>Vencimento *<input name="vencimento" type="date" required value="${v.vencimento}"></label>
     <label>Forma de pagamento<select name="forma">${FORMAS.map(f=>`<option ${v.forma===f?'selected':''}>${f}</option>`).join('')}</select></label>
@@ -2274,6 +2276,12 @@ const acoes = {
     }
     save(); fechar(); render(); },
   cadastrar: () => escolherCadastro(),
+  novaCategoria: () => { const b=document.getElementById('boxNovaCat'); if(!b) return; b.style.display='flex'; document.getElementById('inNovaCat').focus(); },
+  salvarCategoria: () => { const inp=document.getElementById('inNovaCat'), nome=(inp?.value||'').trim().replace(/\s+/g,' '); if(!nome) return toast('Digite o nome da categoria.');
+    const sel=document.querySelector('#fPedido [name=categoria]'); let ja=db.categorias.find(c=>semAcento(c)===semAcento(nome));
+    if(!ja){ db.categorias.push(nome); ja=nome; save(); if(sel){ const o=document.createElement('option'); o.textContent=nome; sel.appendChild(o); } toast('Categoria "'+nome+'" cadastrada'); } else toast('A categoria "'+ja+'" já existe. Selecionei ela para você.');
+    if(sel){ sel.value=ja; const ci=sel.parentNode.querySelector('.combo-in'); if(ci) ci.value=ja; }
+    inp.value=''; document.getElementById('boxNovaCat').style.display='none'; },
   importarPessoas: () => importarPessoas(),
   modeloPessoas: () => modeloPessoas(),
   confirmarImpPessoas: () => confirmarImpPessoas(),
@@ -2711,7 +2719,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '7.1';
+const APP_VERSAO = '7.2';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
