@@ -262,6 +262,11 @@ nav button.on{color:#002620;border-color:var(--cobre)}
 .badge{background:#efbb3c33;color:#702b16}
 header .badge,.appbar .badge{background:#efbb3c!important;color:#002620!important}
 header .av{background:#f4efeb!important;color:#002620!important}
+.concPar tr.achou td{background:#e9f7ef}
+.concPar td.meio{text-align:center;border-left:2px solid var(--line);border-right:2px solid var(--line);white-space:nowrap;width:1%}
+.concPar td.meio .btn{display:block;margin:3px auto 0}
+.achouTag{display:inline-block;font-size:11px;font-weight:600;color:#1a7f45;background:#d3f2df;border-radius:6px;padding:1px 6px}
+.concPar td.procurar{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1899,20 +1904,19 @@ function telaConciliacao(){
     <li>O app sugere quando batem o <b>mesmo favorecido</b> (nome ou CPF/CNPJ) e o <b>mesmo valor</b>, na <b>mesma data de pagamento</b>. Confira e clique em <b>Confirmar todas</b>.</li>
     <li>Você confere as sugestões e confirma. Pedidos "Aprovado · a pagar" que aparecem no banco viram <b>Pago</b> automaticamente, com a data do banco.</li>
     <li>O que não bater, você concilia <b>manualmente</b> — escolhendo o lançamento, ou informando a data de pagamento sem extrato.</li></ol></div>`:''}
-  ${sug.length?`<div class="panel" style="margin-bottom:12px;border-color:#00262033"><div class="toolbar" style="margin:0 0 6px"><b>✨ Sugestões automáticas (${sug.length})</b><div class="spacer"></div><button class="btn sm ok" data-act="concTodas">Confirmar todas</button></div>
-    <table class="cards"><thead><tr><th>Data banco</th><th>Extrato</th><th class="right">Valor</th><th>Pedido</th><th>Favorecido</th><th class="right">Valor</th><th>Status</th><th>Por quê</th><th></th></tr></thead><tbody>
-    ${sug.map(s=>`<tr>${tx(s.t)}${ped(s.p)}<td class="meta" style="white-space:normal">${s.motivo}</td><td><div class="btns" style="margin:0;flex-wrap:nowrap"><button class="btn sm ok" data-act="concConfirmar" data-id="${s.t.id}" data-arg="${s.p.id}">Confirmar</button><button class="btn sm" data-act="concRejeitar" data-id="${s.t.id}" data-arg="${s.p.id}">Não é este</button></div></td></tr>`).join('')}
+  ${pend.length?`<div class="panel" style="margin-bottom:12px"><div class="toolbar" style="margin:0 0 6px"><b>Lançamentos do banco sem conciliação (${pend.length})</b><span class="meta">${sug.length} encontrado(s) automaticamente</span><div class="spacer"></div>${sug.length?`<button class="btn sm ok" data-act="concTodas">Conciliar todos os encontrados (${sug.length})</button>`:''}</div>
+    <table class="cards filtravel concPar" data-key="concTx"><thead><tr><th>Data banco</th><th>Favorecido no banco</th><th class="right">Valor</th><th></th><th>Pedido</th><th>Favorecido</th><th class="right">Valor</th><th>Vencimento</th><th></th></tr></thead><tbody>
+    ${[...sug.map(s=>({t:s.t,s})), ...semSug.map(t=>({t}))].sort((x,y)=>x.t.data.localeCompare(y.t.data)).map(({t,s})=>`<tr class="${s?'achou':''}">${tx(t)}
+      ${s?`<td class="meio"><span class="achouTag" title="${h(s.motivo)}">✨ Encontramos</span><button class="btn sm ok" data-act="concConfirmar" data-id="${t.id}" data-arg="${s.p.id}">Conciliar</button></td>
+        <td><b>${s.p.id}</b></td><td style="white-space:normal"><b>${h(pessoa(s.p.pessoaId).nome)}</b><br><span class="meta">${h(evento(s.p.eventoId).nome)}</span></td><td class="right"><b>${brl(s.p.valor)}</b></td><td>${fmt(s.p.vencimento)}</td>
+        <td><button class="btn sm" data-act="concRejeitar" data-id="${t.id}" data-arg="${s.p.id}" title="Não é este pedido">Desvincular</button></td>`
+      :`<td class="meio"></td><td colspan="4" class="procurar"><button class="btn sm pri" data-act="concManualTx" data-id="${t.id}">🔍 Procurar pedido</button></td>
+        <td><button class="btn sm" data-act="concIgnorar" data-id="${t.id}" title="Ex.: tarifas, impostos, transferência entre contas">Ignorar</button></td>`}</tr>`).join('')}
     </tbody></table></div>`:''}
-  <div class="grid2">
-    <div class="panel"><b>Lançamentos do banco sem conciliação (${semSug.length})</b>
-      <table class="cards filtravel" data-key="concTx" style="margin-top:6px"><thead><tr><th>Data</th><th>Descrição</th><th class="right">Valor</th><th></th></tr></thead><tbody>
-      ${semSug.map(t=>`<tr>${tx(t)}<td><div class="btns" style="margin:0;flex-wrap:nowrap"><button class="btn sm pri" data-act="concManualTx" data-id="${t.id}">Conciliar</button><button class="btn sm" data-act="concIgnorar" data-id="${t.id}" title="Ex.: tarifas, impostos, transferência entre contas">Ignorar</button></div></td></tr>`).join('') || '<tr><td colspan="4" class="empty">Nada pendente</td></tr>'}
-      </tbody></table></div>
-    <div class="panel"><b>Pedidos sem conciliação (${peds.length})</b>
-      <table class="cards filtravel" data-key="concPed" style="margin-top:6px"><thead><tr><th>Nº</th><th>Favorecido</th><th class="right">Valor</th><th>Status</th><th></th></tr></thead><tbody>
-      ${peds.map(p=>`<tr>${ped(p)}<td><button class="btn sm" data-act="concManualPed" data-id="${p.id}">Conciliar manual</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Tudo conciliado 🎉</td></tr>'}
-      </tbody></table></div>
-  </div>
+  <details class="panel" ${pend.length?'':'open'}><summary style="cursor:pointer"><b>Pedidos sem lançamento do banco (${peds.length})</b> <span class="meta">— para conciliar sem extrato ou procurar o lançamento pelo pedido</span></summary>
+    <table class="cards filtravel" data-key="concPed" style="margin-top:6px"><thead><tr><th>Nº</th><th>Favorecido</th><th class="right">Valor</th><th>Status</th><th></th></tr></thead><tbody>
+    ${peds.map(p=>`<tr>${ped(p)}<td><button class="btn sm" data-act="concManualPed" data-id="${p.id}">Conciliar manual</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Tudo conciliado 🎉</td></tr>'}
+    </tbody></table></details>
   <details class="panel" style="margin-top:12px" ${conc.length&&!sug.length&&!pend.length?'open':''}><summary style="cursor:pointer"><b>✅ Conciliados (${conc.length})</b></summary>
     <table class="cards filtravel" data-key="concOk" style="margin-top:6px"><thead><tr><th>Nº</th><th>Favorecido</th><th class="right">Valor</th><th>Pago no banco</th><th>Como</th><th>Por</th><th></th></tr></thead><tbody>
     ${conc.map(p=>`<tr><td><b>${p.id}</b></td><td>${h(pessoa(p.pessoaId).nome)}</td><td class="right">${brl(p.valor)}</td><td>${fmt(p.conc.data)}</td>
@@ -2804,7 +2808,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.2';
+const APP_VERSAO = '8.3';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
