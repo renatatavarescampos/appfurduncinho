@@ -1102,12 +1102,14 @@ function escolherAtualizar(){
   <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="irAtualizar">Continuar</button></div>`);
 }
 function telaPessoas(){
-  return `<div class="toolbar"><h2 style="margin:0">Pessoas e fornecedores</h2><div class="spacer"></div><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkAuto">🔗 Link para a pessoa se cadastrar</button><button class="btn pri" data-act="cadastrar">+ Cadastrar</button></div>
+  const adm = isAdmin();
+  [...SEL].forEach(id=>{ if(!db.pessoas.some(p=>p.id===id)) SEL.delete(id); });
+  return `<div class="toolbar"><h2 style="margin:0">Pessoas e fornecedores</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSelPessoas" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkAuto">🔗 Link para a pessoa se cadastrar</button><button class="btn pri" data-act="cadastrar">+ Cadastrar</button></div>
   ${painelAlteracoes()}
-  <div class="panel"><table class="cards filtravel" data-key="pessoas"><thead><tr><th>Nome</th><th>Função</th><th>CPF / CNPJ</th><th>Dados bancários</th><th>Telefone</th><th></th></tr></thead><tbody>
+  <div class="panel"><table class="cards filtravel" data-key="pessoas"><thead><tr>${adm?'<th class="sel-col" title="Selecionar todas as pessoas que aparecem na lista"><input type="checkbox" data-sel-todos></th>':''}<th>Nome</th><th>Função</th><th>CPF / CNPJ</th><th>Dados bancários</th><th>Telefone</th><th></th></tr></thead><tbody>
   ${[...db.pessoas].sort((a,b)=>(a.ativo===false)-(b.ativo===false) || a.nome.localeCompare(b.nome)).map(p=>{ const inativo = p.ativo===false;
     const ult = db.alteracoes.filter(a=>a.pessoaId===p.id).sort((a,b)=>b.quando.localeCompare(a.quando))[0];
-    return `<tr class="click" data-act="formPessoa" data-id="${p.id}" style="${inativo?'opacity:.55':''}"><td data-v="${h(p.nome)}"><b>${h(p.nome)}</b>${inativo?' <span class="tag" style="background:var(--cancelado)">Inativo</span>':''}${p.origem==='autocadastro'?' <span class="tag" style="background:var(--brand)" title="Cadastrado pela própria pessoa pelo link">autocadastro</span>':''}${ult?`<br><span class="meta">${ult.tipo==='autocadastro'?'cadastrado pela própria pessoa':'alterado'} em ${fmtHora(ult.quando).replace(/(\d\d:\d\d):\d\d$/,'$1')}${ult.quem==='externo'?' (link de '+h(user(ult.convite).nome)+')':' por '+h(user(ult.quem).nome)}</span>`:''}</td><td>${h(p.funcao)}</td><td>${h(p.doc)}</td><td style="white-space:normal;min-width:230px">${bancoHTML(p)}</td><td>${h(p.tel)}</td>
+    return `<tr class="click" data-act="formPessoa" data-id="${p.id}" style="${inativo?'opacity:.55':''}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}<td data-v="${h(p.nome)}"><b>${h(p.nome)}</b>${inativo?' <span class="tag" style="background:var(--cancelado)">Inativo</span>':''}${p.origem==='autocadastro'?' <span class="tag" style="background:var(--brand)" title="Cadastrado pela própria pessoa pelo link">autocadastro</span>':''}${ult?`<br><span class="meta">${ult.tipo==='autocadastro'?'cadastrado pela própria pessoa':'alterado'} em ${fmtHora(ult.quando).replace(/(\d\d:\d\d):\d\d$/,'$1')}${ult.quem==='externo'?' (link de '+h(user(ult.convite).nome)+')':' por '+h(user(ult.quem).nome)}</span>`:''}</td><td>${h(p.funcao)}</td><td>${h(p.doc)}</td><td style="white-space:normal;min-width:230px">${bancoHTML(p)}</td><td>${h(p.tel)}</td>
     <td><div class="btns" style="margin:0;flex-wrap:nowrap"><span class="btn sm">Editar</span><button class="btn sm" data-act="verHist" data-id="${p.id}" title="Histórico de alterações">🕒 Histórico</button>${!isAdmin()?'':inativo
       ? `<button class="btn sm ok" data-act="ativarPessoa" data-id="${p.id}">Reativar</button>`
       : `<button class="btn sm bad" data-act="desativarPessoa" data-id="${p.id}">Desativar</button>`}</div></td></tr>`; }).join('')}
@@ -2722,6 +2724,21 @@ Object.assign(acoes, {
       .filter(id=>!db.pedidos.some(p=>p.eventoId===id) && !(db.recebimentos||[]).some(x=>x.eventoId===id));
     db.eventos = db.eventos.filter(e=>!ids.includes(e.id));
     ids.forEach(id=>SEL.delete(id)); save(); fechar(); render(); toast(ids.length+(ids.length>1?' eventos excluídos':' evento excluído')); },
+  excluirSelPessoas: () => { if(!isAdmin()) return;
+    const ids = selVisiveis().filter(c=>c.checked).map(c=>c.dataset.sel); if(!ids.length) return;
+    const usos = pe => db.pedidos.filter(p=>p.pessoaId===pe.id).length;
+    const ps = db.pessoas.filter(p=>ids.includes(p.id)), livres = ps.filter(p=>!usos(p)), presas = ps.filter(p=>usos(p));
+    const linha = (p, extra) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span>${h(p.nome)}${p.doc?' · '+h(p.doc):''}</span>${extra}</div>`;
+    modal(`<h3>Excluir ${livres.length} pessoa${livres.length!==1?'s':''}?</h3>
+    ${livres.length?`<p style="color:var(--muted);margin:0 0 10px">O cadastro e o histórico de alterações dessas pessoas são apagados. <b>Essa ação não pode ser desfeita.</b></p>
+    <div style="max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px">${livres.map(p=>linha(p,'')).join('')}</div>`:''}
+    ${presas.length?`<p style="color:var(--muted);margin:12px 0 6px">${presas.length>1?'Estas pessoas não serão excluídas porque têm':'Esta pessoa não será excluída porque tem'} pedidos de pagamento. Para tirar da lista de escolha, use <b>Desativar</b>.</p>
+    <div style="max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--muted)">${presas.map(p=>linha(p,`<span>${usos(p)} pedido${usos(p)>1?'s':''}</span>`)).join('')}</div>`:''}
+    <div class="actions"><button class="btn" data-act="fechar">${livres.length?'Cancelar':'Ok'}</button>${livres.length?`<button class="btn pri" style="background:var(--recusado);border-color:var(--recusado)" data-act="confirmarExcluirSelPessoas" data-id="${livres.map(p=>p.id).join(',')}">Excluir ${livres.length} pessoa${livres.length>1?'s':''}</button>`:''}</div>`, 520); },
+  confirmarExcluirSelPessoas: idsTxt => { if(!isAdmin()) return; const ids = String(idsTxt||'').split(',').filter(Boolean).filter(id=>!db.pedidos.some(p=>p.pessoaId===id));
+    db.pessoas = db.pessoas.filter(p=>!ids.includes(p.id));
+    db.alteracoes = (db.alteracoes||[]).filter(a=>!ids.includes(a.pessoaId));
+    ids.forEach(id=>SEL.delete(id)); save(); fechar(); render(); toast(ids.length+(ids.length>1?' pessoas excluídas':' pessoa excluída')); },
   confirmarExcluirReceb: id => { if(!isAdmin()) return; db.recebimentos = db.recebimentos.filter(x=>x.id!==id); save(); fechar(); render(); toast(id+' excluído'); }
 });
 document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k){ FC[k] = [...e.target.selectedOptions].map(o=>o.value).filter(Boolean);
@@ -2731,7 +2748,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '7.4';
+const APP_VERSAO = '7.5';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
