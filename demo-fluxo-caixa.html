@@ -2419,6 +2419,8 @@ document.addEventListener('change', e => {
 // Junta as SAÍDAS (pedidos de pagamento) e as ENTRADAS (recebimentos) dos eventos.
 // Realizado = o que já saiu/entrou no banco. Previsto = o que ainda vai sair/entrar (pela data prevista).
 const ORIGENS = ['Bilheteria','Bar','Patrocínio','Repasse de plataforma','Aluguel de espaço','Outros'];
+// lista de origens: as padrão + as criadas (＋ Nova origem…) + as que já estão em algum recebimento; "Outros" fica por último
+const origens = () => { const l = [...new Set([...ORIGENS.filter(o=>o!=='Outros'), ...(db.origens||[]), ...(db.recebimentos||[]).map(r=>r.origem)].filter(Boolean))]; return [...l.filter(o=>o!=='Outros'), 'Outros']; };
 let LF = {cc:'', serie:''}; // filtros do gráfico de lucro
 let FC = {ano:[String(new Date().getFullYear())], mes:[], evento:[], situacao:[], aba:'resumo', diario:null, dia:null};
 function seedRecebimentos(eventos, pedidos){
@@ -2645,7 +2647,7 @@ function formReceb(id){
   modal(`<h3>${id?'Recebimento '+x.id:'Novo recebimento'}</h3>
   <form class="form" id="fReceb">
     <label class="full">Evento *<select name="eventoId" required><option value="">Escolha o evento…</option>${[...db.eventos].sort((a,b)=>b.data.localeCompare(a.data)).map(e=>`<option value="${e.id}" ${x.eventoId===e.id?'selected':''}>${h(e.nome)} · ${fmt(e.data)}</option>`).join('')}</select></label>
-    <label>Origem *<select name="origem" required>${ORIGENS.map(o=>`<option ${x.origem===o?'selected':''}>${o}</option>`).join('')}</select></label>
+    <label>Origem *<select name="origem" required data-novo="origem">${origens().map(o=>`<option ${x.origem===o?'selected':''}>${h(o)}</option>`).join('')}<option value="__novo__">＋ Nova origem…</option></select></label>
     <label>Forma<select name="forma">${FORMAS.map(f=>`<option ${x.forma===f?'selected':''}>${f}</option>`).join('')}</select></label>
     <label class="full">Descrição<input name="descricao" value="${h(x.descricao)}" placeholder="Ex.: repasse da bilheteria, cota de patrocínio…"></label>
     <label>Valor (R$) *<input name="valor" type="number" step="0.01" min="0.01" required value="${x.valor}"></label>
@@ -2683,7 +2685,9 @@ Object.assign(acoes, {
   formReceb: id => formReceb(id),
   csvReceber: () => csvReceber(),
   salvarReceb: id => { if(!isAdmin()) return; const d=lerForm('fReceb'); if(!d) return;
-    const dados = {eventoId:d.eventoId, origem:d.origem, forma:d.forma, descricao:(d.descricao||'').trim()||d.origem, valor:Number(d.valor)||0, previsto:d.previsto, recebidoEm:d.recebidoEm||'', banco:lembrarBanco(d.banco)};
+    const orig = String(d.origem||'').trim().replace(/\s+/g,' ').slice(0,60); if (!orig) return toast('Escolha ou digite a origem.');
+    if (!origens().includes(orig)) db.origens = [...(db.origens||[]), orig];
+    const dados = {eventoId:d.eventoId, origem:orig, forma:d.forma, descricao:(d.descricao||'').trim()||orig, valor:Number(d.valor)||0, previsto:d.previsto, recebidoEm:d.recebidoEm||'', banco:lembrarBanco(d.banco)};
     const recusar = d.situacao==='recusado';
     if (id){ const x=recebimento(id), antes=!!x.recebidoEm, eraRec = x.status==='cancelado'; Object.assign(x,dados); if(recusar) x.status='cancelado'; else delete x.status;
       if (recusar!==eraRec) x.historico.push({quando:agora(),quem:me.id,acao: recusar?'Marcou como recusado':'Voltou a ser válido'});
@@ -2773,7 +2777,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '7.9';
+const APP_VERSAO = '8.0';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
