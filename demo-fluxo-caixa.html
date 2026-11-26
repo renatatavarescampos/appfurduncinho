@@ -1154,7 +1154,10 @@ function telaUsuarios(){
 }
 
 // ================= JANELAS (MODAIS) =================
-function modal(html, largura){ fechar(); const o=document.createElement('div'); o.className='overlay'; o.id='ov'; o.innerHTML=`<div class="modal" ${largura?`style="max-width:${largura}px"`:''}>${html}</div>`; o.addEventListener('mousedown',e=>{ if(e.target===o) fechar(); }); document.body.appendChild(o); turbinarSelects(o); filtrosDeColuna(o); }
+function modal(html, largura){ fechar(); const o=document.createElement('div'); o.className='overlay'; o.id='ov'; o.innerHTML=`<div class="modal" ${largura?`style="max-width:${largura}px"`:''}>${html}</div>`; // fecha clicando fora só se: o clique começou e terminou no fundo, não foi na barra de rolagem, e nada foi digitado no formulário
+  let fora=false, mexeu=false; o.addEventListener('input',()=>{ mexeu=true; }); o.addEventListener('change',()=>{ mexeu=true; });
+  o.addEventListener('mousedown',e=>{ fora = e.target===o && e.clientX < o.clientWidth && e.clientY < o.clientHeight; });
+  o.addEventListener('click',e=>{ if(fora && e.target===o){ if(mexeu) toast('Para fechar sem salvar, use o botão Cancelar'); else fechar(); } fora=false; }); document.body.appendChild(o); turbinarSelects(o); filtrosDeColuna(o); }
 
 // ================= FILTRO DE MÚLTIPLA ESCOLHA =================
 // Para <select multiple>: abre uma lista com caixinhas de marcar + campo de busca.
@@ -2840,7 +2843,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.5';
+const APP_VERSAO = '8.6';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
