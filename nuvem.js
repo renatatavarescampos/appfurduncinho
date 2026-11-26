@@ -89,16 +89,122 @@
     timers[chave] = setTimeout(function(){ enviar(chave); }, 700);
     estado();
   }
+  /* ---------- várias abas ou computadores abertos ao mesmo tempo ----------
+     Cada aba lembra a versão que baixou (base). Antes de salvar, confere se outra aba
+     salvou depois disso; se salvou, junta as duas versões (o que cada uma acrescentou,
+     alterou ou excluiu) em vez de apagar o trabalho da outra. */
+  var base = {}, versao = {}, fila = {};
+  var APPK = /demo-pagamentos-eventos-v\d+$/;
+  function igual(a, b){ return JSON.stringify(a) === JSON.stringify(b); }
+  function ehObj(x){ return x !== null && typeof x === 'object' && !Array.isArray(x); }
+  function idDe(x){ return ehObj(x) && x.id != null ? 'i:' + x.id : 'j:' + JSON.stringify(x); }
+  function mesclar(b, l, r){
+    if (igual(l, r)) return l;
+    if (b !== undefined && igual(l, b)) return r;
+    if (b !== undefined && igual(r, b)) return l;
+    if (Array.isArray(l) && Array.isArray(r)) return mesclarLista(Array.isArray(b) ? b : [], l, r);
+    if (ehObj(l) && ehObj(r)){
+      var bb = ehObj(b) ? b : {}, out = {}, ks = Object.keys(l).concat(Object.keys(r).filter(function(k){ return !(k in l); }));
+      ks.forEach(function(k){
+        if (!(k in l)){ if (k in bb && igual(r[k], bb[k])) return; out[k] = r[k]; }
+        else if (!(k in r)){ if (k in bb && igual(l[k], bb[k])) return; out[k] = l[k]; }
+        else if ((k === 'seq' || k === 'recSeq') && typeof l[k] === 'number' && typeof r[k] === 'number') out[k] = Math.max(l[k], r[k]);
+        else out[k] = mesclar(bb[k], l[k], r[k]);
+      });
+      return out;
+    }
+    return l;   // o mesmo valor mudou nas duas abas: vale o desta
+  }
+  function mesclarLista(b, l, r){
+    var mapa = function(a){ var m = {}; a.forEach(function(x){ m[idDe(x)] = x; }); return m; };
+    var B = mapa(b), L = mapa(l), visto = {}, out = [];
+    r.forEach(function(x){ var k = idDe(x); if (visto[k]) return; visto[k] = 1;
+      if (k in L){
+        if (!(k in B) && !igual(L[k], x) && ehObj(x)){ out.push(x); var c = JSON.parse(JSON.stringify(L[k])); c.id = String(c.id) + '~' + Math.random().toString(36).slice(2,6); out.push(c); }  // mesmo número criado nas duas abas: fica com os dois
+        else out.push(mesclar(B[k], L[k], x));
+      } else if (!(k in B) || !igual(x, B[k])) out.push(x);          // excluído aqui só se a outra aba não mexeu nele
+    });
+    l.forEach(function(x){ var k = idDe(x); if (visto[k]) return; visto[k] = 1;
+      if (!(k in B) || !igual(x, B[k])) out.push(x);                 // acrescentado aqui (ou alterado aqui e excluído lá)
+    });
+    return out;
+  }
+  // o mesmo número de pedido (ou recebimento) criado nas duas abas: o desta aba ganha o próximo número livre
+  function renumerar(db){
+    var ag = new Date(); ag.setMinutes(ag.getMinutes() - ag.getTimezoneOffset()); ag = ag.toISOString().slice(0,16);
+    (db.pedidos||[]).forEach(function(p){ if (String(p.id).indexOf('~') < 0) return; var antigo = String(p.id).split('~')[0];
+      p.id = 'PG-' + String(db.seq++).padStart(4,'0'); (p.historico = p.historico || []).push({quando: ag, quem: p.criadoPor || '', acao: 'Número trocado de ' + antigo + ' para ' + p.id + ' (o mesmo número foi criado em outra aba ao mesmo tempo)'}); });
+    (db.recebimentos||[]).forEach(function(r){ if (String(r.id).indexOf('~') >= 0) r.id = 'RC-' + String(db.recSeq++).padStart(4,'0'); });
+  }
+  function avisarApp(){
+    var manda = function(w){ try{ w.dispatchEvent(new w.CustomEvent('nuvem-dados')); }catch(e){} };
+    manda(window);
+    try{ document.querySelectorAll('iframe').forEach(function(f){ try{ manda(f.contentWindow); }catch(e){} }); }catch(e){}
+  }
+  function lerRemoto(chave, campos){
+    return api('GET', '/rest/v1/armazenamento?select=' + campos + '&chave=eq.' + encodeURIComponent(chave)).then(function(l){ return (l && l[0]) || null; });
+  }
+  // junta a versão desta aba com a que está na nuvem; devolve o texto final (ou o mesmo, se ninguém mais salvou)
+  function conciliar(chave, v){
+    if (!APPK.test(chave) || v == null) return Promise.resolve(v);
+    return lerRemoto(chave, 'atualizado_em').then(function(m){
+      if (!m || (versao[chave] && m.atualizado_em === versao[chave])) return v;
+      return lerRemoto(chave, 'valor,atualizado_em').then(function(row){
+        if (!row || row.valor === base[chave] || row.valor === v) return v;
+        var B, L, R; try{ B = base[chave] != null ? JSON.parse(base[chave]) : undefined; L = JSON.parse(v); R = JSON.parse(row.valor); }catch(e){ return v; }
+        var M = mesclar(B, L, R);
+        var agora = rget(chave);   // o app pode ter salvo de novo enquanto a nuvem respondia
+        if (agora !== v){ try{ M = mesclar(L, JSON.parse(agora), M); }catch(e){} }
+        renumerar(M);
+        var txt = JSON.stringify(M);
+        base[chave] = row.valor; versao[chave] = row.atualizado_em;
+        if (txt !== agora){ rset(chave, txt); avisarApp(); }
+        console.info('[nuvem] outra aba tinha salvo: versões juntadas', chave);
+        return txt;
+      });
+    });
+  }
   function enviar(chave){
     delete pendentes[chave]; enviando++; estado();
-    var v = rget(chave);
-    var p = v == null
-      ? api('DELETE', '/rest/v1/armazenamento?chave=eq.' + encodeURIComponent(chave), null, {'Prefer':'return=minimal'})
-      : api('POST', '/rest/v1/armazenamento?on_conflict=chave', [{chave: chave, dados_id: dadosId(chave), valor: v, atualizado_em: new Date().toISOString(), atualizado_por: sessao.email}], {'Prefer':'resolution=merge-duplicates,return=minimal'});
-    return p.then(function(){ erroEnvio = false; if (gestora && /^central-clientes/.test(chave) && v) return sincronizarAcessos(v); },
-                  function(e){ erroEnvio = true; console.warn('[nuvem] não salvou', chave, e); })
+    var anterior = fila[chave] || Promise.resolve();
+    var p = fila[chave] = anterior.then(function(){
+      var v = rget(chave);
+      return conciliar(chave, v).then(function(v2){
+        var quando = new Date().toISOString();
+        return (v2 == null
+          ? api('DELETE', '/rest/v1/armazenamento?chave=eq.' + encodeURIComponent(chave), null, {'Prefer':'return=minimal'})
+          : api('POST', '/rest/v1/armazenamento?on_conflict=chave', [{chave: chave, dados_id: dadosId(chave), valor: v2, atualizado_em: quando, atualizado_por: sessao.email}], {'Prefer':'resolution=merge-duplicates,return=minimal'}))
+          .then(function(){
+            base[chave] = v2; versao[chave] = quando;
+            erroEnvio = false; if (gestora && /^central-clientes/.test(chave) && v2) return sincronizarAcessos(v2);
+          });
+      });
+    }).catch(function(e){ erroEnvio = true; console.warn('[nuvem] não salvou', chave, e); })
       .finally(function(){ enviando--; estado(); });
+    return p;
   }
+  // de tempos em tempos (e ao voltar para a aba) busca o que outras abas salvaram
+  var buscando = false;
+  function buscarNovidades(){
+    if (!pronto || !sessao || buscando || document.visibilityState !== 'visible') return;
+    var ks = Object.keys(base).filter(function(k){ return APPK.test(k) && !pendentes[k] && !fila_ocupada(k); });
+    if (!ks.length) return;
+    buscando = true;
+    Promise.all(ks.map(function(k){
+      return lerRemoto(k, 'atualizado_em').then(function(m){
+        if (!m || m.atualizado_em === versao[k]) return;
+        return lerRemoto(k, 'valor,atualizado_em').then(function(row){
+          if (!row || pendentes[k] || fila_ocupada(k)) return;
+          if (row.valor === base[k]){ versao[k] = row.atualizado_em; return; }
+          if (rget(k) === base[k]){ rset(k, row.valor); base[k] = row.valor; versao[k] = row.atualizado_em; avisarApp(); }
+          else { pendentes[k] = true; enviar(k); }   // tem alteração desta aba ainda não enviada: junta e envia
+        });
+      });
+    })).catch(function(e){ console.warn('[nuvem] buscar', e); }).finally(function(){ buscando = false; });
+  }
+  function fila_ocupada(k){ return enviando > 0; }
+  setInterval(buscarNovidades, 20000);
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible') setTimeout(buscarNovidades, 300); });
   S.setItem = function(k, v){ var r = RAW_SET.apply(this, arguments); if (this === LS) mudou(String(k), v); return r; };
   S.removeItem = function(k){ var r = RAW_DEL.apply(this, arguments); if (this === LS) mudou(String(k), null); return r; };
   window.addEventListener('beforeunload', function(e){ if (Object.keys(pendentes).length || enviando){ Object.keys(pendentes).forEach(enviar); e.preventDefault(); e.returnValue = ''; } });
@@ -300,12 +406,12 @@
     });
   }
   function baixar(filtro){
-    return api('GET', '/rest/v1/armazenamento?select=chave,dados_id,valor' + (filtro || ''));
+    return api('GET', '/rest/v1/armazenamento?select=chave,dados_id,valor,atualizado_em' + (filtro || ''));
   }
   // aplica o que veio da nuvem no navegador; se mudou algo, recarrega a página uma vez para o app ler os dados novos
   function aplicar(linhas, podeSubir, filtroLocal){
     var mudouAlgo = false, naNuvem = {};
-    (linhas||[]).forEach(function(l){ naNuvem[l.chave] = 1; if (rget(l.chave) !== l.valor){ rset(l.chave, l.valor); mudouAlgo = true; } });
+    (linhas||[]).forEach(function(l){ naNuvem[l.chave] = 1; base[l.chave] = l.valor; versao[l.chave] = l.atualizado_em; if (rget(l.chave) !== l.valor){ rset(l.chave, l.valor); mudouAlgo = true; } });
     var subir = [];
     if (podeSubir){
       for (var i = 0; i < LS.length; i++){ var k = RAW_KEY.call(LS, i); if (k && SINC.test(k) && !naNuvem[k] && (!filtroLocal || filtroLocal(k))) subir.push(k); }
