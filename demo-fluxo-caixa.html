@@ -267,6 +267,8 @@ header .av{background:#f4efeb!important;color:#002620!important}
 .concPar td.meio .btn{display:block;margin:3px auto 0}
 .achouTag{display:inline-block;font-size:11px;font-weight:600;color:#1a7f45;background:#d3f2df;border-radius:6px;padding:1px 6px}
 .concPar td.procurar{color:var(--muted)}
+.cf-aviso{margin:0 0 8px;padding:7px 10px;border-radius:8px;background:#efbb3c26;border:1px solid #efbb3c;font-size:13px;color:var(--text)}
+.cf-aviso a{font-weight:600;margin-left:4px}
 </style>
 </head>
 <body>
@@ -1240,6 +1242,14 @@ function filtrosDeColuna(root){
       let vazio = tb.tBodies[0].querySelector('.cf-vazio');
       if (!n && linhas().length){ if(!vazio){ vazio=document.createElement('tr'); vazio.className='cf-vazio'; vazio.innerHTML=`<td colspan="${tb.tHead.rows[0].cells.length}" class="empty">Nada encontrado com esse filtro</td>`; tb.tBodies[0].appendChild(vazio);} }
       else if (vazio) vazio.remove();
+      // aviso de quais colunas estão filtrando (os filtros somam: a linha precisa passar em todos)
+      let av = tb.previousElementSibling && tb.previousElementSibling.classList.contains('cf-aviso') ? tb.previousElementSibling : null;
+      if (fs.length){
+        if (!av){ av = document.createElement('div'); av.className = 'cf-aviso'; tb.parentNode.insertBefore(av, tb); }
+        const nomes = [...tb.tHead.rows[0].cells].map(th=>th.textContent.trim());
+        av.innerHTML = `🔎 Filtrando por <b>${fs.map(([c,v])=>h(nomes[c]||'coluna')+': '+h(v.length>2?v.slice(0,2).join(', ')+' +'+(v.length-2):v.join(', '))).join('</b> e <b>')}</b> — mostrando ${n} de ${linhas().length}. <a href="#" data-cflimpa="1">Limpar filtros das colunas</a>`;
+        av.querySelector('[data-cflimpa]').onclick = e => { e.preventDefault(); delete CFS[key]; render(); };
+      } else if (av) av.remove();
     };
     tb.addEventListener('change', e => { const c = e.target.dataset.col; if (c !== undefined){ st[c] = [...e.target.selectedOptions].map(o=>o.value); aplicar(); } });
     aplicar();
@@ -2830,7 +2840,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.4';
+const APP_VERSAO = '8.5';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
