@@ -652,7 +652,7 @@ function selAtualizar(){
   const vis = selVisiveis(), marcadas = vis.filter(c=>c.checked);
   const todos = document.querySelector('input[data-sel-todos]');
   if (todos){ todos.checked = vis.length>0 && marcadas.length===vis.length; todos.indeterminate = marcadas.length>0 && marcadas.length<vis.length; }
-  const b = document.getElementById('btnExclSel'); if (b){ b.style.display = marcadas.length?'':'none'; b.querySelector('[data-sel-n]').textContent = marcadas.length; }
+  ['btnExclSel','btnEditSel'].forEach(idb=>{ const b = document.getElementById(idb); if (b){ b.style.display = marcadas.length?'':'none'; b.querySelector('[data-sel-n]').textContent = marcadas.length; } });
   document.querySelectorAll('input[data-sel]').forEach(c=>c.closest('tr').classList.toggle('sel-on', c.checked));
 }
 document.addEventListener('change', e => {
@@ -667,7 +667,7 @@ function telaLista(){
   const tot = lista.filter(p=>!inativo(p)).reduce((a,p)=>a+p.valor,0);
   const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0), iv = cols.findIndex(c=>c.id==='valor');
   [...SEL].forEach(id=>{ if(!db.pedidos.some(p=>p.id===id)) SEL.delete(id); });
-  return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
+  return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn pri" id="btnEditSel" data-act="editarSel" style="${SEL.size?'':'display:none'}">✏️ Alterar selecionadas (<span data-sel-n>${SEL.size}</span>)</button><button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
     ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkForm" title="Link para quem não tem acesso ao sistema enviar um pedido">🔗 Link do formulário</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
   <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}<th>Pagamento</th></tr></thead>
@@ -1406,6 +1406,43 @@ function formCentros(){
   setTimeout(()=>document.getElementById('novoCC')?.focus(), 30);
 }
 const somaMeses = (iso, k) => { const [y,m,d]=iso.split('-').map(Number); const t=new Date(Date.UTC(y,m-1+k,1)); const ult=new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,0)).getUTCDate(); t.setUTCDate(Math.min(d,ult)); return t.toISOString().slice(0,10); };
+// Alterar várias contas de uma vez: só os campos preenchidos mudam; o resto fica como está
+function formLote(){
+  const ids = selVisiveis().filter(c=>c.checked).map(c=>c.dataset.sel), ps = db.pedidos.filter(p=>ids.includes(p.id) && podeEditar(p));
+  if (!ps.length) return toast('Nenhuma conta selecionada pode ser alterada.');
+  const NA = '<option value="">— não alterar —</option>';
+  const evs = [...db.eventos].sort((a,b)=>b.data.localeCompare(a.data));
+  modal(`<h3>✏️ Alterar ${ps.length} conta${ps.length>1?'s':''}</h3>
+  <p class="meta" style="margin-top:0">Preencha só o que quer mudar. Os campos deixados em "não alterar" ficam como estão em cada conta. Total selecionado: <b>${brl(ps.reduce((a,p)=>a+p.valor,0))}</b>.</p>
+  <form class="form" id="fLote">
+    <label class="full">Evento<select name="eventoId">${NA}${evs.map(e=>`<option value="${e.id}">${h(e.nome)} — ${fmt(e.data)}</option>`).join('')}<option value="_empresa">— Sem evento (despesa da empresa) —</option></select></label>
+    <label>Categoria<select name="categoria">${NA}${db.categorias.map(c=>`<option>${h(c)}</option>`).join('')}</select></label>
+    <label>Vencimento<input name="vencimento" type="date"></label>
+    <label>Forma de pagamento<select name="forma">${NA}${FORMAS.map(f=>`<option>${f}</option>`).join('')}</select></label>
+    <label>Centro de custo<select name="centroCusto">${NA}${centrosDeCusto().map(c=>`<option>${h(c)}</option>`).join('')}<option value="_limpar">— o mesmo do evento (limpar) —</option></select></label>
+    <label class="full">Favorecido<select name="pessoaId">${NA}${[...db.pessoas].filter(x=>x.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome)).map(x=>`<option value="${x.id}">${h(x.nome)} — ${h(x.funcao)}</option>`).join('')}</select></label>
+    <label class="full">Descrição<input name="descricao" placeholder="— não alterar —"></label>
+  </form>
+  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="salvarLote" data-id="${ps.map(p=>p.id).join(',')}">Alterar ${ps.length} conta${ps.length>1?'s':''}</button></div>`, 620);
+}
+function salvarLote(lista){
+  const d = Object.fromEntries(new FormData(document.getElementById('fLote')));
+  const novo = {};
+  if (d.eventoId) novo.eventoId = d.eventoId==='_empresa' ? '' : d.eventoId;
+  ['categoria','vencimento','forma','pessoaId'].forEach(k=>{ if (d[k]) novo[k] = d[k]; });
+  if (d.centroCusto) novo.centroCusto = d.centroCusto==='_limpar' ? '' : d.centroCusto;
+  if ((d.descricao||'').trim()) novo.descricao = d.descricao.trim();
+  if (!Object.keys(novo).length) return toast('Preencha pelo menos um campo para alterar.');
+  const rot = {eventoId:['Evento',v=>evento(v).nome||'sem evento'],pessoaId:['Favorecido',v=>pessoa(v).nome],categoria:['Categoria',v=>v||'—'],vencimento:['Vencimento',v=>fmt(v)],forma:['Forma',v=>v],descricao:['Descrição',v=>v||'—'],centroCusto:['Centro de custo',v=>v||'—']};
+  let n = 0;
+  db.pedidos.filter(p=>lista.includes(p.id) && podeEditar(p)).forEach(p=>{
+    const difs = Object.keys(novo).filter(k=>String(p[k]??'')!==String(novo[k])).map(k=>`${rot[k][0]}: ${rot[k][1](p[k])} → ${rot[k][1](novo[k])}`);
+    if (!difs.length) return;
+    Object.keys(novo).forEach(k=>{ p[k] = novo[k]; });
+    p.historico.push({quando:agora(), quem:me.id, acao:'Alterou em lote — '+difs.join('; ')}); n++;
+  });
+  save(); fechar(); SEL.clear(); render(); toast(n ? n+' conta(s) alterada(s)' : 'Nada mudou: as contas já tinham esses dados');
+}
 function salvarPedido(id){
   const f = document.getElementById('fPedido'); if(!f.reportValidity()) return;
   const d = Object.fromEntries(new FormData(f));
@@ -2785,6 +2822,8 @@ Object.assign(acoes, {
     modal(`<h3>Excluir ${x.id}?</h3><p style="color:var(--muted)">${h(x.descricao)} · ${brl(x.valor)} · ${h(evento(x.eventoId).nome)}<br>O recebimento sai do fluxo de caixa. Essa ação não pode ser desfeita.</p>
     <div class="actions"><button class="btn" data-act="formReceb" data-id="${id}">Voltar</button><button class="btn bad" data-act="confirmarExcluirReceb" data-id="${id}">Excluir</button></div>`); },
   selCel: () => {},
+  editarSel: () => { if(isAdmin()) formLote(); },
+  salvarLote: lista => salvarLote(String(lista||'').split(',')),
   excluirSel: () => { if(!isAdmin()) return;
     const ids = selVisiveis().filter(c=>c.checked).map(c=>c.dataset.sel); if(!ids.length) return;
     const ps = db.pedidos.filter(p=>ids.includes(p.id)), tot = ps.reduce((a,p)=>a+p.valor,0);
@@ -2845,7 +2884,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.7';
+const APP_VERSAO = '8.8';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
