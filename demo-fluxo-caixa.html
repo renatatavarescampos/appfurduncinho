@@ -1212,21 +1212,23 @@ function multiCombo(sel){
 // ================= FILTRO POR COLUNA NAS TABELAS =================
 // Em toda tabela com a classe "filtravel" aparece, embaixo dos títulos, um campo por coluna.
 // É só digitar: o sistema sugere os nomes daquela coluna e esconde as linhas que não combinam.
-const CFS = {};   // lembra o que foi digitado em cada tabela, mesmo quando a tela é redesenhada
+const CFS = {};
+const VAZIO = '\u2205vazio';   // valor do filtro de coluna para células em branco   // lembra o que foi digitado em cada tabela, mesmo quando a tela é redesenhada
 function filtrosDeColuna(root){
   root.querySelectorAll('table.filtravel:not([data-cf])').forEach(tb => {
     tb.dataset.cf = '1';
     const key = tb.dataset.key, st = CFS[key] || (CFS[key] = {});
     const linhas = () => [...tb.tBodies[0].rows].filter(r => !r.querySelector('.empty'));
     // valor "principal" da célula (data-v quando existir, senão a 1ª linha do texto)
-    const valor = (r, i) => { const c = r.cells[i]; return c ? (c.dataset.v ?? (c.innerText||'').split('\n')[0].trim()) : ''; };
+    const valor = (r, i) => { const c = r.cells[i]; const v = c ? (c.dataset.v ?? (c.innerText||'').split('\n')[0].trim()) : ''; return /^[—–-]?$/.test(v) ? VAZIO : v; };
     const linha = document.createElement('tr'); linha.className = 'cf-row';
     [...tb.tHead.rows[0].cells].forEach((th, i) => {
       const c = document.createElement('th');
       const titulo = th.textContent.trim();
       if (titulo){
-        const valores = [...new Set(linhas().map(r => valor(r,i)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR',{numeric:true}));
-        c.innerHTML = `<select multiple data-col="${i}" data-live="1" data-ph="🔍 ${h(titulo)}">${valores.map(v=>`<option value="${h(v)}" ${(st[i]||[]).includes(v)?'selected':''}>${h(v)}</option>`).join('')}</select>`;
+        const todos = linhas().map(r => valor(r,i)), valores = [...new Set(todos.filter(v=>v!==VAZIO))].sort((a,b)=>a.localeCompare(b,'pt-BR',{numeric:true}));
+        if (todos.includes(VAZIO)) valores.unshift(VAZIO);
+        c.innerHTML = `<select multiple data-col="${i}" data-live="1" data-ph="🔍 ${h(titulo)}">${valores.map(v=>`<option value="${h(v)}" ${(st[i]||[]).includes(v)?'selected':''}>${v===VAZIO?'(vazio)':h(v)}</option>`).join('')}</select>`;
       }
       linha.appendChild(c);
     });
@@ -1250,7 +1252,7 @@ function filtrosDeColuna(root){
       if (fs.length){
         if (!av){ av = document.createElement('div'); av.className = 'cf-aviso'; tb.parentNode.insertBefore(av, tb); }
         const nomes = [...tb.tHead.rows[0].cells].map(th=>th.textContent.trim());
-        av.innerHTML = `🔎 Filtrando por <b>${fs.map(([c,v])=>h(nomes[c]||'coluna')+': '+h(v.length>2?v.slice(0,2).join(', ')+' +'+(v.length-2):v.join(', '))).join('</b> e <b>')}</b> — mostrando ${n} de ${linhas().length}. <a href="#" data-cflimpa="1">Limpar filtros das colunas</a>`;
+        av.innerHTML = `🔎 Filtrando por <b>${fs.map(([c,v])=>h(nomes[c]||'coluna')+': '+h((x=>x.length>2?x.slice(0,2).join(', ')+' +'+(x.length-2):x.join(', '))(v.map(y=>y===VAZIO?'(vazio)':y)))).join('</b> e <b>')}</b> — mostrando ${n} de ${linhas().length}. <a href="#" data-cflimpa="1">Limpar filtros das colunas</a>`;
         av.querySelector('[data-cflimpa]').onclick = e => { e.preventDefault(); delete CFS[key]; render(); };
       } else if (av) av.remove();
     };
@@ -2843,7 +2845,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.6';
+const APP_VERSAO = '8.7';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
