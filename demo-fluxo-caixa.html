@@ -731,16 +731,18 @@ function telaDash(){
       return {e, receita, custo, lucro: receita-custo}; })
     .filter(x=>x.receita || x.custo);   // evento sem nenhum lançamento ainda não entra (não é lucro zero)
   const posMax = Math.max(0,...lucroEv.map(x=>x.lucro)), negMax = Math.max(0,...lucroEv.map(x=>-x.lucro));
-  const escala = Math.max(1, posMax+negMax), topo = !negMax ? 100 : !posMax ? 12 : posMax/escala*100;   // só prejuízo: deixa um espaço acima da linha do zero
+  const escala = Math.max(1, posMax+negMax), topo = !negMax ? 100 : !posMax ? 0 : Math.min(85, Math.max(15, posMax/escala*100));   // lucro e prejuízo sempre com pelo menos 15% do espaço cada
   const lucroTotal = lucroEv.reduce((a,x)=>a+x.lucro,0);
   // despesas sem evento (aluguel, contador…): ficam fora do lucro dos eventos, mas entram no resultado geral
   const despEmp = LF.serie || LF.cc || F.evento.length ? 0 : visiveis().filter(p=>!p.eventoId && !['recusado','cancelado'].includes(p.status) && anosSel.includes(p.vencimento.slice(0,4)) && passa(F.mes,p.vencimento.slice(5,7))).reduce((a,p)=>a+p.valor,0);
-  const graficoLucro = lucroEv.length ? `<div class="graf-rola"><div style="display:flex;gap:0;height:240px;padding-top:18px;justify-content:center;min-width:${lucroEv.length*62}px">${lucroEv.map(x=>{
-      const pos = x.lucro>=0, alt = Math.abs(x.lucro)/escala*(negMax && !posMax ? 76 : 88);
+  const graficoLucro = lucroEv.length ? `<div class="graf-rola"><div style="display:flex;gap:0;padding-top:4px;justify-content:center;min-width:${lucroEv.length*62}px">${lucroEv.map(x=>{
+      // tamanhos em pixels: lucro acima da linha do zero, prejuízo abaixo, na mesma escala; os rótulos têm espaço próprio
+      const AREA = 190, pxTopo = Math.round(topo/100*AREA), pxBaixo = AREA - pxTopo;
+      const pos = x.lucro>=0, alt = Math.max(3, Math.round(pos ? x.lucro/(posMax||1)*pxTopo : -x.lucro/(negMax||1)*pxBaixo));
       return `<div data-act="pagosEvento" data-id="${x.e.id}" style="flex:1;min-width:62px;max-width:170px;display:flex;flex-direction:column;cursor:pointer" data-tip="${h(x.e.nome)} (${fmt(x.e.data)})&#10;Receita: ${brl(x.receita)}&#10;Custo: ${brl(x.custo)}&#10;Lucro: ${brl(x.lucro)}">
-        <div style="height:${topo}%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;padding:0 5px">${pos?`<div style="font-size:10px;color:#002620;text-align:center;font-weight:600">${brl(x.lucro)}</div><div style="height:${alt/topo*100}%;background:#002620;border-radius:4px 4px 0 0;min-height:2px"></div>`:''}</div>
+        <div style="height:${pxTopo+(posMax?16:0)}px;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;padding:0 5px">${pos?`<div style="font-size:10px;color:#002620;text-align:center;font-weight:600">${brl(x.lucro)}</div><div style="height:${Math.min(alt,pxTopo)}px;background:#002620;border-radius:4px 4px 0 0;flex-shrink:0"></div>`:''}</div>
         <div style="border-top:2px solid #002620"></div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:stretch;padding:0 5px">${!pos?`<div style="height:${alt/(100-topo||1)*100}%;background:#ef4444;border-radius:0 0 4px 4px"></div><div style="font-size:10px;color:#ef4444;text-align:center;font-weight:600">-${brl(-x.lucro)}</div>`:''}</div>
+        <div style="height:${pxBaixo+(negMax?16:0)}px;display:flex;flex-direction:column;align-items:stretch;padding:0 5px">${!pos?`<div style="height:${Math.min(alt,pxBaixo)}px;background:#ef4444;border-radius:0 0 4px 4px;flex-shrink:0"></div><div style="font-size:10px;color:#ef4444;text-align:center;font-weight:600">-${brl(-x.lucro)}</div>`:''}</div>
         <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h(x.e.nome)}</div>
         <div style="font-size:10px;color:var(--muted);text-align:center">${(LF.serie?fmt(x.e.data):fmt(x.e.data).slice(0,5))}</div></div>`; }).join('')}</div></div>${lucroEv.length>5?'<div class="dica-rola">↔ Deslize o gráfico para o lado para ver todos os eventos</div>':''}`
     : '<div class="empty">Nenhum evento neste período</div>';
@@ -2884,7 +2886,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '8.8';
+const APP_VERSAO = '8.9';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
