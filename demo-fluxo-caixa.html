@@ -66,6 +66,8 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);white-spac
 th{font-size:12px;color:var(--muted);font-weight:600}
 tr.click{cursor:pointer}
 tr.click:hover td{background:#f4efeb}
+tr.dup td{background:#fde2e1}
+tr.dup.click:hover td{background:#fbcfcd}
 .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;color:#fff;font-weight:600}
 .right{text-align:right}
 /* dashboard */
@@ -532,7 +534,7 @@ function filtrosHTML({periodo=true,status=true,categoria=true}={}){
 
 // Possível duplicidade: outro pedido válido com o mesmo favorecido, o mesmo valor e o mesmo evento
 const duplicados = p => db.pedidos.filter(q => q.id!==p.id && q.pessoaId===p.pessoaId && (q.eventoId||'')===(p.eventoId||'') && Math.round(q.valor*100)===Math.round(p.valor*100) && !['recusado','cancelado'].includes(q.status));
-const tagDup = p => duplicados(p).length ? `<span class="tag" style="background:#d97706;white-space:nowrap" title="Mesmo favorecido, valor e evento de ${duplicados(p).map(q=>q.id).join(', ')}">⚠ Possível duplicidade</span>` : '';
+const tagDup = p => duplicados(p).length ? `<span class="tag" style="background:var(--recusado);white-space:nowrap" title="Mesmo favorecido, valor e evento de ${duplicados(p).map(q=>q.id).join(', ')}">⚠ Possível duplicidade</span>` : '';
 function avisoDuplicidade(id){
   const p = db.pedidos.find(x=>x.id===id); if (!p) return;
   const ds = duplicados(p);
@@ -715,7 +717,7 @@ function telaLista(){
     ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkForm" title="Link para quem não tem acesso ao sistema enviar um pedido">🔗 Link do formulário</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
   <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}<th>Pagamento</th></tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click${inativo(p)?' inativo':''}" data-act="ver" data-id="${p.id}" data-valor="${inativo(p) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
+  <tbody>${lista.map(p=>`<tr class="click${inativo(p)?' inativo':''}${p.status==='aguardando'&&duplicados(p).length?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${inativo(p) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
   <tfoot><tr>${rodapeTotal((adm?1:0)+iv, cols.length-iv, `<b data-cnt="pedidos">${lista.length} pedidos</b> · ${F.status.some(s=>['recusado','cancelado'].includes(s))?'total':'total válido (sem recusados/cancelados)'}`, brl(tot))}</tr></tfoot></table></div>`;
 }
 // Tabela de pedidos com as mesmas colunas escolhidas na Lista (usada nas relações do dashboard e em Aprovações)
@@ -723,7 +725,7 @@ function tabelaPedidos(lista, key, {extraCols=[], acoes=null, vazio='Nenhum pedi
   const cols = [...colsLista(), ...extraCols.filter(c=>!colsLista().some(x=>x.id===c.id))];
   const n = cols.length + (acoes?1:0), tot = lista.reduce((a,p)=>a+p.valor,0), iv = cols.findIndex(c=>c.id==='valor');
   return `<table class="filtravel" data-key="${key}_${cols.map(c=>c.id).join('-')}"><thead><tr>${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}${acoes?'<th></th>':''}</tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${p.valor}">${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${acoes?`<td>${acoes(p)}</td>`:''}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">${vazio}</td></tr>`}</tbody>
+  <tbody>${lista.map(p=>`<tr class="click${p.status==='aguardando'&&duplicados(p).length?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${p.valor}">${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${acoes?`<td>${acoes(p)}</td>`:''}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">${vazio}</td></tr>`}</tbody>
   <tfoot><tr>${rodapeTotal(iv, cols.length-iv-1+(acoes?1:0), `<b data-cnt="${cnt}">${lista.length} ${cnt}</b>`, brl(tot))}</tr></tfoot></table>`;
 }
 let colsRasc = null, colsTipo = 'lista';
@@ -2979,7 +2981,7 @@ function fluxoPagamentos(lista){
   const ps = lista.filter(m=>m.tipo==='saida').sort((a,b)=>b.data.localeCompare(a.data));
   const tot = ps.reduce((a,m)=>a+m.valor,0);
   return `<div class="panel"><table class="filtravel cards" data-key="fcPag"><thead><tr><th>Data</th><th>Nº</th><th>Evento</th><th>Favorecido</th><th>Categoria</th><th>Forma</th><th>Situação</th><th class="right">Valor</th></tr></thead>
-  <tbody>${ps.map(m=>{ const p=m.ref; return `<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${p.valor}"><td data-v="${fmt(m.data)}">${fmt(m.data)}${m.realizado?'':'<br><span class="meta">vencimento</span>'}</td><td>${p.id}</td><td>${h(evento(p.eventoId).nome)}</td><td>${h(pessoa(p.pessoaId).nome)}</td><td>${h(p.categoria)}</td><td>${h(p.forma)}</td>
+  <tbody>${ps.map(m=>{ const p=m.ref; return `<tr class="click${p.status==='aguardando'&&duplicados(p).length?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${p.valor}"><td data-v="${fmt(m.data)}">${fmt(m.data)}${m.realizado?'':'<br><span class="meta">vencimento</span>'}</td><td>${p.id}</td><td>${h(evento(p.eventoId).nome)}</td><td>${h(pessoa(p.pessoaId).nome)}</td><td>${h(p.categoria)}</td><td>${h(p.forma)}</td>
     <td data-v="${SIT[m.sit].nome}">${tagSit(m.sit)}${p.conc?' <span title="Conciliado com o banco">🏦✓</span>':''}</td><td class="right">${brl(p.valor)}</td></tr>`; }).join('') || '<tr><td colspan="8" class="empty">Nenhum pagamento com esses filtros</td></tr>'}</tbody>
   <tfoot><tr><td colspan="7"><b data-cnt="pagamentos">${ps.length} pagamentos</b> · pagos, aprovados a pagar e aguardando aprovação (sem recusados/cancelados)</td><td class="right"><b data-tot>${brl(tot)}</b></td></tr></tfoot></table></div>`;
 }
