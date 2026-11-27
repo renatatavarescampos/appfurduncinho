@@ -587,7 +587,7 @@ label.cb{position:relative}
   function telaColar(o){
     var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
     ARQS = []; PLAN = null; LOTE = {anexos:null, ok:0};
-    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Colar ou falar a mensagem</h1><p class="intro">Cole a mensagem do WhatsApp ou toque em <b>Gravar áudio</b> e fale os pagamentos. Na próxima tela você confere o que foi entendido antes de enviar.</p>'
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Colar mensagem ou gravar um áudio</h1><p class="intro">Cole a mensagem do WhatsApp ou toque em <b>Gravar áudio</b> e fale os pagamentos. Na próxima tela você confere o que foi entendido antes de enviar.</p>'
       + '<form id="fm" novalidate>'
       + '<div class="grupo">Quem está pedindo</div><div class="form">'
       + camposSol(o)
