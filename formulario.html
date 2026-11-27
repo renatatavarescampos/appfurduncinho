@@ -274,7 +274,7 @@ label.cb{position:relative}
   function telaInicio(o){
     cx.innerHTML = '<h1>Como você quer enviar?</h1><p class="intro">Escolha uma opção.</p><div class="escolha">'
       + '<button type="button" id="opManual"><span class="ic">✍️</span><span><b>Lançamento manual</b><small>Preencher um pagamento por vez, com nota fiscal ou print se tiver.</small></span></button>'
-      + '<button type="button" id="opNota"><span class="ic">🧾</span><span><b>Enviar nota fiscal ou recibo</b><small>Tirar uma foto ou escolher o PDF. A gente lê o documento e já preenche o pagamento para você conferir.</small></span></button>'
+      + '<button type="button" id="opNota"><span class="ic">🧾</span><span><b>Enviar nota fiscal, recibo ou boleto</b><small>Tirar uma foto ou escolher o PDF. A gente lê o documento e já preenche o pagamento para você conferir.</small></span></button>'
       + '<button type="button" id="opZap"><span class="ic">💬</span><span><b>Colar mensagem ou gravar um áudio</b><small>Colar o texto da conversa ou gravar um áudio falando os pagamentos. A gente monta tudo para você conferir.</small></span></button>'
       + '<button type="button" id="opImport"><span class="ic">📥</span><span><b>Importar arquivo</b><small>Enviar uma planilha Excel com vários pagamentos de uma vez.</small></span></button></div>';
     document.getElementById('opManual').onclick = function(){ telaPedido(o); window.scrollTo(0,0); };
@@ -799,7 +799,7 @@ label.cb{position:relative}
       e2.textContent = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message; e2.style.display = 'block'; });
   }
   // "Seu nome": lista da Equipe quando o app mandou a lista; senão, campo livre
-  // ---------- nota fiscal ou recibo (foto ou PDF) ----------
+  // ---------- nota fiscal, recibo ou boleto (foto ou PDF) ----------
   var PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/', TESS = 'https://cdn.jsdelivr.net/npm/', _scr = {};
   function carregarScript(url, glob){
     if (window[glob]) return Promise.resolve(window[glob]);
@@ -852,11 +852,26 @@ label.cb{position:relative}
   function num(s){ return Math.round(Number(s.replace(/\./g, '').replace(',', '.')) * 100) / 100; }
   function fmtDoc(d){ return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4'); }
   // procura os dados no texto: valor, vencimento, quem emitiu (CNPJ/CPF e nome), número, PIX e boleto
+  // boleto bancário (47 números): os últimos 14 trazem o vencimento (fator) e o valor; confere os dígitos antes de confiar
+  function boletoInfo(linha){
+    var d = String(linha).replace(/\D/g, ''); if (d.length !== 47) return null;
+    var m10 = function(s){ var t = 0; for (var i = s.length - 1, k = 2; i >= 0; i--, k = k === 2 ? 1 : 2){ var x = +s[i] * k; t += x > 9 ? x - 9 : x; } return (10 - t % 10) % 10; };
+    if (m10(d.slice(0, 9)) !== +d[9] || m10(d.slice(10, 20)) !== +d[20] || m10(d.slice(21, 31)) !== +d[31]) return null;
+    var fator = +d.slice(33, 37), valor = +d.slice(37) / 100, venc = '';
+    if (fator >= 1000){ var dia = 864e5, hj = Date.now(), a = Date.UTC(1997, 9, 7) + fator * dia, b = Date.UTC(2025, 1, 22) + (fator - 1000) * dia;
+      venc = new Date(Math.abs(a - hj) < Math.abs(b - hj) ? a : b).toISOString().slice(0, 10); }
+    return {valor: valor > 0 ? valor : 0, vencimento: venc};
+  }
   function lerNota(texto, o){
     var t = String(texto || '').normalize('NFC').replace(/\r/g, '').replace(/[ \t\u00a0]+/g, ' ');
     var n = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     if (n.length !== t.length) n = t.toLowerCase();
     var R = {lido: n.replace(/\s/g, '').length >= 15, tipo: /recibo/.test(n) && !/nota fiscal|nfs-?e|danfe/.test(n) ? 'Recibo' : 'Nota fiscal'};
+    var ml2 = t.match(/\d{5}[.\s]?\d{5}\s?\d{5}[.\s]?\d{6}\s?\d{5}[.\s]?\d{6}\s?\d\s?\d{14}|8\d{10}[\s-]?\d[\s]?\d{11}[\s-]?\d[\s]?\d{11}[\s-]?\d[\s]?\d{11}[\s-]?\d/);
+    if (ml2) R.boleto = ml2[0].replace(/\s+/g, ' ');
+    else if (/linha\s+digitavel|codigo\s+de\s+barras/.test(n) && !/danfe/.test(n)) R.boleto = true;
+    if (!/nota fiscal|nfs-?e|danfe/.test(n) && (ml2 || /ficha\s+de\s+compensacao|recibo\s+do\s+pagador|nosso\s+numero|linha\s+digitavel/.test(n))) R.tipo = 'Boleto';
+    var bol = ml2 && boletoInfo(ml2[0]);
     var MONEY = /(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+|\d+),(\d{2})(?!\d)/g;
     var primeiroValor = function(trecho){ MONEY.lastIndex = 0; var m; while ((m = MONEY.exec(trecho))){ var v = num(m[1] + ',' + m[2]); if (v > 0) return v; } return 0; };
     var rotulos = [/valor\s+liquido/g, /total\s+a\s+pagar|valor\s+a\s+pagar|valor\s+a\s+receber|valor\s+do\s+documento|valor\s+cobrado/g,
@@ -883,7 +898,9 @@ label.cb{position:relative}
       if (nm && !(R.doc && nm.dh && nm.dh !== docResumo(R.doc))) R.fav = nm; }
     if (!R.fav){
       var limpa = function(s){ s = String(s || '').split(/\n|\s(?:cpf|cnpj|inscri|endere|e-?mail|telefone|fone|cep|municipio|insc\.)/i)[0].replace(/^[\s:\-–|]+|[\s,.;:\-–|]+$/g, ''); return /[a-zA-ZÀ-ú]{2}/.test(s) && s.length >= 3 && s.length <= 90 ? s : ''; };
-      var ini = quem && quem.rot >= 0 ? quem.rot : n.search(/prestador|emitente/);
+      var mb = R.tipo === 'Boleto' && n.match(/(?:nome\s+do\s+)?(?:beneficiario|cedente)(?:\s+final)?\s*[:\-]?\s*/);
+      if (mb) R.nome = limpa(t.slice(mb.index + mb[0].length, mb.index + mb[0].length + 120).replace(/\s+-\s+.*$/m, ''));
+      var ini = R.nome ? -1 : quem && quem.rot >= 0 ? quem.rot : n.search(/prestador|emitente/);
       if (ini >= 0){ var reg = n.slice(ini, ini + 500), ml = reg.match(/(nome\s*\/\s*razao\s+social|razao\s+social|nome\s+empresarial|nome)\s*[:\-]?\s*/);
         if (ml){ var p0 = ini + ml.index + ml[0].length; R.nome = limpa(t.slice(p0, p0 + 120)); } }
       if (!R.nome){ var me = n.match(/\beu,?\s+/); if (me && R.tipo === 'Recibo'){ R.nome = limpa(t.slice(me.index + me[0].length, me.index + me[0].length + 100).split(',')[0]); } }
@@ -893,19 +910,18 @@ label.cb{position:relative}
     var mp = n.match(/chave\s+pix\s*(?:\([^)]*\))?\s*[:\-]?\s*/);
     if (mp){ var lin = t.slice(mp.index + mp[0].length).split('\n')[0].trim(), em = lin.match(/^([\w.+-]+?)\s*[(\[{]?\s*[@O0©®]\s*([\w-]+(?:\.[\w-]+)+)/), fn = lin.match(/^\+?[\d()\s.-]{10,20}/);
       var px = em ? em[1] + '@' + em[2] : fn ? fn[0].trim() : lin.split(/[\s,;]/)[0]; if (px.length >= 5) R.pix = px; }
-    var ml2 = t.match(/\d{5}\.?\d{5}\s?\d{5}\.?\d{6}\s?\d{5}\.?\d{6}\s?\d\s?\d{14}/); if (ml2){ R.boleto = ml2[0]; }
-    else if (/linha\s+digitavel|codigo\s+de\s+barras/.test(n) && !/danfe/.test(n)) R.boleto = true;
+    if (bol){ if (bol.valor) R.valor = bol.valor; if (bol.vencimento) R.vencimento = bol.vencimento; }
     var mr = n.match(/(?:discriminacao|descricao)\s+(?:dos?\s+)?servicos?\s*[:\-]?\s*|referente\s+(?:a|ao|aos|as)\s+/);
     var ref = mr ? t.slice(mr.index + mr[0].length).split(/\n\s*\n|valor\s|total\s|vencimento|chave\s+pix|pagamento\s+via|para\s+clareza|\.\s/i)[0].replace(/\s+/g, ' ').trim().slice(0, 160) : '';
     ref = ref.charAt(0).toUpperCase() + ref.slice(1);
-    R.descricao = [R.tipo + (R.numero ? ' nº ' + R.numero : '') + (R.emissao ? ', emitida em ' + fmt(R.emissao) : ''), ref, typeof R.boleto === 'string' ? 'Linha digitável: ' + R.boleto : ''].filter(Boolean).join('. ').slice(0, 500);
+    R.descricao = [R.tipo + (R.numero ? ' nº ' + R.numero : '') + (R.emissao && R.tipo !== 'Boleto' ? ', emitida em ' + fmt(R.emissao) : ''), ref, typeof R.boleto === 'string' ? 'Linha digitável: ' + R.boleto : ''].filter(Boolean).join('. ').slice(0, 500);
     return R;
   }
   function resumoLido(d){
     if (!d) return '<div class="nfLido" id="nfLido">🧾 <b>Documento anexado.</b> Preencha os campos abaixo.</div>';
     if (!d.lido) return '<div class="nfLido" id="nfLido">🧾 <b>Não consegui ler os dados deste documento</b> (foto escura ou tremida, ou arquivo protegido). Ele já vai anexado: é só preencher os campos abaixo.</div>';
     var ok = function(t, v){ return '<li>✓ ' + t + ': <b>' + v + '</b></li>'; }, falta = function(t){ return '<li class="falta">Não achei ' + t + '. Preencha abaixo.</li>'; };
-    return '<div class="nfLido" id="nfLido">🧾 <b>Lemos ' + (d.tipo === 'Recibo' ? 'o recibo' : 'a nota fiscal') + '.</b> Os campos em amarelo foram preenchidos sozinhos: confira antes de continuar.<ul>'
+    return '<div class="nfLido" id="nfLido">🧾 <b>Lemos ' + (d.tipo === 'Recibo' ? 'o recibo' : d.tipo === 'Boleto' ? 'o boleto' : 'a nota fiscal') + '.</b> Os campos em amarelo foram preenchidos sozinhos: confira antes de continuar.<ul>'
       + (d.fav ? ok('Favorecido', esc(d.fav.nome) + ' (já cadastrado)') : d.nome ? '<li>✓ Favorecido: <b>' + esc(d.nome) + (d.doc ? ' · ' + fmtDoc(d.doc) : '') + '</b> <span class="falta">(ainda não cadastrado: clique em “Cadastrar novo favorecido” e os dados já vêm preenchidos)</span></li>' : d.doc ? '<li class="falta">Achei o CPF/CNPJ ' + fmtDoc(d.doc) + ', mas não o nome. Busque o favorecido na lista ou clique em “Cadastrar novo favorecido”.</li>' : '<li class="falta">Não achei quem emitiu. Busque o favorecido na lista ou clique em "Cadastrar novo favorecido".</li>')
       + (d.valor ? ok('Valor', brl(d.valor)) : falta('o valor'))
       + (d.vencimento ? ok('Vencimento', fmt(d.vencimento)) : '<li class="falta">O documento não tem vencimento. Informe a data em que precisa ser pago.</li>')
@@ -928,8 +944,8 @@ label.cb{position:relative}
   function telaNota(o){
     var toque = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
     ARQS = []; PLAN = null;
-    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Nota fiscal ou recibo</h1><p class="intro">Envie a foto ou o PDF do documento. A gente lê os dados e já preenche o pagamento para você conferir. O documento vai anexado ao pedido.</p>'
-      + '<div id="nfCorpo"><div class="nfZona" id="nfZona"><div class="big">🧾</div><p>' + (toque ? 'Tire uma foto da nota ou do recibo, bem de frente e com boa luz, ou escolha o PDF.' : 'Arraste o arquivo para cá ou clique no botão abaixo.') + '</p><div class="nfBts">'
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Nota fiscal, recibo ou boleto</h1><p class="intro">Envie a foto ou o PDF do documento. A gente lê os dados e já preenche o pagamento para você conferir. O documento vai anexado ao pedido.</p>'
+      + '<div id="nfCorpo"><div class="nfZona" id="nfZona"><div class="big">🧾</div><p>' + (toque ? 'Tire uma foto da nota, do recibo ou do boleto, bem de frente e com boa luz, ou escolha o PDF.' : 'Arraste o arquivo para cá ou clique no botão abaixo.') + '</p><div class="nfBts">'
       + (toque ? '<button type="button" class="btn" id="btFoto">📷 Tirar foto</button>' : '')
       + '<button type="button" class="btn' + (toque ? ' sec' : '') + '" id="btArqNota">📄 Escolher ' + (toque ? 'arquivo' : 'foto ou PDF') + '</button></div>'
       + '<p style="margin:10px 0 0;font-size:12px">PDF ou foto (JPG, PNG, HEIC) · até 10 MB</p></div>'
@@ -969,7 +985,7 @@ label.cb{position:relative}
     var cat = (o.categorias||[]).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
     var fr = (o.formas||['PIX','Transferência','Boleto','Dinheiro']).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
     ARQS = pre && pre.arq ? [pre.arq] : [];
-    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>' + (pre ? (pre.dados && pre.dados.tipo === 'Recibo' ? 'Pagamento do recibo' : 'Pagamento da nota') : 'Novo pagamento') + '</h1><p class="intro">' + (pre ? 'O documento já vai anexado. Confira e complete os dados abaixo. Na próxima tela você vê tudo antes de enviar.' : 'Preencha os dados abaixo. Na próxima tela você confere tudo antes de enviar.') + '</p>'
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>' + (pre ? (pre.dados && pre.dados.tipo === 'Recibo' ? 'Pagamento do recibo' : pre.dados && pre.dados.tipo === 'Boleto' ? 'Pagamento do boleto' : 'Pagamento da nota') : 'Novo pagamento') + '</h1><p class="intro">' + (pre ? 'O documento já vai anexado. Confira e complete os dados abaixo. Na próxima tela você vê tudo antes de enviar.' : 'Preencha os dados abaixo. Na próxima tela você confere tudo antes de enviar.') + '</p>'
       + (pre ? resumoLido(pre.dados) : '')
       + '<form id="fm" novalidate>'
       + '<div class="grupo">Quem está pedindo</div><div class="form">'
