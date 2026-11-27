@@ -1850,23 +1850,31 @@ function sugestoes(){
   });
   return out;
 }
-function conciliar(txId, pedidoId, modo){
-  const t = db.extrato.find(x=>x.id===txId), p = db.pedidos.find(x=>x.id===pedidoId);
-  if (!t || !p || p.conc || t.pedidoId) return false;
-  const mudouStatus = p.status === 'aprovado';
-  const dif = Math.round((-t.valor - p.valor)*100)/100;
-  p.conc = {tipo:modo, txId, data:t.data, desc:t.desc, valorBanco:-t.valor, banco:t.banco||p.bancoPag||'', quando:agora(), quem:me.id, mudouStatus};
-  if (mudouStatus){ p.status = 'pago'; p.pagoEm = t.data; p.historico.push({quando:agora(), quem:me.id, acao:`Marcou como pago (conciliação bancária — pago no banco em ${fmt(t.data)})`}); }
-  p.historico.push({quando:agora(), quem:me.id, acao:`Conciliado ${modo==='auto'?'automaticamente':'manualmente'} com o extrato: ${t.desc} · ${brl(-t.valor)} · ${fmt(t.data)}${dif?` (diferença de ${brl(dif)} em relação ao pedido)`:''}`});
-  t.pedidoId = p.id;
+// Um lançamento do banco pode pagar um ou vários pedidos (ex.: um PIX de R$ 800 para 4 diárias de R$ 200)
+function conciliar(txId, pedidoIds, modo){
+  const ids = [].concat(pedidoIds).filter(Boolean);
+  const t = db.extrato.find(x=>x.id===txId), ps = ids.map(id=>db.pedidos.find(x=>x.id===id));
+  if (!t || !ps.length || ps.some(p=>!p || p.conc) || t.pedidoId) return false;
+  const soma = ps.reduce((a,p)=>a+p.valor,0), dif = Math.round((-t.valor - soma)*100)/100, varios = ps.length>1;
+  ps.forEach(p=>{
+    const mudouStatus = p.status === 'aprovado';
+    p.conc = {tipo:modo, txId, data:t.data, desc:t.desc, valorBanco:-t.valor, banco:t.banco||p.bancoPag||'', quando:agora(), quem:me.id, mudouStatus, ...(varios?{grupo:ids}:{})};
+    if (mudouStatus){ p.status = 'pago'; p.pagoEm = t.data; p.historico.push({quando:agora(), quem:me.id, acao:`Marcou como pago (conciliação bancária — pago no banco em ${fmt(t.data)})`}); }
+    p.historico.push({quando:agora(), quem:me.id, acao:`Conciliado ${modo==='auto'?'automaticamente':'manualmente'} com o extrato: ${t.desc} · ${brl(-t.valor)} · ${fmt(t.data)}${varios?` (lançamento único para ${ps.length} pedidos: ${ids.join(', ')} · soma ${brl(soma)})`:''}${dif?` (diferença de ${brl(dif)} em relação ${varios?'à soma dos pedidos':'ao pedido'})`:''}`});
+  });
+  t.pedidoId = ids[0]; if (varios) t.pedidoIds = ids; else delete t.pedidoIds;
   return true;
 }
+const txDoPedido = id => db.extrato.find(x=>x.pedidoId===id || (x.pedidoIds||[]).includes(id));
 function desfazerConc(pedidoId){
   const p = db.pedidos.find(x=>x.id===pedidoId); if (!p || !p.conc) return;
-  const t = db.extrato.find(x=>x.pedidoId===pedidoId); if (t) t.pedidoId = null;
-  if (p.conc.mudouStatus){ p.status = 'aprovado'; delete p.pagoEm; }
-  p.historico.push({quando:agora(), quem:me.id, acao:'Desfez a conciliação bancária'+(p.conc.mudouStatus?' (voltou para "Aprovado · a pagar")':'')});
-  delete p.conc;
+  const t = txDoPedido(pedidoId);
+  const ids = t && t.pedidoIds ? t.pedidoIds : (p.conc.grupo || [pedidoId]);   // conciliados juntos são desfeitos juntos
+  if (t){ t.pedidoId = null; delete t.pedidoIds; }
+  ids.forEach(id=>{ const q = db.pedidos.find(x=>x.id===id); if (!q || !q.conc) return;
+    if (q.conc.mudouStatus){ q.status = 'aprovado'; delete q.pagoEm; }
+    q.historico.push({quando:agora(), quem:me.id, acao:'Desfez a conciliação bancária'+(ids.length>1?' (junto com '+ids.filter(x=>x!==id).join(', ')+')':'')+(q.conc.mudouStatus?' (voltou para "Aprovado · a pagar")':'')});
+    delete q.conc; });
 }
 
 // ---- leitura de arquivos ----
@@ -2085,13 +2093,34 @@ function concManualTx(txId){
   const igual = p => Math.round(p.valor*100)===Math.round(-t.valor*100), dele = p => mesmoFavorecido(t, pessoa(p.pessoaId));
   const nota = p => (dele(p)&&igual(p)?3:0) + (igual(p)?1:0) + (dele(p)?1:0);
   const ops = pedidosConciliaveis().sort((a,b) => nota(b)-nota(a) || Math.abs(a.valor+t.valor)-Math.abs(b.valor+t.valor) || diasEntre(a.vencimento,t.data)-diasEntre(b.vencimento,t.data));
-  const pre = ops[0] && dele(ops[0]) && igual(ops[0]) ? ops[0].id : '';
+  let pre = ops[0] && dele(ops[0]) && igual(ops[0]) ? [ops[0].id] : [];
+  if (!pre.length){   // vários pedidos do mesmo favorecido que somam exatamente o valor do banco já vêm marcados
+    const deles = ops.filter(dele); if (deles.length>1 && Math.round(deles.reduce((a,p)=>a+p.valor,0)*100)===Math.round(-t.valor*100)) pre = deles.map(p=>p.id); }
   modal(`<h3>Conciliar lançamento do banco</h3>
   <div class="kpi" style="margin-bottom:12px"><div class="l">${fmt(t.data)} · ${t.fav?'<b>'+h(t.fav)+'</b> · ':''}${h((t.fav?t.desc.replace(t.fav,'').replace(/^\s*—\s*/,''):t.desc)||'—')}</div><div class="v" style="color:var(--recusado)">${brl(t.valor)}</div></div>
-  <form class="form" id="fConc"><label class="full">Qual pedido foi pago com este lançamento? *<select name="pid" required><option value="">Digite o nome, número ou valor…</option>
-    ${ops.map(p=>`<option value="${p.id}" ${p.id===pre?'selected':''}>${p.id} · ${h(pessoa(p.pessoaId).nome)} · ${brl(p.valor)} · evento: ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}${dele(p)&&igual(p)?' ✓ mesmo favorecido e valor':igual(p)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
-  <div class="note">${pre?'Já deixei escolhido o pedido do mesmo favorecido com o mesmo valor. Confira e clique em Conciliar.':'Os pedidos com o mesmo valor aparecem primeiro.'} Se o valor for diferente, a diferença fica registrada no histórico do pedido.</div>
-  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="concConfirmarManual" data-id="${txId}">Conciliar</button></div>`, 620);
+  <div style="font-size:14px;margin:0 0 6px">Quais pedidos foram pagos com este lançamento? * <span class="meta">— marque um ou vários</span></div>
+  <input id="concBusca" placeholder="Digite o nome, número, evento ou valor…" oninput="concFiltrar()" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px">
+  <div id="concLista" style="max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px">
+    ${ops.map(p=>`<label class="conc-op" data-busca="${h(semAcento([p.id,pessoa(p.pessoaId).nome,evData(p.eventoId),brl(p.valor),p.valor].join(' ')))}" style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px">
+      <input type="checkbox" data-conc-pid="${p.id}" data-valor="${p.valor}" ${pre.includes(p.id)?'checked':''} onchange="concSomar()" style="margin-top:3px">
+      <span style="flex:1"><b>${p.id}</b> · ${h(pessoa(p.pessoaId).nome)}<br><span class="meta">evento: ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}${dele(p)&&igual(p)?' · ✓ mesmo favorecido e valor':igual(p)?' · ✓ mesmo valor':dele(p)?' · ✓ mesmo favorecido':''}</span></span>
+      <b style="white-space:nowrap">${brl(p.valor)}</b></label>`).join('') || '<div class="empty">Nenhum pedido aprovado ou pago para conciliar</div>'}
+  </div>
+  <div id="concSoma" data-banco="${-t.valor}" style="margin:8px 0 0;font-size:14px"></div>
+  <div class="note">${pre.length>1?'Já deixei marcados os pedidos do mesmo favorecido que somam o valor do banco. ':pre.length?'Já deixei marcado o pedido do mesmo favorecido com o mesmo valor. ':'Os pedidos do mesmo favorecido e com o mesmo valor aparecem primeiro. '}Se a soma for diferente do banco, a diferença fica registrada no histórico dos pedidos.</div>
+  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="concConfirmarManual" data-id="${txId}">Conciliar</button></div>`, 680);
+  concSomar();
+}
+function concFiltrar(){
+  const q = semAcento(document.getElementById('concBusca').value||'').trim().split(/\s+/).filter(Boolean);
+  document.querySelectorAll('#concLista .conc-op').forEach(l=>{ const b=l.dataset.busca, marcado=l.querySelector('input').checked;
+    l.style.display = marcado || q.every(w=>b.includes(w)) ? '' : 'none'; });
+}
+function concSomar(){
+  const el = document.getElementById('concSoma'); if (!el) return;
+  const cs = [...document.querySelectorAll('#concLista input[data-conc-pid]:checked')];
+  const soma = cs.reduce((a,c)=>a+Number(c.dataset.valor),0), banco = Number(el.dataset.banco), dif = Math.round((banco-soma)*100)/100;
+  el.innerHTML = cs.length ? `<b>${cs.length} pedido(s) marcado(s)</b> · soma <b>${brl(soma)}</b> · banco <b>${brl(banco)}</b> · ${dif ? `<b style="color:var(--recusado)">diferença de ${brl(dif)}</b>` : '<b style="color:#002620">✓ valores batem</b>'}` : '<span class="meta">Nenhum pedido marcado</span>';
 }
 function concManualPed(pid){
   const p = db.pedidos.find(x=>x.id===pid); if (!p) return;
@@ -2552,7 +2581,9 @@ const acoes = {
     if (erro) return toast('Confira os valores: use só números, ex.: 12.345,67');
     db.saldoInicial={data:d.data, contas, quem:me.id, quando:new Date().toISOString()}; save(); fechar(); render(); toast('Saldo inicial salvo'); },
   saldoIniLimpar: () => { delete db.saldoInicial; save(); fechar(); render(); toast('Saldo inicial removido'); },
-  concConfirmarManual: txId => { const d=lerForm('fConc'); if(!d) return; if (conciliar(txId,d.pid,'manual')){ save(); fechar(); render(); toast(d.pid+' conciliado manualmente'); } },
+  concConfirmarManual: txId => { const ids=[...document.querySelectorAll('#concLista input[data-conc-pid]:checked')].map(c=>c.dataset.concPid);
+    if(!ids.length) return toast('Marque pelo menos um pedido.');
+    if (conciliar(txId,ids,'manual')){ save(); fechar(); render(); toast(ids.length>1 ? ids.length+' pedidos conciliados com o mesmo lançamento' : ids[0]+' conciliado manualmente'); } },
   concPedTx: pid => { const d=lerForm('fConcTx'); if(!d || !d.tid) return toast('Escolha o lançamento do extrato.'); if (conciliar(d.tid,pid,'manual')){ save(); fechar(); render(); toast(pid+' conciliado manualmente'); } },
   concSemExtrato: pid => { if(!isAdmin()) return; const d=lerForm('fConcSem'); if(!d) return; const p=db.pedidos.find(x=>x.id===pid); if(!p || p.conc) return;
     const mudouStatus = p.status==='aprovado', obs = (d.obs||'').trim();
@@ -3032,7 +3063,7 @@ Object.assign(acoes, {
     <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" style="background:var(--recusado);border-color:var(--recusado)" data-act="confirmarExcluirSel" data-id="${ids.join(',')}">Excluir ${ps.length} conta${ps.length>1?'s':''}</button></div>`, 520); },
   confirmarExcluirSel: idsTxt => { if(!isAdmin()) return; const ids = String(idsTxt||'').split(',').filter(Boolean);
     db.pedidos = db.pedidos.filter(p=>!ids.includes(p.id));
-    (db.extrato||[]).forEach(t=>{ if(ids.includes(t.pedidoId)) delete t.pedidoId; });
+    (db.extrato||[]).forEach(t=>{ if(t.pedidoIds){ t.pedidoIds=t.pedidoIds.filter(x=>!ids.includes(x)); if(!t.pedidoIds.length){ delete t.pedidoIds; delete t.pedidoId; } else { t.pedidoId=t.pedidoIds[0]; if(t.pedidoIds.length===1) delete t.pedidoIds; } } else if(ids.includes(t.pedidoId)) delete t.pedidoId; });
     ids.forEach(id=>SEL.delete(id)); save(); fechar(); render(); toast(ids.length+(ids.length>1?' contas excluídas':' conta excluída')); },
   excluirSelReceb: () => { if(!isAdmin()) return;
     const ids = selVisiveis().filter(c=>c.checked).map(c=>c.dataset.sel); if(!ids.length) return;
@@ -3083,7 +3114,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.8';
+const APP_VERSAO = '9.9';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
