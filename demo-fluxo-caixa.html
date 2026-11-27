@@ -437,6 +437,23 @@ const podeCancelar = p => p.status==='aguardando' && (isAdmin() || (isProd() && 
 const podePagar = p => isAdmin() && p.status==='aprovado';
 
 function visiveis(){ return db.pedidos.filter(podeVer); }
+const evData = id => { const e = evento(id); return e.nome + (e.data ? ' ('+fmt(e.data)+')' : ''); };   // nome do evento com a data
+// Rateio: pagamento sem evento, mas com centro de custo, é dividido em partes iguais entre os eventos
+// desse centro de custo no mesmo mês do vencimento (ex.: R$ 50 e 5 eventos do Bar Fua no mês = R$ 10 em cada).
+// Se não houver evento desse centro de custo no mês, continua como despesa da empresa.
+function rateios(){
+  const m = {};
+  visiveis().filter(p=>!p.eventoId && p.centroCusto && !['recusado','cancelado'].includes(p.status)).forEach(p=>{
+    const ym = String(p.vencimento||'').slice(0,7);
+    const evs = db.eventos.filter(e=>(e.centroCusto||'')===p.centroCusto && (e.data||'').slice(0,7)===ym).sort((a,b)=>a.data.localeCompare(b.data));
+    if (!evs.length) return;
+    const parte = Math.round(p.valor/evs.length*100)/100;
+    evs.forEach((e,i)=>{ const valor = i===evs.length-1 ? Math.round((p.valor-parte*(evs.length-1))*100)/100 : parte;   // centavos que sobram ficam no último
+      (m[e.id]=m[e.id]||[]).push({p, valor, n:evs.length}); });
+  });
+  return m;
+}
+const rateadoIds = r => new Set(Object.values(r).flat().map(x=>x.p.id));
 function filtrar(lista, {status=true, periodo=true}={}){
   return lista.filter(p =>
     (!periodo || passa(F.ano, p.vencimento.slice(0,4))) &&
@@ -738,18 +755,19 @@ function telaDash(){
   const maxEv = Math.max(1,...porEv.map(x=>x.pago+x.aprovado+x.aguardando));
   // lucro por evento: eventos do ano escolhido (e do mês, se filtrado, pela data do evento)
   // filtros do lucro: centro de custo e evento recorrente (todas as edições, de qualquer ano)
+  const RAT = rateios();
   const lucroEv = db.eventos.filter(e=>(LF.serie ? serieDe(e)===LF.serie : anosSel.includes(e.data.slice(0,4)) && passa(F.mes, e.data.slice(5,7)) && passa(F.evento, e.id)) && (!LF.cc || (e.centroCusto||'')===LF.cc))
     .sort((a,b)=>a.data.localeCompare(b.data)).map(e=>{
       const receita = (db.recebimentos||[]).filter(r=>r.eventoId===e.id && r.status!=='cancelado').reduce((a,r)=>a+r.valor,0);
-      const custo = visiveis().filter(p=>p.eventoId===e.id && !['recusado','cancelado'].includes(p.status)).reduce((a,p)=>a+p.valor,0);
+      const custo = visiveis().filter(p=>p.eventoId===e.id && !['recusado','cancelado'].includes(p.status)).reduce((a,p)=>a+p.valor,0)
+        + (RAT[e.id]||[]).reduce((a,r)=>a+r.valor,0);   // + parte das despesas do centro de custo (rateio)
       return {e, receita, custo, lucro: receita-custo}; })
     .filter(x=>x.receita || x.custo);   // evento sem nenhum lançamento ainda não entra (não é lucro zero)
   const posMax = Math.max(0,...lucroEv.map(x=>x.lucro)), negMax = Math.max(0,...lucroEv.map(x=>-x.lucro));
   const escala = Math.max(1, posMax+negMax), topo = !negMax ? 100 : !posMax ? 0 : Math.min(85, Math.max(15, posMax/escala*100));   // lucro e prejuízo sempre com pelo menos 15% do espaço cada
   const lucroTotal = lucroEv.reduce((a,x)=>a+x.lucro,0);
   const recTotal = lucroEv.reduce((a,x)=>a+x.receita,0), pagTotal = lucroEv.reduce((a,x)=>a+x.custo,0);   // somam o mesmo que o lucro (recebimentos − pagamentos)
-  // despesas sem evento (aluguel, contador…): ficam fora do lucro dos eventos, mas entram no resultado geral
-  const despEmp = LF.serie || LF.cc || F.evento.length ? 0 : visiveis().filter(p=>!p.eventoId && !['recusado','cancelado'].includes(p.status) && anosSel.includes(p.vencimento.slice(0,4)) && passa(F.mes,p.vencimento.slice(5,7))).reduce((a,p)=>a+p.valor,0);
+  // despesas sem evento e sem rateio (aluguel, contador…) ficam fora do lucro dos eventos; aparecem no gráfico Por categoria
   const graficoLucro = lucroEv.length ? `<div class="graf-rola"><div style="display:flex;gap:0;padding-top:4px;justify-content:center;min-width:${lucroEv.length*62}px">${lucroEv.map(x=>{
       // tamanhos em pixels: lucro acima da linha do zero, prejuízo abaixo, na mesma escala; os rótulos têm espaço próprio
       const AREA = 190, pxTopo = Math.round(topo/100*AREA), pxBaixo = AREA - pxTopo;
@@ -825,7 +843,7 @@ function telaDash(){
     <select data-lf="serie" title="Evento (todas as edições)" style="padding:5px 8px;border:1px solid var(--line);border-radius:8px"><option value="">Todos os eventos</option>${[...new Set(db.eventos.map(serieDe))].sort((a,b)=>a.localeCompare(b,'pt-BR')).map(x=>{const n=db.eventos.filter(e=>serieDe(e)===x).length;return `<option value="${h(x)}" ${LF.serie===x?'selected':''}>${h(x)}${n>1?' ('+n+' edições)':''}</option>`;}).join('')}</select>
     ${LF.cc||LF.serie?'<button class="btn sm" data-act="lucroLimpar">✕ Limpar</button>':''}<div class="spacer"></div>
     ${DASH_VIS==='lucro'
-      ? `<div class="legend" style="margin-left:auto;align-items:center"><span><i class="dot" style="background:#002620"></i>Lucro</span><span><i class="dot" style="background:#ef4444"></i>Prejuízo</span><span class="lucro-tots"><span>Total de recebimentos: <b style="color:#002620">${brl(recTotal)}</b></span><span>Total de pagamentos: <b style="color:#ef4444">${brl(pagTotal)}</b></span><span>${despEmp?'Lucro dos eventos':'Total do período'}: <b style="color:${lucroTotal>=0?'#002620':'#ef4444'}">${brl(lucroTotal)}</b></span>${despEmp?`<span>Despesas da empresa (sem evento): <b style="color:#ef4444">-${brl(despEmp)}</b></span><span>Resultado geral: <b style="color:${lucroTotal-despEmp>=0?'#002620':'#ef4444'}">${brl(lucroTotal-despEmp)}</b></span>`:''}</span></div></div>`
+      ? `<div class="legend" style="margin-left:auto;align-items:center"><span><i class="dot" style="background:#002620"></i>Lucro</span><span><i class="dot" style="background:#ef4444"></i>Prejuízo</span><span class="lucro-tots"><span>Total de recebimentos: <b style="color:#002620">${brl(recTotal)}</b></span><span>Total de pagamentos: <b style="color:#ef4444">${brl(pagTotal)}</b></span><span>Total do período: <b style="color:${lucroTotal>=0?'#002620':'#ef4444'}">${brl(lucroTotal)}</b></span></span></div></div>`
       : `<div class="legend"><span><i class="dot" style="background:var(--pago)"></i>Pago</span><span><i class="dot" style="background:var(--aprovado)"></i>A pagar</span><span><i class="dot" style="background:var(--aguardando)"></i>Aguardando aprovação</span></div></div>`}
     ${DASH_VIS==='lucro'
       ? `${F.mes.length&&!LF.serie?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 0">${MESES.map((m,i)=>{const mm=String(i+1).padStart(2,'0');return `<button class="btn sm ${F.mes.includes(mm)?'pri':''}" data-act="lucroMesSel" data-id="${mm}">${m}</button>`;}).join('')}</div>`:''}${graficoLucro}<div class="meta">Lucro = receitas do evento (recebidas e a receber) − custos (pedidos válidos). ${LF.serie?'Mostrando todas as edições deste evento, de todos os anos.':'Escolha o ano e o mês nos filtros de cima: no mês, entram só os eventos daquele mês.'} Filtre por centro de custo ou por evento para comparar edições. Clique em um evento para ver as movimentações.</div>${linhaLucro}`
@@ -882,12 +900,14 @@ function pagosEvento(id){
   const tot = lista.reduce((a,p)=>a+p.valor,0);
   // gráfico de pagamentos do evento: situação geral e o que foi pago por categoria
   const todos = visiveis().filter(p=>p.eventoId===id && !['recusado','cancelado'].includes(p.status));
-  const st = s => todos.filter(p=>p.status===s).reduce((a,p)=>a+p.valor,0);
+  const rat = rateios()[id] || [];   // parte das despesas do centro de custo que cabe a este evento
+  const st = s => todos.filter(p=>p.status===s).reduce((a,p)=>a+p.valor,0) + rat.filter(r=>r.p.status===s).reduce((a,r)=>a+r.valor,0);
   const sit = [['pago','Pago',st('pago')],['aprovado','A pagar',st('aprovado')],['aguardando','Aguardando',st('aguardando')]];
   const totSit = Math.max(1, sit.reduce((a,x)=>a+x[2],0));
   const porCat = {}; lista.forEach(p=>{ porCat[p.categoria]=(porCat[p.categoria]||0)+p.valor; });
+  rat.filter(r=>r.p.status==='pago').forEach(r=>{ porCat[r.p.categoria]=(porCat[r.p.categoria]||0)+r.valor; });
   const cats = Object.entries(porCat).sort((a,b)=>b[1]-a[1]), mxCat = Math.max(1,...cats.map(c=>c[1]));
-  const grafico = todos.length ? `<div class="panel" style="margin-bottom:12px">
+  const grafico = todos.length || rat.length ? `<div class="panel" style="margin-bottom:12px">
     ${(()=>{ // valor recebido × valor pago do evento
       const recs = (db.recebimentos||[]).filter(r=>r.eventoId===id && r.status!=='cancelado');
       const recebido = recs.filter(r=>r.recebidoEm).reduce((a,r)=>a+r.valor,0), aReceber = recs.filter(r=>!r.recebidoEm).reduce((a,r)=>a+r.valor,0);
@@ -896,7 +916,7 @@ function pagosEvento(id){
       const mx = Math.max(1, ...linhas.map(l=>l[1]));
       const res = recebido - pago;
       return linhas.map(([n,v,cor,obs])=>`<div class="hbar"><div class="name"><b>${n}</b></div><div class="track" style="height:18px"><div class="fill" style="width:${v/mx*100}%;background:${cor};height:100%"></div></div><div class="right"><b>${brl(v)}</b>${obs?`<br><span class="meta" style="font-size:11px">${obs}</span>`:''}</div></div>`).join('')
-        + `<div class="legend" style="margin:6px 0 12px">${isProd()?'':`<span>Resultado (recebido − pago): <b style="color:${res>=0?'#002620':'#ef4444'}">${brl(res)}</b></span>`}${e.orcamento?`<span>Orçamento: <b>${brl(e.orcamento)}</b> (${(todos.reduce((a,p)=>a+p.valor,0)/e.orcamento*100).toFixed(0)}% usado)</span>`:''}</div>`;
+        + `<div class="legend" style="margin:6px 0 12px">${isProd()?'':`<span>Resultado (recebido − pago): <b style="color:${res>=0?'#002620':'#ef4444'}">${brl(res)}</b></span>`}${e.orcamento?`<span>Orçamento: <b>${brl(e.orcamento)}</b> (${((todos.reduce((a,p)=>a+p.valor,0)+rat.reduce((a,r)=>a+r.valor,0))/e.orcamento*100).toFixed(0)}% usado)</span>`:''}</div>`;
     })()}
     ${cats.length?`<b style="font-size:13px">Pago por categoria</b>${cats.map(([c,v])=>`<div class="hbar"><div class="name" title="${h(c)}">${h(c)}</div><div class="track"><div class="fill" style="width:${v/mxCat*100}%;background:#ef444480"></div></div><div class="right">${brl(v)}</div></div>`).join('')}`:''}
   </div>` : '';
@@ -905,13 +925,15 @@ function pagosEvento(id){
   const movs = [
     ...todos.map(p=>({tipo:'saida', ref:p, data:p.status==='pago'&&dataPagamento(p)?String(dataPagamento(p)).slice(0,10):p.vencimento,
       sit:STATUS[p.status].nome, cor:STATUS[p.status].cor, quem:pessoa(p.pessoaId).nome, oque:p.categoria+(p.descricao?' · '+p.descricao:''), banco:bancoPed(p), valor:p.valor})),
+    ...rat.map(({p,valor,n})=>({tipo:'saida', ref:p, rateio:true, data:p.status==='pago'&&dataPagamento(p)?String(dataPagamento(p)).slice(0,10):p.vencimento,
+      sit:STATUS[p.status].nome, cor:STATUS[p.status].cor, quem:pessoa(p.pessoaId).nome, oque:`Rateio 1/${n} de ${brl(p.valor)} · `+p.categoria+(p.descricao?' · '+p.descricao:''), banco:bancoPed(p), valor})),
     ...recsEv.map(r=>({tipo:'entrada', ref:r, data:r.recebidoEm||r.previsto,
       sit:r.recebidoEm?'Recebido':(r.previsto<HOJE?'Atrasado':'A receber'), cor:r.recebidoEm?'var(--pago)':(r.previsto<HOJE?'var(--recusado)':'var(--aprovado)'), quem:r.origem, oque:r.descricao||'', banco:r.banco||'', valor:r.valor}))
   ].sort((a,b)=>a.data.localeCompare(b.data));
   const totEnt = movs.filter(m=>m.tipo==='entrada').reduce((a,m)=>a+m.valor,0), totSai = movs.filter(m=>m.tipo==='saida').reduce((a,m)=>a+m.valor,0);
   const tabMov = `<table class="filtravel" data-key="movEvento" style="font-size:13px"><thead><tr><th>Data</th><th>Tipo</th><th>Nº</th><th>Favorecido / Origem</th><th>Categoria / Descrição</th><th>Centro de custo</th><th>Situação</th><th>Banco</th><th class="right">Valor</th></tr></thead>
   <tbody>${movs.map(m=>{ const ent=m.tipo==='entrada', x=m.ref; return `<tr class="click" data-act="${ent?'formReceb':'ver'}" data-id="${x.id}" data-valor="${ent?m.valor:-m.valor}">
-    <td data-v="${fmt(m.data)}">${fmt(m.data)}</td><td data-v="${ent?'Recebimento':'Pagamento'}"><span class="tag" style="background:${ent?'#002620':'#ef4444'}">${ent?'⬆ Recebimento':'⬇ Pagamento'}</span></td><td>${x.id}</td>
+    <td data-v="${fmt(m.data)}">${fmt(m.data)}</td><td data-v="${ent?'Recebimento':'Pagamento'}"><span class="tag" style="background:${ent?'#002620':'#ef4444'}">${ent?'⬆ Recebimento':'⬇ Pagamento'}</span></td><td>${x.id}${m.rateio?'<br><span class="tag" style="background:#6b7570" title="Despesa do centro de custo dividida entre os eventos do mês">rateio</span>':''}</td>
     <td>${h(m.quem)}</td><td style="white-space:normal;min-width:150px">${h(m.oque)}</td><td>${h(ent?(e.centroCusto||'—'):(ccDe(x)||'—'))}</td>
     <td data-v="${m.sit}"><span class="tag" style="background:${m.cor}">${m.sit}</span></td><td data-v="${h(m.banco||'—')}">${m.banco?h(m.banco):'<span class="meta">—</span>'}</td>
     <td class="right" style="color:${ent?'#002620':'#ef4444'};white-space:nowrap"><b>${ent?'+ ':'− '}${brl(m.valor)}</b></td></tr>`; }).join('') || '<tr><td colspan="9" class="empty">Nenhuma movimentação neste evento</td></tr>'}</tbody>
@@ -922,7 +944,7 @@ function pagosEvento(id){
   ${isProd()?'':`<div class="panel" style="margin-bottom:12px"><b>🔗 Links</b> <span class="meta">— os mesmos do cadastro do evento</span>${linksEditor(id,'mov')}</div>`}
   ${grafico}
   <div style="overflow-x:auto">${tabMov}</div>
-  <p class="meta" style="margin:6px 0 0">Entram todos os pagamentos (pagos, a pagar e aguardando) e todos os recebimentos do evento. Use os filtros das colunas para ver só um tipo. A coluna Banco é preenchida na conciliação.</p>
+  <p class="meta" style="margin:6px 0 0">Entram todos os pagamentos (pagos, a pagar e aguardando) e todos os recebimentos do evento. Pagamentos sem evento, com o centro de custo deste evento, entram divididos igualmente entre os eventos desse centro de custo no mês do vencimento (marcados como "rateio"). Use os filtros das colunas para ver só um tipo. A coluna Banco é preenchida na conciliação.</p>
   <div class="actions">${movs.length?`<button class="btn" data-act="csvPagos" data-id="${id}">⬇ Exportar Excel</button>`:''}<button class="btn" data-act="fechar">Fechar</button></div>`, 1280);
 }
 
@@ -2019,7 +2041,7 @@ function telaConciliacao(){
   const conc = db.pedidos.filter(p=>p.conc).sort((a,b)=>(b.conc.quando||'').localeCompare(a.conc.quando||''));
   const saidas = db.extrato.filter(t=>t.valor<0), ign = db.extrato.filter(t=>t.ignorado);
   const tx = t => `<td>${fmt(t.data)}</td><td style="white-space:normal;min-width:180px">${t.fav?`<b>${h(t.fav)}</b>${t.desc&&t.desc!==t.fav?`<br><span class="meta">${h(t.desc.replace(t.fav,'').replace(/^\s*—\s*/,''))}</span>`:''}`:h(t.desc||'—')}</td><td class="right" style="color:var(--recusado);font-weight:600">${brl(t.valor)}</td>`;
-  const ped = p => `<td><b>${p.id}</b></td><td style="white-space:normal">${h(pessoa(p.pessoaId).nome)}<br><span class="meta">${h(evento(p.eventoId).nome)}</span></td><td class="right"><b>${brl(p.valor)}</b></td><td data-v="${STATUS[p.status].nome}"><span class="tag" style="background:${atrasadoPag(p)?'var(--recusado)':STATUS[p.status].cor}">${atrasadoPag(p)?'⏰ Atrasado · '+(p.status==='aguardando'?'aguardando aprovação':'a pagar'):STATUS[p.status].nome}</span><br><span class="meta">venc. ${fmt(p.vencimento)}</span></td>`;
+  const ped = p => `<td><b>${p.id}</b></td><td style="white-space:normal">${h(pessoa(p.pessoaId).nome)}<br><span class="meta">${h(evData(p.eventoId))}</span></td><td class="right"><b>${brl(p.valor)}</b></td><td data-v="${STATUS[p.status].nome}"><span class="tag" style="background:${atrasadoPag(p)?'var(--recusado)':STATUS[p.status].cor}">${atrasadoPag(p)?'⏰ Atrasado · '+(p.status==='aguardando'?'aguardando aprovação':'a pagar'):STATUS[p.status].nome}</span><br><span class="meta">venc. ${fmt(p.vencimento)}</span></td>`;
   return `<div class="toolbar"><h2 style="margin:0">🏦 Conciliação bancária</h2><div class="spacer"></div>
     <label class="btn pri" style="cursor:pointer">📥 Importar extrato (OFX, CSV ou Excel)<input type="file" id="arqExtrato" accept=".ofx,.csv,.txt,.xlsx" multiple hidden></label>
     <button class="btn" data-act="extratoExemplo" title="Só na demonstração">🧪 Extrato de exemplo</button></div>
@@ -2067,7 +2089,7 @@ function concManualTx(txId){
   modal(`<h3>Conciliar lançamento do banco</h3>
   <div class="kpi" style="margin-bottom:12px"><div class="l">${fmt(t.data)} · ${t.fav?'<b>'+h(t.fav)+'</b> · ':''}${h((t.fav?t.desc.replace(t.fav,'').replace(/^\s*—\s*/,''):t.desc)||'—')}</div><div class="v" style="color:var(--recusado)">${brl(t.valor)}</div></div>
   <form class="form" id="fConc"><label class="full">Qual pedido foi pago com este lançamento? *<select name="pid" required><option value="">Digite o nome, número ou valor…</option>
-    ${ops.map(p=>`<option value="${p.id}" ${p.id===pre?'selected':''}>${p.id} · ${h(pessoa(p.pessoaId).nome)} · ${brl(p.valor)} · venc. ${fmt(p.vencimento)}${dele(p)&&igual(p)?' ✓ mesmo favorecido e valor':igual(p)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
+    ${ops.map(p=>`<option value="${p.id}" ${p.id===pre?'selected':''}>${p.id} · ${h(pessoa(p.pessoaId).nome)} · ${brl(p.valor)} · evento: ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}${dele(p)&&igual(p)?' ✓ mesmo favorecido e valor':igual(p)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
   <div class="note">${pre?'Já deixei escolhido o pedido do mesmo favorecido com o mesmo valor. Confira e clique em Conciliar.':'Os pedidos com o mesmo valor aparecem primeiro.'} Se o valor for diferente, a diferença fica registrada no histórico do pedido.</div>
   <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="concConfirmarManual" data-id="${txId}">Conciliar</button></div>`, 620);
 }
@@ -2078,7 +2100,7 @@ function concManualPed(pid){
   const ops = txPendentes().sort((a,b) => nota(b)-nota(a) || Math.abs(p.valor+a.valor)-Math.abs(p.valor+b.valor) || diasEntre(a.data,p.vencimento)-diasEntre(b.data,p.vencimento));
   const pre = ops[0] && dele(ops[0]) && igual(ops[0]) ? ops[0].id : '';
   modal(`<h3>Conciliar ${p.id} manualmente</h3>
-  <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evento(p.eventoId).nome)} · venc. ${fmt(p.vencimento)}</div><div class="v">${brl(p.valor)}</div></div>
+  <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}</div><div class="v">${brl(p.valor)}</div></div>
   ${ops.length?`<form class="form" id="fConcTx"><label class="full">Opção 1 — escolher o lançamento do extrato<select name="tid"><option value="">Digite a descrição, data ou valor…</option>
     ${ops.map(t=>`<option value="${t.id}" ${t.id===pre?'selected':''}>${fmt(t.data)} · ${h(t.desc||'—')} · ${brl(t.valor)}${dele(t)&&igual(t)?' ✓ mesmo favorecido e valor':igual(t)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
     <div class="actions" style="margin-top:8px"><button class="btn pri" data-act="concPedTx" data-id="${pid}">Conciliar com este lançamento</button></div>
@@ -2423,6 +2445,7 @@ const acoes = {
   csvPagos: id => { const e=evento(id), num=v=>v.toFixed(2).replace('.',',');
     const linhas=[['Data','Tipo','Nº','Evento','Favorecido / Origem','CPF/CNPJ','Categoria / Descrição','Centro de custo','Forma','Situação','Banco','Entrada','Saída']];
     const ms = [...visiveis().filter(p=>p.eventoId===id && !['recusado','cancelado'].includes(p.status)).map(p=>({d:p.status==='pago'&&dataPagamento(p)?String(dataPagamento(p)).slice(0,10):p.vencimento, l:[ 'Pagamento',p.id,e.nome,pessoa(p.pessoaId).nome,pessoa(p.pessoaId).doc||'',p.categoria+(p.descricao?' · '+p.descricao:''),ccDe(p),p.forma,STATUS[p.status].nome,bancoPed(p),'',num(p.valor)]})),
+      ...(rateios()[id]||[]).map(({p,valor,n})=>({d:p.status==='pago'&&dataPagamento(p)?String(dataPagamento(p)).slice(0,10):p.vencimento, l:['Pagamento (rateio 1/'+n+' de '+num(p.valor)+')',p.id,e.nome,pessoa(p.pessoaId).nome,pessoa(p.pessoaId).doc||'',p.categoria+(p.descricao?' · '+p.descricao:''),ccDe(p),p.forma,STATUS[p.status].nome,bancoPed(p),'',num(valor)]})),
       ...(isProd()?[]:(db.recebimentos||[]).filter(r=>r.eventoId===id && r.status!=='cancelado').map(r=>({d:r.recebidoEm||r.previsto, l:['Recebimento',r.id,e.nome,r.origem,'',r.descricao||'',e.centroCusto||'',r.forma,r.recebidoEm?'Recebido':(r.previsto<HOJE?'Atrasado':'A receber'),r.banco||'',num(r.valor),'']})))]
       .sort((x,y)=>x.d.localeCompare(y.d));
     ms.forEach(m=>linhas.push([fmt(m.d),...m.l]));
@@ -2984,7 +3007,7 @@ Object.assign(acoes, {
     <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn ok" data-act="receberOk" data-id="${id}">Confirmar recebimento</button></div>`, 520); },
   pagarConf: id => { const p=db.pedidos.find(x=>x.id===id); if(!podePagar(p)) return;
     modal(`<h3>✓ Confirmar pagamento ${p.id}</h3>
-    <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evento(p.eventoId).nome)} · venc. ${fmt(p.vencimento)}</div><div class="v" style="color:var(--recusado)">${brl(p.valor)}</div></div>
+    <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}</div><div class="v" style="color:var(--recusado)">${brl(p.valor)}</div></div>
     <form class="form" id="fPagOk"><label>Pago em *<input type="date" name="data" required value="${HOJE}"></label>
     <label>Banco (conta de onde saiu)${selectBanco('banco', (db.contasBanco||[]).slice(-1)[0]||'')}</label></form>
     <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn ok" data-act="pagarOk" data-id="${id}">Confirmar pagamento</button></div>`, 520); },
@@ -3060,7 +3083,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.5';
+const APP_VERSAO = '9.8';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
