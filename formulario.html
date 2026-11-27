@@ -100,6 +100,19 @@ label.cb{position:relative}
 .msgAprov{white-space:pre-wrap;text-align:left;background:#efbb3c14;border:1px solid #efbb3c66;border-radius:12px;padding:12px 14px;font-size:13px;color:var(--verde);max-height:260px;overflow:auto;overflow-wrap:anywhere}
 .erroCad .usaFav{margin-top:10px;width:auto;padding:10px 16px;font-size:13.5px}
 .rodape{text-align:center;font-size:11px;color:var(--muted);margin-top:16px}
+.nfZona{border:1.5px dashed var(--cobre);border-radius:14px;padding:22px 16px;text-align:center;background:#f4efeb80;color:var(--verde)}
+.nfZona.sobre{border-color:var(--ouro);background:#efbb3c1f}
+.nfZona .big{font-size:40px;line-height:1}
+.nfZona p{margin:8px 0 14px;font-size:13px;color:var(--muted)}
+.nfBts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.nfBts .btn{margin-top:0;width:auto;flex:1 1 200px}
+.nfLendo{text-align:center;padding:26px 8px}
+.nfLendo .barra{height:6px;border-radius:6px;background:#c37f3633;overflow:hidden;margin:14px auto 8px;max-width:320px}
+.nfLendo .barra span{display:block;height:100%;width:8%;background:var(--ouro);transition:width .3s}
+.nfLido{background:#efbb3c14;border:1px solid #efbb3c66;border-radius:12px;padding:12px 14px;font-size:13px;margin:0 0 6px}
+.nfLido b{color:var(--verde)} .nfLido ul{margin:6px 0 0;padding-left:18px} .nfLido li{margin:2px 0}
+.nfLido .falta{color:var(--terra)}
+.auto{background:#efbb3c1f !important;border-color:#efbb3c99 !important}
 @media (max-width:560px){ .form{grid-template-columns:1fr} h1{font-size:24px} }
 </style>
 </head>
@@ -197,9 +210,9 @@ label.cb{position:relative}
       + '<label><input type="radio" name="situacao" value="pago"><span><b style="color:var(--verde)">' + esc(emp) + ' já pagou</b><small>Só para registro e conferência, não precisa de aprovação.</small></span></label>'
       + '</div><label id="boxPago" style="display:none;margin-top:10px"><span>Data do pagamento <b>*</b></span><input type="date" id="dataPago" value="' + esc(d.get('vencimento')) + '"></label>'
       + '<div class="lado"><button class="btn sec" id="btVolta" type="button">← Corrigir</button><button class="btn" id="btConf" type="button">Confirmar e enviar</button></div><div class="msg" id="msg2"></div>';
-    fm.style.display = 'none'; document.querySelector('.passos').style.display = 'none'; document.querySelector('#cx > h1').style.display = 'none'; document.querySelector('#cx > .intro').style.display = 'none'; document.getElementById('btInicio').style.display = 'none';
+    fm.style.display = 'none'; document.querySelector('.passos').style.display = 'none'; document.querySelector('#cx > h1').style.display = 'none'; document.querySelector('#cx > .intro').style.display = 'none'; document.getElementById('btInicio').style.display = 'none'; var nfl = document.getElementById('nfLido'); if (nfl) nfl.style.display = 'none';
     p2.querySelectorAll('[name=situacao]').forEach(function(r){ r.onchange = function(){ document.getElementById('boxPago').style.display = p2.querySelector('[name=situacao]:checked').value === 'pago' ? '' : 'none'; }; });
-    document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; fm.style.display = ''; document.querySelector('.passos').style.display = ''; document.querySelector('#cx > h1').style.display = ''; document.querySelector('#cx > .intro').style.display = ''; document.getElementById('btInicio').style.display = ''; window.scrollTo(0,0); };
+    document.getElementById('btVolta').onclick = function(){ p2.innerHTML = ''; fm.style.display = ''; document.querySelector('.passos').style.display = ''; document.querySelector('#cx > h1').style.display = ''; document.querySelector('#cx > .intro').style.display = ''; document.getElementById('btInicio').style.display = ''; if (nfl) nfl.style.display = ''; window.scrollTo(0,0); };
     document.getElementById('btConf').onclick = function(){ enviarPedido(fm, d); };
     window.scrollTo(0,0);
   }
@@ -255,9 +268,11 @@ label.cb{position:relative}
   function telaInicio(o){
     cx.innerHTML = '<h1>Como você quer enviar?</h1><p class="intro">Escolha uma opção.</p><div class="escolha">'
       + '<button type="button" id="opManual"><span class="ic">✍️</span><span><b>Lançamento manual</b><small>Preencher um pagamento por vez, com nota fiscal ou print se tiver.</small></span></button>'
+      + '<button type="button" id="opNota"><span class="ic">🧾</span><span><b>Enviar nota fiscal ou recibo</b><small>Tirar uma foto ou escolher o PDF. A gente lê o documento e já preenche o pagamento para você conferir.</small></span></button>'
       + '<button type="button" id="opZap"><span class="ic">💬</span><span><b>Colar mensagem do WhatsApp</b><small>Copiar o texto da conversa e colar aqui. A gente monta os pagamentos para você conferir.</small></span></button>'
       + '<button type="button" id="opImport"><span class="ic">📥</span><span><b>Importar arquivo</b><small>Enviar uma planilha Excel com vários pagamentos de uma vez.</small></span></button></div>';
     document.getElementById('opManual').onclick = function(){ telaPedido(o); window.scrollTo(0,0); };
+    document.getElementById('opNota').onclick = function(){ telaNota(o); window.scrollTo(0,0); };
     document.getElementById('opZap').onclick = function(){ telaColar(o); window.scrollTo(0,0); };
     document.getElementById('opImport').onclick = function(){ telaImportar(o); window.scrollTo(0,0); };
   }
@@ -717,6 +732,164 @@ label.cb{position:relative}
       e2.textContent = /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message; e2.style.display = 'block'; });
   }
   // "Seu nome": lista da Equipe quando o app mandou a lista; senão, campo livre
+  // ---------- nota fiscal ou recibo (foto ou PDF) ----------
+  var PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/', TESS = 'https://cdn.jsdelivr.net/npm/', _scr = {};
+  function carregarScript(url, glob){
+    if (window[glob]) return Promise.resolve(window[glob]);
+    if (!_scr[url]) _scr[url] = new Promise(function(ok, falha){ var s = document.createElement('script'); s.src = url; s.onload = function(){ window[glob] ? ok(window[glob]) : falha(new Error(glob)); }; s.onerror = function(){ delete _scr[url]; falha(new Error(glob)); }; document.head.appendChild(s); });
+    return _scr[url];
+  }
+  var NOTA_OK = /\.(pdf|png|jpe?g|webp|heic|heif)$/i, NOTA_MIME = /^(application\/pdf|image\/(png|jpeg|webp|heic|heif))$/;
+  function ehPdf(f){ return f.type === 'application/pdf' || /\.pdf$/i.test(f.name); }
+  // abre a foto (Safari abre até HEIC) e reduz para no máximo 2200 px
+  function imagemEmCanvas(f, max){
+    return new Promise(function(ok, falha){
+      var u = URL.createObjectURL(f), im = new Image();
+      im.onload = function(){ var k = Math.min(1, (max || 2200) / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas');
+        c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); ok(c); };
+      im.onerror = function(){ URL.revokeObjectURL(u); falha(new Error('imagem')); };
+      im.src = u;
+    });
+  }
+  function ocr(img, prog){
+    return carregarScript(TESS + 'tesseract.js@5.1.1/dist/tesseract.min.js', 'Tesseract').then(function(T){
+      return T.createWorker('por', 1, {workerPath: TESS + 'tesseract.js@5.1.1/dist/worker.min.js', corePath: TESS + 'tesseract.js-core@5.1.1', langPath: TESS + '@tesseract.js-data/por@1.0.0/4.0.0_best_int',
+        logger: function(m){ if (m.status === 'recognizing text') prog(0.35 + m.progress * 0.65); else if (/load|initializ/.test(m.status || '')) prog(0.1 + (m.progress || 0) * 0.25); }});
+    }).then(function(w){ return w.recognize(img).then(function(r){ w.terminate(); return r.data.text || ''; }, function(e){ w.terminate(); throw e; }); });
+  }
+  // texto do documento: PDF digital lê direto; PDF escaneado e foto passam pelo reconhecimento de texto
+  function textoDoArquivo(f, prog){
+    if (!ehPdf(f)) return imagemEmCanvas(f).then(function(c){ return ocr(c, prog); });
+    return carregarScript(PDFJS + 'pdf.min.js', 'pdfjsLib').then(function(P){
+      P.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js';
+      return f.arrayBuffer().then(function(b){ return P.getDocument({data: b}).promise; });
+    }).then(function(pdf){
+      var n = Math.min(pdf.numPages, 3), txt = '', i = 1;
+      var pg = function(){ return pdf.getPage(i).then(function(p){ return p.getTextContent().then(function(tc){
+        txt += tc.items.map(function(it){ return it.str + (it.hasEOL ? '\n' : ' '); }).join('') + '\n'; prog(0.2 + 0.6 * i / n);
+        return ++i <= n ? pg() : null; }); }); };
+      return pg().then(function(){
+        if (txt.replace(/\s/g, '').length >= 40) return txt;
+        return pdf.getPage(1).then(function(p){ var v = p.getViewport({scale: 2}), c = document.createElement('canvas'); c.width = v.width; c.height = v.height;
+          return p.render({canvasContext: c.getContext('2d'), viewport: v}).promise.then(function(){ return ocr(c, prog); }); });
+      });
+    });
+  }
+  // foto do celular vira um JPG de uns 300 a 500 KB (continua legível e ocupa pouco espaço na nuvem)
+  function arquivoParaAnexo(f){
+    if (ehPdf(f) || f.size <= 1024 * 1024) return Promise.resolve(f);
+    var grande = function(){ if (f.size > 10 * 1024 * 1024) throw new Error('grande'); return f; };
+    return imagemEmCanvas(f, 1800).then(function(c){ return new Promise(function(ok, falha){ c.toBlob(function(b){
+      try { ok(b && b.size < f.size ? new File([b], f.name.replace(/\.[^.]+$/, '') + '.jpg', {type: 'image/jpeg'}) : grande()); } catch(e){ falha(e); } }, 'image/jpeg', 0.8); }); }, grande);
+  }
+  function num(s){ return Math.round(Number(s.replace(/\./g, '').replace(',', '.')) * 100) / 100; }
+  function fmtDoc(d){ return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4'); }
+  // procura os dados no texto: valor, vencimento, quem emitiu (CNPJ/CPF e nome), número, PIX e boleto
+  function lerNota(texto, o){
+    var t = String(texto || '').normalize('NFC').replace(/\r/g, '').replace(/[ \t\u00a0]+/g, ' ');
+    var n = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (n.length !== t.length) n = t.toLowerCase();
+    var R = {lido: n.replace(/\s/g, '').length >= 15, tipo: /recibo/.test(n) && !/nota fiscal|nfs-?e|danfe/.test(n) ? 'Recibo' : 'Nota fiscal'};
+    var MONEY = /(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+|\d+),(\d{2})(?!\d)/g;
+    var primeiroValor = function(trecho){ MONEY.lastIndex = 0; var m; while ((m = MONEY.exec(trecho))){ var v = num(m[1] + ',' + m[2]); if (v > 0) return v; } return 0; };
+    var rotulos = [/valor\s+liquido/g, /total\s+a\s+pagar|valor\s+a\s+pagar|valor\s+a\s+receber|valor\s+do\s+documento|valor\s+cobrado/g,
+      /valor\s+total\s+da\s+nota|valor\s+total\s+(?:do\s+|dos\s+)?(?:documento|servicos?|recibo)/g, /(?:a\s+)?(?:importancia|quantia)\s+de/g,
+      /valor\s+total|total\s+geral|total\s+da\s+nota/g, /valor\s+(?:do\s+|dos\s+)?servicos?|valor\s+bruto/g, /valor\b/g];
+    for (var k = 0; k < rotulos.length && !R.valor; k++){ var m; rotulos[k].lastIndex = 0;
+      while (!R.valor && (m = rotulos[k].exec(n))) R.valor = primeiroValor(n.slice(m.index + m[0].length, m.index + m[0].length + 120)); }
+    if (!R.valor){ MONEY.lastIndex = 0; var mm, mx = 0; while ((mm = MONEY.exec(n))) mx = Math.max(mx, num(mm[1] + ',' + mm[2])); if (mx > 0) R.valor = mx; }
+    var DATA = '(\\d{1,2}[\\/.-]\\d{1,2}[\\/.-]\\d{2,4})';
+    var dt = function(re){ var m = n.match(new RegExp(re + '[^0-9]{0,60}' + DATA)); return m ? lerData(m[m.length - 1]) : ''; };
+    R.vencimento = dt('venc(?:imento|e em|\\.)?'); R.emissao = dt('(?:emissao|emitid[ao] em|data do recibo)');
+    // CNPJ/CPF: fica com o de quem emitiu (prestador, emitente), não o de quem paga (tomador)
+    var bom = /prestador|emitente|emissor|beneficiario|favorecido|cedente|recebedor/g, ruim = /tomador|destinatario|pagador|sacado|recebi d[eao]s?|contratante/g;
+    var ultimo = function(re, s){ var p = -1, m; re.lastIndex = 0; while ((m = re.exec(s))) p = m.index; return p; };
+    var docs = [], md, DOCRE = /\d{2}\.?\d{3}\.?\d{3}\s?\/?\s?\d{4}\s?-?\s?\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2}/g;
+    while ((md = DOCRE.exec(n))){ var d = md[0].replace(/\D/g, ''); if (!docValido(d) || docs.some(function(x){ return x.d === d; })) continue;
+      var antes = n.slice(Math.max(0, md.index - 250), md.index), b = ultimo(bom, antes), r = ultimo(ruim, antes);
+      docs.push({d: d, i: md.index, papel: b > r ? 'bom' : r > b ? 'ruim' : '', rot: b > r ? Math.max(0, md.index - 250) + b : -1}); }
+    var favs = o.favorecidos || [], esc1 = docs.filter(function(x){ return x.papel !== 'ruim'; });
+    esc1.concat(docs).some(function(x){ var f = favPorDoc(x.d); if (f){ R.fav = f; R.doc = x.d; } return !!f; });
+    var quem = esc1.filter(function(x){ return x.papel === 'bom'; })[0] || esc1[0];
+    if (!R.fav && quem) R.doc = quem.d;
+    if (!R.fav){ var nm = favs.filter(function(f){ var a = semAcento(f.nome); return a.length >= 5 && n.replace(/\s+/g, ' ').indexOf(a) >= 0; }).sort(function(a, b){ return b.nome.length - a.nome.length; })[0];
+      if (nm && !(R.doc && nm.dh && nm.dh !== docResumo(R.doc))) R.fav = nm; }
+    if (!R.fav){
+      var limpa = function(s){ s = String(s || '').split(/\n|\s(?:cpf|cnpj|inscri|endere|e-?mail|telefone|fone|cep|municipio|insc\.)/i)[0].replace(/^[\s:\-–|]+|[\s,.;:\-–|]+$/g, ''); return /[a-zA-ZÀ-ú]{2}/.test(s) && s.length >= 3 && s.length <= 90 ? s : ''; };
+      var ini = quem && quem.rot >= 0 ? quem.rot : n.search(/prestador|emitente/);
+      if (ini >= 0){ var reg = n.slice(ini, ini + 500), ml = reg.match(/(nome\s*\/\s*razao\s+social|razao\s+social|nome\s+empresarial|nome)\s*[:\-]?\s*/);
+        if (ml){ var p0 = ini + ml.index + ml[0].length; R.nome = limpa(t.slice(p0, p0 + 120)); } }
+      if (!R.nome){ var me = n.match(/\beu,?\s+/); if (me && R.tipo === 'Recibo'){ R.nome = limpa(t.slice(me.index + me[0].length, me.index + me[0].length + 100).split(',')[0]); } }
+    }
+    var mn = n.match(/(?:numero\s+da\s+(?:nota|nfs-?e)|nota\s+fiscal\s+(?:eletronica\s+)?(?:de\s+servicos?\s+(?:eletronica\s+)?)?n[o°º.]*|nfs-?e\s*n[o°º.]*|recibo\s*n[o°º.]*|\bn[o°º]\.?)\s*[:\-]?\s*(\d[\d.]{0,14})/);
+    if (mn) R.numero = mn[1].replace(/\.$/, '');
+    var mp = n.match(/chave\s+pix\s*(?:\([^)]*\))?\s*[:\-]?\s*/);
+    if (mp){ var lin = t.slice(mp.index + mp[0].length).split('\n')[0].trim(), em = lin.match(/^([\w.+-]+?)\s*[(\[{]?\s*[@O0©®]\s*([\w-]+(?:\.[\w-]+)+)/), fn = lin.match(/^\+?[\d()\s.-]{10,20}/);
+      var px = em ? em[1] + '@' + em[2] : fn ? fn[0].trim() : lin.split(/[\s,;]/)[0]; if (px.length >= 5) R.pix = px; }
+    var ml2 = t.match(/\d{5}\.?\d{5}\s?\d{5}\.?\d{6}\s?\d{5}\.?\d{6}\s?\d\s?\d{14}/); if (ml2){ R.boleto = ml2[0]; }
+    else if (/linha\s+digitavel|codigo\s+de\s+barras/.test(n) && !/danfe/.test(n)) R.boleto = true;
+    var mr = n.match(/(?:discriminacao|descricao)\s+(?:dos?\s+)?servicos?\s*[:\-]?\s*|referente\s+(?:a|ao|aos|as)\s+/);
+    var ref = mr ? t.slice(mr.index + mr[0].length).split(/\n\s*\n|valor\s|total\s|vencimento|chave\s+pix|pagamento\s+via|para\s+clareza|\.\s/i)[0].replace(/\s+/g, ' ').trim().slice(0, 160) : '';
+    ref = ref.charAt(0).toUpperCase() + ref.slice(1);
+    R.descricao = [R.tipo + (R.numero ? ' nº ' + R.numero : '') + (R.emissao ? ', emitida em ' + fmt(R.emissao) : ''), ref, typeof R.boleto === 'string' ? 'Linha digitável: ' + R.boleto : ''].filter(Boolean).join('. ').slice(0, 500);
+    return R;
+  }
+  function resumoLido(d){
+    if (!d) return '<div class="nfLido" id="nfLido">🧾 <b>Documento anexado.</b> Preencha os campos abaixo.</div>';
+    if (!d.lido) return '<div class="nfLido" id="nfLido">🧾 <b>Não consegui ler os dados deste documento</b> (foto escura ou tremida, ou arquivo protegido). Ele já vai anexado: é só preencher os campos abaixo.</div>';
+    var ok = function(t, v){ return '<li>✓ ' + t + ': <b>' + v + '</b></li>'; }, falta = function(t){ return '<li class="falta">Não achei ' + t + '. Preencha abaixo.</li>'; };
+    return '<div class="nfLido" id="nfLido">🧾 <b>Lemos ' + (d.tipo === 'Recibo' ? 'o recibo' : 'a nota fiscal') + '.</b> Os campos em amarelo foram preenchidos sozinhos: confira antes de continuar.<ul>'
+      + (d.fav ? ok('Favorecido', esc(d.fav.nome) + ' (já cadastrado)') : d.nome ? ok('Favorecido', esc(d.nome) + (d.doc ? ' · ' + fmtDoc(d.doc) : '')) : d.doc ? '<li class="falta">Achei o CPF/CNPJ ' + fmtDoc(d.doc) + ', mas não o nome. Digite o nome do favorecido.</li>' : falta('quem emitiu'))
+      + (d.valor ? ok('Valor', brl(d.valor)) : falta('o valor'))
+      + (d.vencimento ? ok('Vencimento', fmt(d.vencimento)) : '<li class="falta">O documento não tem vencimento. Informe a data em que precisa ser pago.</li>')
+      + (d.pix ? ok('Chave PIX', esc(d.pix)) : '') + (d.boleto ? '<li>✓ Tem boleto' + (typeof d.boleto === 'string' ? ' (linha digitável na descrição)' : '') + '</li>' : '')
+      + '</ul></div>';
+  }
+  function preencherDaNota(d, bf){
+    var fm = document.getElementById('fm');
+    var marca = function(el){ el.classList.add('auto'); el.addEventListener('input', function(){ el.classList.remove('auto'); }, {once: true}); el.addEventListener('change', function(){ el.classList.remove('auto'); }, {once: true}); };
+    var poe = function(nome, v){ var el = fm.querySelector('[name=' + nome + ']'); if (v && el && !el.value){ el.value = v; marca(el); } };
+    if (!d || !d.lido) return;
+    poe('valor', d.valor ? d.valor.toFixed(2) : ''); poe('vencimento', d.vencimento); poe('descricao', d.descricao);
+    var fr = fm.querySelector('[name=forma]'), quer = d.boleto ? /boleto/i : d.pix ? /pix/i : null;
+    if (fr && quer){ var op = [].filter.call(fr.options, function(x){ return quer.test(x.text); })[0]; if (op && fr.value !== op.value){ fr.value = op.value; marca(fr); } }
+    var bus = document.getElementById('busFav');
+    if (d.fav){ bf.set(d.fav); marca(bus); }
+    else if (d.nome){ bus.value = d.nome; bf.set(null); marca(bus); var pn = fm.querySelector('[name=p_nome]'); if (pn){ pn.value = d.nome; pn.dataset.auto = 1; marca(pn); } }
+    if (!d.fav){ poe('p_doc', d.doc ? fmtDoc(d.doc) : ''); poe('p_pix', d.pix); }
+  }
+  function telaNota(o){
+    var toque = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
+    ARQS = []; PLAN = null;
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Nota fiscal ou recibo</h1><p class="intro">Envie a foto ou o PDF do documento. A gente lê os dados e já preenche o pagamento para você conferir. O documento vai anexado ao pedido.</p>'
+      + '<div id="nfCorpo"><div class="nfZona" id="nfZona"><div class="big">🧾</div><p>' + (toque ? 'Tire uma foto da nota ou do recibo, bem de frente e com boa luz, ou escolha o PDF.' : 'Arraste o arquivo para cá ou clique no botão abaixo.') + '</p><div class="nfBts">'
+      + (toque ? '<button type="button" class="btn" id="btFoto">📷 Tirar foto</button>' : '')
+      + '<button type="button" class="btn' + (toque ? ' sec' : '') + '" id="btArqNota">📄 Escolher ' + (toque ? 'arquivo' : 'foto ou PDF') + '</button></div>'
+      + '<p style="margin:10px 0 0;font-size:12px">PDF ou foto (JPG, PNG, HEIC) · até 10 MB</p></div>'
+      + '<input type="file" id="inFoto" accept="image/*" capture="environment" style="display:none"><input type="file" id="inNota" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,application/pdf,image/*" style="display:none">'
+      + '<div class="msg" id="msg"></div></div>';
+    voltarInicio();
+    var inF = document.getElementById('inFoto'), inN = document.getElementById('inNota'), z = document.getElementById('nfZona');
+    var bFoto = document.getElementById('btFoto'); if (bFoto) bFoto.onclick = function(){ inF.click(); };
+    document.getElementById('btArqNota').onclick = function(){ inN.click(); };
+    [inF, inN].forEach(function(i){ i.addEventListener('change', function(){ var f = i.files[0]; i.value = ''; if (f) usarNota(o, f); }); });
+    z.addEventListener('dragover', function(e){ e.preventDefault(); z.classList.add('sobre'); });
+    z.addEventListener('dragleave', function(){ z.classList.remove('sobre'); });
+    z.addEventListener('drop', function(e){ e.preventDefault(); z.classList.remove('sobre'); var f = e.dataTransfer.files[0]; if (f) usarNota(o, f); });
+  }
+  function usarNota(o, f){
+    if (!(NOTA_OK.test(f.name) || NOTA_MIME.test(f.type))) return erro('O arquivo "' + f.name + '" não é PDF nem foto. Envie o PDF da nota ou uma foto (JPG, PNG).');
+    if (ehPdf(f) && f.size > 10 * 1024 * 1024) return erro('O PDF passa de 10 MB. Envie um arquivo menor ou tire uma foto da nota.');
+    var corpo = document.getElementById('nfCorpo'), cancelado = false;
+    corpo.innerHTML = '<div class="nfLendo"><div style="font-size:36px">🔎</div><b>Lendo ' + esc(f.name) + '…</b><div class="barra"><span id="nfBarra"></span></div><p class="ajuda" id="nfDica" style="margin:0">' + (ehPdf(f) ? 'Só um instante.' : 'Lendo a foto. Pode levar uns segundos.') + '</p>'
+      + '<button type="button" class="btn sec" id="btPular" style="width:auto;padding:10px 16px;font-size:13.5px">Pular e preencher eu mesmo</button></div>';
+    var barra = document.getElementById('nfBarra'), prog = function(p){ if (!cancelado && barra) barra.style.width = Math.round(8 + Math.min(1, p) * 92) + '%'; };
+    var segue = function(arq, dados){ if (cancelado) return; cancelado = true; telaPedido(o, {arq: arq, dados: dados}); window.scrollTo(0,0); };
+    var anexo = arquivoParaAnexo(f);
+    document.getElementById('btPular').onclick = function(){ anexo.then(function(a){ segue(a, null); }, function(){ cancelado = true; telaNota(o); erro('A foto passa de 10 MB e não consegui reduzir. Tire outra foto ou envie o PDF.'); }); };
+    var lendo = textoDoArquivo(f, prog).then(function(tx){ return lerNota(tx, o); }, function(){ return {lido: false}; });
+    Promise.all([anexo, lendo]).then(function(r){ prog(1); segue(r[0], r[1]); }, function(){ if (cancelado) return; cancelado = true; telaNota(o); erro('A foto passa de 10 MB e não consegui reduzir. Tire outra foto ou envie o PDF.'); });
+  }
   function camposSol(o){
     var eq = (o && o.equipe) || [];
     if (!eq.length) return '<label><span>Seu nome <b>*</b></span><input name="s_nome" required maxlength="120" autocomplete="name"></label>'
@@ -724,12 +897,13 @@ label.cb{position:relative}
     return '<label class="full"><span>Seu nome <b>*</b></span><select name="s_usuario" required onchange="var o=this.options[this.selectedIndex];this.form.s_nome.value=this.value?o.text:\'\'"><option value="">Selecione…</option>'
       + eq.map(function(u){ return '<option value="' + esc(u.id) + '">' + esc(u.nome) + '</option>'; }).join('') + '</select><input type="hidden" name="s_nome"></label>';
   }
-  function telaPedido(o){
+  function telaPedido(o, pre){
     var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
     var cat = (o.categorias||[]).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
     var fr = (o.formas||['PIX','Transferência','Boleto','Dinheiro']).map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
-    ARQS = [];
-    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Novo pagamento</h1><p class="intro">Preencha os dados abaixo. Na próxima tela você confere tudo antes de enviar.</p>'
+    ARQS = pre && pre.arq ? [pre.arq] : [];
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>' + (pre ? (pre.dados && pre.dados.tipo === 'Recibo' ? 'Pagamento do recibo' : 'Pagamento da nota') : 'Novo pagamento') + '</h1><p class="intro">' + (pre ? 'O documento já vai anexado. Confira e complete os dados abaixo. Na próxima tela você vê tudo antes de enviar.' : 'Preencha os dados abaixo. Na próxima tela você confere tudo antes de enviar.') + '</p>'
+      + (pre ? resumoLido(pre.dados) : '')
       + '<form id="fm" novalidate>'
       + '<div class="grupo">Quem está pedindo</div><div class="form">'
       + camposSol(o) + '</div>'
@@ -747,7 +921,7 @@ label.cb{position:relative}
       + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,.csv,.xls,.xlsx,.ods,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul></div>'
       + '</div><button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
     var hid = document.querySelector('[name=pessoaId]'), box = document.getElementById('boxNovo'), stF = document.getElementById('stFav');
-    buscaFav(document.getElementById('busFav'), o.favorecidos || [], function(f, txt, fim){
+    var bf = buscaFav(document.getElementById('busFav'), o.favorecidos || [], function(f, txt, fim){
       hid.value = f ? f.id : txt && fim ? '__novo__' : '';
       stF.className = 'stFav' + (f ? ' ok' : ''); stF.innerHTML = !f && txt && !fim ? '' : f ? '✓ Favorecido cadastrado' + (f.pix ? ' · PIX ' + esc(f.pix) : '') : hid.value ? 'Novo favorecido: preencha o cadastro abaixo.' : 'Digite o nome e escolha na lista. Se não estiver, cadastre na hora.';
       if (hid.value === '__novo__'){ var pn = box.querySelector('[name=p_nome]'); if (pn && (!pn.value || pn.dataset.auto)){ pn.value = txt; pn.dataset.auto = 1; } }
@@ -758,6 +932,8 @@ label.cb{position:relative}
     document.getElementById('arqBox').onclick = function(){ inp.click(); };
     inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(addArq); inp.value = ''; listarArqs(); });
     document.getElementById('fm').addEventListener('submit', revisar);
+    listarArqs();
+    if (pre && pre.dados) preencherDaNota(pre.dados, bf);
   }
   function telaCadastro(){
     cx.innerHTML = '<h1>Cadastro para pagamentos</h1><p class="intro">Preencha seus dados pessoais e bancários. Eles serão usados só para os seus pagamentos.</p>'
