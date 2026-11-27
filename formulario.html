@@ -839,7 +839,7 @@ label.cb{position:relative}
     if (!d.lido) return '<div class="nfLido" id="nfLido">🧾 <b>Não consegui ler os dados deste documento</b> (foto escura ou tremida, ou arquivo protegido). Ele já vai anexado: é só preencher os campos abaixo.</div>';
     var ok = function(t, v){ return '<li>✓ ' + t + ': <b>' + v + '</b></li>'; }, falta = function(t){ return '<li class="falta">Não achei ' + t + '. Preencha abaixo.</li>'; };
     return '<div class="nfLido" id="nfLido">🧾 <b>Lemos ' + (d.tipo === 'Recibo' ? 'o recibo' : 'a nota fiscal') + '.</b> Os campos em amarelo foram preenchidos sozinhos: confira antes de continuar.<ul>'
-      + (d.fav ? ok('Favorecido', esc(d.fav.nome) + ' (já cadastrado)') : d.nome ? ok('Favorecido', esc(d.nome) + (d.doc ? ' · ' + fmtDoc(d.doc) : '')) : d.doc ? '<li class="falta">Achei o CPF/CNPJ ' + fmtDoc(d.doc) + ', mas não o nome. Digite o nome do favorecido.</li>' : falta('quem emitiu'))
+      + (d.fav ? ok('Favorecido', esc(d.fav.nome) + ' (já cadastrado)') : d.nome ? ok('Favorecido', esc(d.nome) + (d.doc ? ' · ' + fmtDoc(d.doc) : '')) : d.doc ? '<li class="falta">Achei o CPF/CNPJ ' + fmtDoc(d.doc) + ', mas não o nome. Abrimos o cadastro do favorecido abaixo: complete o nome.</li>' : '<li class="falta">Não achei quem emitiu. Busque o favorecido na lista ou clique em "Cadastrar novo favorecido".</li>')
       + (d.valor ? ok('Valor', brl(d.valor)) : falta('o valor'))
       + (d.vencimento ? ok('Vencimento', fmt(d.vencimento)) : '<li class="falta">O documento não tem vencimento. Informe a data em que precisa ser pago.</li>')
       + (d.pix ? ok('Chave PIX', esc(d.pix)) : '') + (d.boleto ? '<li>✓ Tem boleto' + (typeof d.boleto === 'string' ? ' (linha digitável na descrição)' : '') + '</li>' : '')
@@ -856,6 +856,7 @@ label.cb{position:relative}
     var bus = document.getElementById('busFav');
     if (d.fav){ bf.set(d.fav); marca(bus); }
     else if (d.nome){ bus.value = d.nome; bf.set(null); marca(bus); var pn = fm.querySelector('[name=p_nome]'); if (pn){ pn.value = d.nome; pn.dataset.auto = 1; marca(pn); } }
+    if (!d.fav && !d.nome && d.doc) document.getElementById('lkNovoFav').click();
     if (!d.fav){ poe('p_doc', d.doc ? fmtDoc(d.doc) : ''); poe('p_pix', d.pix); }
   }
   function telaNota(o){
@@ -910,6 +911,7 @@ label.cb{position:relative}
       + '<div class="grupo">Pagamento</div><div class="form">'
       + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label>'
       + '<label class="full"><span>Favorecido (quem vai receber) <b>*</b></span><input id="busFav" maxlength="150" placeholder="Digite para buscar"><input type="hidden" name="pessoaId"><div class="stFav" id="stFav">Digite o nome e escolha na lista. Se não estiver, cadastre na hora.</div></label>'
+      + '<div class="full" id="boxLkNovo" style="margin-top:-6px"><a href="#" class="qm" id="lkNovoFav">➕ Não achou na lista? Cadastrar novo favorecido</a></div>'
       + '<div class="full novo" id="boxNovo" style="display:none"><div class="form">' + CAMPOS_PESSOA + '</div></div>'
       + '<label>Categoria<select name="categoria"><option value="">Não sei / deixar para a equipe</option>' + cat + '</select></label>'
       + '<label><span>Valor (R$) <b>*</b></span><input name="valor" type="number" step="0.01" min="0.01" required inputmode="decimal"></label>'
@@ -926,8 +928,13 @@ label.cb{position:relative}
       stF.className = 'stFav' + (f ? ' ok' : ''); stF.innerHTML = !f && txt && !fim ? '' : f ? '✓ Favorecido cadastrado' + (f.pix ? ' · PIX ' + esc(f.pix) : '') : hid.value ? 'Novo favorecido: preencha o cadastro abaixo.' : 'Digite o nome e escolha na lista. Se não estiver, cadastre na hora.';
       if (hid.value === '__novo__'){ var pn = box.querySelector('[name=p_nome]'); if (pn && (!pn.value || pn.dataset.auto)){ pn.value = txt; pn.dataset.auto = 1; } }
       novoOn(); });
-    function novoOn(){ var on = hid.value === '__novo__'; box.style.display = on ? '' : 'none'; box.querySelectorAll('[required]').forEach(function(i){ i.disabled = !on; }); box.querySelectorAll('input,select').forEach(function(i){ i.disabled = !on; }); }
+    function novoOn(){ var on = hid.value === '__novo__'; box.style.display = on ? '' : 'none'; document.getElementById('boxLkNovo').style.display = on ? 'none' : ''; box.querySelectorAll('[required]').forEach(function(i){ i.disabled = !on; }); box.querySelectorAll('input,select').forEach(function(i){ i.disabled = !on; }); }
     novoOn(); voltarInicio();
+    document.getElementById('lkNovoFav').onclick = function(ev){ ev.preventDefault(); var bus = document.getElementById('busFav');
+      hid.value = '__novo__'; stF.className = 'stFav'; stF.innerHTML = 'Novo favorecido: preencha o cadastro abaixo.'; novoOn();
+      var pn = box.querySelector('[name=p_nome]'); if (pn && !pn.value && bus.value.trim()){ pn.value = bus.value.trim(); pn.dataset.auto = 1; }
+      if (!bus.value.trim() && pn) pn.addEventListener('input', function(){ if (hid.value === '__novo__') bus.value = pn.value; });
+      (pn && !pn.value ? pn : box.querySelector('[name=p_doc]')).focus(); };
     var inp = document.getElementById('arqIn');
     document.getElementById('arqBox').onclick = function(){ inp.click(); };
     inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(addArq); inp.value = ''; listarArqs(); });
