@@ -76,6 +76,12 @@ dl.res dt{color:var(--muted)} dl.res dd{margin:0;font-weight:500;word-break:brea
 .tab tfoot td{font-weight:600;background:#f4efeb}
 .tab tr.ruim td{background:#ef44440f}
 .tcad{font-size:14px;margin-bottom:10px}
+.voz{display:flex;gap:10px;margin:0 0 10px}.voz .btn{margin-top:0;white-space:nowrap;font-size:14px;padding:12px 10px;display:flex;align-items:center;justify-content:center;gap:8px}
+.voz .btVoz.on{background:var(--terra);color:var(--creme);border-color:var(--terra)}
+.voz .btVoz.on .pt{width:9px;height:9px;border-radius:50%;background:var(--ouro);animation:pisca 1s infinite}
+@keyframes pisca{50%{opacity:.25}}
+.vozSt{font-size:12px;color:var(--muted);margin:-4px 0 10px;display:none;background:#efbb3c14;border:1px solid #efbb3c66;border-radius:10px;padding:8px 10px}
+.vozSt.err{background:#ef44441a;border-color:#ef444455;color:#b91c1c}
 .lkcad{color:var(--cobre);font-weight:600;font-size:12.5px;text-decoration:underline;display:inline-block;margin-top:2px}
 .lkcad.feito{color:#15803d;text-decoration:none}
 .lkcad.falta{color:#b91c1c}
@@ -269,7 +275,7 @@ label.cb{position:relative}
     cx.innerHTML = '<h1>Como você quer enviar?</h1><p class="intro">Escolha uma opção.</p><div class="escolha">'
       + '<button type="button" id="opManual"><span class="ic">✍️</span><span><b>Lançamento manual</b><small>Preencher um pagamento por vez, com nota fiscal ou print se tiver.</small></span></button>'
       + '<button type="button" id="opNota"><span class="ic">🧾</span><span><b>Enviar nota fiscal ou recibo</b><small>Tirar uma foto ou escolher o PDF. A gente lê o documento e já preenche o pagamento para você conferir.</small></span></button>'
-      + '<button type="button" id="opZap"><span class="ic">💬</span><span><b>Colar mensagem do WhatsApp</b><small>Copiar o texto da conversa e colar aqui. A gente monta os pagamentos para você conferir.</small></span></button>'
+      + '<button type="button" id="opZap"><span class="ic">💬</span><span><b>Colar mensagem do WhatsApp ou falar</b><small>Colar o texto da conversa ou gravar um áudio falando os pagamentos. A gente monta tudo para você conferir.</small></span></button>'
       + '<button type="button" id="opImport"><span class="ic">📥</span><span><b>Importar arquivo</b><small>Enviar uma planilha Excel com vários pagamentos de uma vez.</small></span></button></div>';
     document.getElementById('opManual').onclick = function(){ telaPedido(o); window.scrollTo(0,0); };
     document.getElementById('opNota').onclick = function(){ telaNota(o); window.scrollTo(0,0); };
@@ -520,16 +526,76 @@ label.cb{position:relative}
       return it;
     });
   }
+  // ---------- falar em vez de digitar (ditado do próprio navegador, sem custo) ----------
+  var MESES = {janeiro:1, fevereiro:2, marco:3, abril:4, maio:5, junho:6, julho:7, agosto:8, setembro:9, outubro:10, novembro:11, dezembro:12};
+  // deixa o que foi falado no formato que o leitor de mensagens entende: "10 de dezembro" vira 10/12, "2 mil e 500" vira 2500
+  function falaParaTexto(t){
+    var h = hoje(), dd = function(d){ return d.slice(8,10) + '/' + d.slice(5,7) + '/' + d.slice(0,4); };
+    var mais = function(n){ var d = new Date(h + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); };
+    return String(t).split('\n').map(function(l){
+      return l
+        .replace(/\b(?:dia\s+)?(\d{1,2}|primeiro)º?\s+de\s+(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+(?:de\s+)?(\d{4}))?/gi, function(_, d, m, a){
+          return (/primeiro/i.test(d) ? 1 : +d) + '/' + MESES[semAcento(m)] + (a ? '/' + a : ''); })
+        .replace(/\bdia\s+(\d{1,2}|primeiro)º?(?!\s*[\/\d])/gi, function(_, d){
+          d = /primeiro/i.test(d) ? 1 : +d; var a = +h.slice(0,4), m = +h.slice(5,7); if (d < +h.slice(8,10)){ m++; if (m > 12){ m = 1; a++; } } return d + '/' + m + '/' + a; })
+        .replace(/\bdepois de amanh[ãa](?![\wÀ-ÿ])/gi, function(){ return dd(mais(2)); })
+        .replace(/(^|[^\wÀ-ÿ])amanh[ãa](?![\wÀ-ÿ])/gi, function(_, p){ return p + dd(mais(1)); })
+        .replace(/\b(?:vence\s+|para\s+|pra\s+)?hoje\b/gi, function(x){ return x.replace(/hoje/i, dd(h)); })
+        .replace(/\b(\d{1,3})\s*mil\s+e\s+(\d{1,3})\b/gi, function(_, a, b){ return String(+a * 1000 + +b); })
+        .replace(/(^|[^\d\s.,])\s*\bmil\s+e\s+(\d{1,3})\b/gi, function(_, p, b){ return p + ' ' + (1000 + +b); })
+        .replace(/(^|[^\d.,\s])\s*\bmil\s+reais\b/gi, '$1 1000 reais')
+        .replace(/\b(\d+)\s*reais\s+e\s+(\d{1,2})\s*centavos?\b/gi, function(_, a, b){ return a + ',' + String(b).padStart(2,'0') + ' reais'; })
+        .replace(/\s+arroba\s+/gi, '@').replace(/\s+ponto\s+com\b/gi, '.com').replace(/\s+ponto\s+br\b/gi, '.br')
+        .replace(/[ \t]+/g, ' ').replace(/^\s*[,.]\s*|\s+$/g, '').replace(/^\s+/, '');
+    }).join('\n');
+  }
+  function ditado(ta){
+    var bt = document.getElementById('btVoz'), px = document.getElementById('btProx'), st = document.getElementById('vozSt');
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null, ligado = false, base = '', fin = '';
+    var aviso = function(m, ruim){ st.innerHTML = m; st.className = 'vozSt' + (ruim ? ' err' : ''); st.style.display = m ? 'block' : 'none'; };
+    var visual = function(){ bt.classList.toggle('on', ligado); bt.querySelector('.ic').outerHTML = ligado ? '<span class="ic pt"></span>' : '<span class="ic">🎙️</span>';
+      bt.querySelector('.tx').textContent = ligado ? 'Parar gravação' : (ta.value.trim() ? 'Gravar mais' : 'Gravar áudio'); px.style.display = ligado ? '' : 'none'; };
+    // "próximo" falado, ou o botão, começa o pagamento seguinte em outra linha
+    var junta = function(extra){ var t = falaParaTexto((fin + (extra ? ' ' + extra : '')).replace(/[ ,.]*(?:^|\b)(?:pr[óo]ximo(?:\s+pagamento)?|outro pagamento)(?![\wÀ-ÿ])[ ,.]*/gi, '\n'));
+      ta.value = (base ? base.replace(/\s*$/, '\n') : '') + t.replace(/^\n+/, ''); ta.scrollTop = ta.scrollHeight; };
+    var fecha = function(){ if (fin) junta(); base = ta.value; fin = ''; };
+    var parar = function(){ if (!ligado) return; ligado = false; try{ rec.stop(); }catch(e){} fecha(); visual(); };
+    var iniciar = function(){
+      rec = new SR(); rec.lang = 'pt-BR'; rec.continuous = true; rec.interimResults = true;
+      rec.onresult = function(e){ var tmp = ''; if (!document.body.contains(ta)) return parar();
+        for (var k = e.resultIndex; k < e.results.length; k++){ var t = e.results[k][0].transcript; if (e.results[k].isFinal) fin += ' ' + t; else tmp += t; }
+        junta(tmp.trim()); };
+      rec.onerror = function(e){
+        if (e.error === 'no-speech' || e.error === 'aborted') return;
+        ligado = false; visual();
+        aviso(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? '🎙️ O microfone está bloqueado. Libere o microfone para este site nas configurações do navegador e toque em <b>Gravar áudio</b> de novo.'
+          : e.error === 'network' ? 'Sem internet para entender o áudio. Verifique a conexão e tente de novo.' : 'Não consegui usar o microfone. Tente de novo ou digite o texto.', true); };
+      // o celular encerra o ditado sozinho depois de uma pausa: se a pessoa não parou, continua ouvindo
+      rec.onend = function(){ fecha(); if (ligado){ try{ rec.start(); }catch(e){ ligado = false; visual(); } } };
+      fecha(); ligado = true; visual();
+      aviso('🔴 Gravando. Fale <b>um pagamento de cada vez: nome, valor e data</b>. Ex.: <i>"DJ Marcos, 1.500 reais, dia 10 de dezembro"</i>. Diga <b>"próximo"</b> ou toque em <b>Próximo</b> para passar ao seguinte.');
+      try{ rec.start(); }catch(e){ ligado = false; visual(); aviso('Não consegui usar o microfone. Tente de novo ou digite o texto.', true); }
+    };
+    bt.onclick = function(){
+      if (!SR){ ta.focus(); aviso('Este navegador não grava áudio aqui. Toque no campo abaixo e use o <b>microfone 🎤 do teclado</b> do celular para ditar, ou abra este link no Chrome ou no Safari.', true); return; }
+      if (ligado){ parar(); aviso(ta.value.trim() ? '✓ Áudio transformado em texto. Confira abaixo e corrija se precisar antes de continuar.' : ''); } else iniciar();
+    };
+    px.onclick = function(){ if (!ligado) return; fin += '\n'; junta(); };
+    ta.addEventListener('input', function(){ if (ligado){ base = ta.value; fin = ''; } visual(); });
+    return parar;
+  }
   function telaColar(o){
     var ev = (o.eventos||[]).map(function(e){ return '<option value="' + esc(e.id) + '">' + esc(e.nome) + (e.data ? ' · ' + fmt(e.data) : '') + '</option>'; }).join('');
     ARQS = []; PLAN = null; LOTE = {anexos:null, ok:0};
-    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Colar mensagem</h1><p class="intro">Copie a mensagem do WhatsApp e cole abaixo. Na próxima tela você confere o que foi entendido antes de enviar.</p>'
+    cx.innerHTML = '<a href="#" class="voltar" id="btInicio">← Voltar</a><div class="passos"><span class="on"></span><span></span></div><h1>Colar ou falar a mensagem</h1><p class="intro">Cole a mensagem do WhatsApp ou toque em <b>Gravar áudio</b> e fale os pagamentos. Na próxima tela você confere o que foi entendido antes de enviar.</p>'
       + '<form id="fm" novalidate>'
       + '<div class="grupo">Quem está pedindo</div><div class="form">'
       + camposSol(o)
       + '<label class="full"><span>Evento <b>*</b></span><select name="eventoId" required><option value="">Selecione…</option>' + ev + '</select></label></div>'
       + '<div class="grupo">Mensagem</div>'
-      + '<label><span>Cole aqui o texto <b>*</b></span><textarea name="texto" id="txZap" required maxlength="8000" style="min-height:180px" placeholder="Exemplo:\nDJ Marcos - R$ 1.500,00 - 10/12\nGráfica Nova R$ 480 vence 15/12 pix grafica@nova.com"></textarea></label>'
+      + '<div class="voz"><button type="button" class="btn sec btVoz" id="btVoz"><span class="ic">🎙️</span><span class="tx">Gravar áudio</span></button><button type="button" class="btn sec" id="btProx" style="display:none">↵ Próximo</button></div>'
+      + '<div class="vozSt" id="vozSt"></div>'
+      + '<label><span>Cole aqui o texto ou fale pelo áudio <b>*</b></span><textarea name="texto" id="txZap" required maxlength="8000" style="min-height:180px" placeholder="Exemplo:\nDJ Marcos - R$ 1.500,00 - 10/12\nGráfica Nova R$ 480 vence 15/12 pix grafica@nova.com"></textarea></label>'
       + '<p class="ajuda" style="margin-top:8px">Um pagamento por linha, com <b>nome, valor e data</b>. Se a mensagem fala de um pagamento só, pode colar do jeito que está.</p>'
       + '<label style="margin-top:12px"><span>Vencimento para quem não tiver data no texto <b>*</b></span><input type="date" name="vencPadrao" required min="' + hoje().slice(0,4) + '-01-01"></label>'
       + '<div class="grupo">Anexos (opcional)</div>'
@@ -537,11 +603,12 @@ label.cb{position:relative}
       + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul>'
       + '<button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
     voltarInicio();
+    var parar = ditado(document.getElementById('txZap'));
     var inp = document.getElementById('arqIn');
     document.getElementById('arqBox').onclick = function(){ inp.click(); };
     inp.addEventListener('change', function(){ [].slice.call(inp.files).forEach(addArq); inp.value = ''; listarArqs(); });
     document.getElementById('fm').addEventListener('submit', function(evt){
-      evt.preventDefault(); var fm = evt.target; document.getElementById('msg').style.display = 'none';
+      evt.preventDefault(); parar(); var fm = evt.target; document.getElementById('msg').style.display = 'none';
       if (!fm.reportValidity()) return;
       var itens = lerTextoZap(String(fm.texto.value), o), vp = fm.vencPadrao.value;
       if (vp) itens.forEach(function(i){ if (!i.vencimento){ i.vencimento = vp; i.problemas = i.problemas.filter(function(p){ return p !== 'sem data de vencimento'; }); } });
