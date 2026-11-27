@@ -437,6 +437,7 @@ const podeCancelar = p => p.status==='aguardando' && (isAdmin() || (isProd() && 
 const podePagar = p => isAdmin() && p.status==='aprovado';
 
 function visiveis(){ return db.pedidos.filter(podeVer); }
+const evData = id => { const e = evento(id); return e.nome + (e.data ? ' ('+fmt(e.data)+')' : ''); };   // nome do evento com a data
 // Rateio: pagamento sem evento, mas com centro de custo, é dividido em partes iguais entre os eventos
 // desse centro de custo no mesmo mês do vencimento (ex.: R$ 50 e 5 eventos do Bar Fua no mês = R$ 10 em cada).
 // Se não houver evento desse centro de custo no mês, continua como despesa da empresa.
@@ -2040,7 +2041,7 @@ function telaConciliacao(){
   const conc = db.pedidos.filter(p=>p.conc).sort((a,b)=>(b.conc.quando||'').localeCompare(a.conc.quando||''));
   const saidas = db.extrato.filter(t=>t.valor<0), ign = db.extrato.filter(t=>t.ignorado);
   const tx = t => `<td>${fmt(t.data)}</td><td style="white-space:normal;min-width:180px">${t.fav?`<b>${h(t.fav)}</b>${t.desc&&t.desc!==t.fav?`<br><span class="meta">${h(t.desc.replace(t.fav,'').replace(/^\s*—\s*/,''))}</span>`:''}`:h(t.desc||'—')}</td><td class="right" style="color:var(--recusado);font-weight:600">${brl(t.valor)}</td>`;
-  const ped = p => `<td><b>${p.id}</b></td><td style="white-space:normal">${h(pessoa(p.pessoaId).nome)}<br><span class="meta">${h(evento(p.eventoId).nome)}</span></td><td class="right"><b>${brl(p.valor)}</b></td><td data-v="${STATUS[p.status].nome}"><span class="tag" style="background:${atrasadoPag(p)?'var(--recusado)':STATUS[p.status].cor}">${atrasadoPag(p)?'⏰ Atrasado · '+(p.status==='aguardando'?'aguardando aprovação':'a pagar'):STATUS[p.status].nome}</span><br><span class="meta">venc. ${fmt(p.vencimento)}</span></td>`;
+  const ped = p => `<td><b>${p.id}</b></td><td style="white-space:normal">${h(pessoa(p.pessoaId).nome)}<br><span class="meta">${h(evData(p.eventoId))}</span></td><td class="right"><b>${brl(p.valor)}</b></td><td data-v="${STATUS[p.status].nome}"><span class="tag" style="background:${atrasadoPag(p)?'var(--recusado)':STATUS[p.status].cor}">${atrasadoPag(p)?'⏰ Atrasado · '+(p.status==='aguardando'?'aguardando aprovação':'a pagar'):STATUS[p.status].nome}</span><br><span class="meta">venc. ${fmt(p.vencimento)}</span></td>`;
   return `<div class="toolbar"><h2 style="margin:0">🏦 Conciliação bancária</h2><div class="spacer"></div>
     <label class="btn pri" style="cursor:pointer">📥 Importar extrato (OFX, CSV ou Excel)<input type="file" id="arqExtrato" accept=".ofx,.csv,.txt,.xlsx" multiple hidden></label>
     <button class="btn" data-act="extratoExemplo" title="Só na demonstração">🧪 Extrato de exemplo</button></div>
@@ -2088,7 +2089,7 @@ function concManualTx(txId){
   modal(`<h3>Conciliar lançamento do banco</h3>
   <div class="kpi" style="margin-bottom:12px"><div class="l">${fmt(t.data)} · ${t.fav?'<b>'+h(t.fav)+'</b> · ':''}${h((t.fav?t.desc.replace(t.fav,'').replace(/^\s*—\s*/,''):t.desc)||'—')}</div><div class="v" style="color:var(--recusado)">${brl(t.valor)}</div></div>
   <form class="form" id="fConc"><label class="full">Qual pedido foi pago com este lançamento? *<select name="pid" required><option value="">Digite o nome, número ou valor…</option>
-    ${ops.map(p=>`<option value="${p.id}" ${p.id===pre?'selected':''}>${p.id} · ${h(pessoa(p.pessoaId).nome)} · ${brl(p.valor)} · venc. ${fmt(p.vencimento)}${dele(p)&&igual(p)?' ✓ mesmo favorecido e valor':igual(p)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
+    ${ops.map(p=>`<option value="${p.id}" ${p.id===pre?'selected':''}>${p.id} · ${h(pessoa(p.pessoaId).nome)} · ${brl(p.valor)} · evento: ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}${dele(p)&&igual(p)?' ✓ mesmo favorecido e valor':igual(p)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
   <div class="note">${pre?'Já deixei escolhido o pedido do mesmo favorecido com o mesmo valor. Confira e clique em Conciliar.':'Os pedidos com o mesmo valor aparecem primeiro.'} Se o valor for diferente, a diferença fica registrada no histórico do pedido.</div>
   <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="concConfirmarManual" data-id="${txId}">Conciliar</button></div>`, 620);
 }
@@ -2099,7 +2100,7 @@ function concManualPed(pid){
   const ops = txPendentes().sort((a,b) => nota(b)-nota(a) || Math.abs(p.valor+a.valor)-Math.abs(p.valor+b.valor) || diasEntre(a.data,p.vencimento)-diasEntre(b.data,p.vencimento));
   const pre = ops[0] && dele(ops[0]) && igual(ops[0]) ? ops[0].id : '';
   modal(`<h3>Conciliar ${p.id} manualmente</h3>
-  <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evento(p.eventoId).nome)} · venc. ${fmt(p.vencimento)}</div><div class="v">${brl(p.valor)}</div></div>
+  <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}</div><div class="v">${brl(p.valor)}</div></div>
   ${ops.length?`<form class="form" id="fConcTx"><label class="full">Opção 1 — escolher o lançamento do extrato<select name="tid"><option value="">Digite a descrição, data ou valor…</option>
     ${ops.map(t=>`<option value="${t.id}" ${t.id===pre?'selected':''}>${fmt(t.data)} · ${h(t.desc||'—')} · ${brl(t.valor)}${dele(t)&&igual(t)?' ✓ mesmo favorecido e valor':igual(t)?' ✓ mesmo valor':''}</option>`).join('')}</select></label></form>
     <div class="actions" style="margin-top:8px"><button class="btn pri" data-act="concPedTx" data-id="${pid}">Conciliar com este lançamento</button></div>
@@ -3006,7 +3007,7 @@ Object.assign(acoes, {
     <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn ok" data-act="receberOk" data-id="${id}">Confirmar recebimento</button></div>`, 520); },
   pagarConf: id => { const p=db.pedidos.find(x=>x.id===id); if(!podePagar(p)) return;
     modal(`<h3>✓ Confirmar pagamento ${p.id}</h3>
-    <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evento(p.eventoId).nome)} · venc. ${fmt(p.vencimento)}</div><div class="v" style="color:var(--recusado)">${brl(p.valor)}</div></div>
+    <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}</div><div class="v" style="color:var(--recusado)">${brl(p.valor)}</div></div>
     <form class="form" id="fPagOk"><label>Pago em *<input type="date" name="data" required value="${HOJE}"></label>
     <label>Banco (conta de onde saiu)${selectBanco('banco', (db.contasBanco||[]).slice(-1)[0]||'')}</label></form>
     <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn ok" data-act="pagarOk" data-id="${id}">Confirmar pagamento</button></div>`, 520); },
@@ -3082,7 +3083,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.7';
+const APP_VERSAO = '9.8';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
