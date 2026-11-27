@@ -533,7 +533,9 @@ function filtrosHTML({periodo=true,status=true,categoria=true}={}){
 }
 
 // Possível duplicidade: outro pedido válido com o mesmo favorecido, o mesmo valor e o mesmo evento
-const duplicados = p => db.pedidos.filter(q => q.id!==p.id && q.pessoaId===p.pessoaId && (q.eventoId||'')===(p.eventoId||'') && Math.round(q.valor*100)===Math.round(p.valor*100) && !['recusado','cancelado'].includes(q.status));
+// pedidos que a gestora já conferiu e marcou como "Não é duplicado" saem do aviso
+const dupConferido = (p,q) => (p.dupOk||[]).includes(q.id) || (q.dupOk||[]).includes(p.id);
+const duplicados = p => db.pedidos.filter(q => q.id!==p.id && !dupConferido(p,q) && q.pessoaId===p.pessoaId && (q.eventoId||'')===(p.eventoId||'') && Math.round(q.valor*100)===Math.round(p.valor*100) && !['recusado','cancelado'].includes(q.status));
 const tagDup = p => duplicados(p).length ? `<span class="tag" style="background:var(--recusado);white-space:nowrap" title="Mesmo favorecido, valor e evento de ${duplicados(p).map(q=>q.id).join(', ')}">⚠ Possível duplicidade</span>` : '';
 function avisoDuplicidade(id){
   const p = db.pedidos.find(x=>x.id===id); if (!p) return;
@@ -543,7 +545,7 @@ function avisoDuplicidade(id){
   <div style="overflow-x:auto"><table class="cards" style="font-size:13px"><thead><tr><th>Nº</th><th>Evento</th><th>Vencimento</th><th>Situação</th><th class="right">Valor</th><th>Descrição</th></tr></thead><tbody>
   ${[p,...ds].map(q=>`<tr style="${q.id===p.id?'background:#fef3c7':''}"><td><b>${q.id}</b>${q.id===p.id?'<br><span class="meta">este</span>':''}</td><td>${h(evData(q.eventoId))}</td><td>${fmt(q.vencimento)}</td><td><span class="tag" style="background:${STATUS[q.status].cor}">${STATUS[q.status].nome}</span></td><td class="right">${brl(q.valor)}</td><td style="white-space:normal">${h(q.descricao||'—')}</td></tr>`).join('')}
   </tbody></table></div>
-  <div class="actions"><button class="btn" data-act="fechar">Voltar</button><div class="spacer"></div><button class="btn bad" data-act="motivo" data-id="${p.id}" data-arg="recusado">Recusar (é duplicado)</button><button class="btn blue" data-act="aprovarMesmo" data-id="${p.id}">Aprovar mesmo assim</button></div>`, 820);
+  <div class="actions"><button class="btn" data-act="fechar">Voltar</button><div class="spacer"></div><button class="btn" data-act="naoDup" data-id="${p.id}">Não é duplicado</button><button class="btn bad" data-act="motivo" data-id="${p.id}" data-arg="recusado">Recusar (é duplicado)</button><button class="btn blue" data-act="aprovarMesmo" data-id="${p.id}">Aprovar mesmo assim</button></div>`, 820);
 }
 function botoes(p){
   let b='';
@@ -687,7 +689,7 @@ function celPagamento(p){
   let v, html;
   if (p.status==='pago'){ v='Pago'; const d=dataPagamento(p); html=`<span class="meta">✓ Pago${d?' em '+fmt(String(d).slice(0,10)):''}</span>`; }
   else if (p.status==='aprovado'){ v=atr?'Atrasado':'A pagar'; html=(atr?tagA:'<span class="tag" style="background:var(--aprovado)">A pagar</span> ')+(podePagar(p)?`<button class="btn sm" data-act="pagarConf" data-id="${p.id}" title="Registrar o pagamento">Marcar como pago</button>`:''); }
-  else if (p.status==='aguardando'){ v=atr?'Aguardando aprovação · atrasado':'Aguardando aprovação'; html=tagA+'<span class="meta">Aguardando aprovação</span>'+(duplicados(p).length?' '+tagDup(p):''); if(duplicados(p).length) v+=' · possível duplicidade'; }
+  else if (p.status==='aguardando'){ v=atr?'Aguardando aprovação · atrasado':'Aguardando aprovação'; html=tagA+'<span class="meta">Aguardando aprovação</span>'+(duplicados(p).length?' '+tagDup(p)+(podeAprovar(p)?` <button class="btn sm" data-act="naoDup" data-id="${p.id}" title="Já conferi: não é pagamento em duplicidade">Não é duplicado</button>`:''):''); if(duplicados(p).length) v+=' · possível duplicidade'; }
   else { v='Recusado / cancelado'; html=`<span class="meta">${STATUS[p.status].nome}</span>`; }
   return `<td data-v="${v}" style="white-space:nowrap">${html}</td>`;
 }
@@ -2527,6 +2529,10 @@ const acoes = {
   fechar: () => fechar(),
   salvarPedido: id => salvarPedido(id),
   aprovar: id => { const p=db.pedidos.find(x=>x.id===id); if(!podeAprovar(p)) return; if (duplicados(p).length) return avisoDuplicidade(id); mudar(id,'aprovado','Aprovou o pedido'); },
+  naoDup: id => { const p=db.pedidos.find(x=>x.id===id); if(!podeAprovar(p)) return; const ds=duplicados(p); if(!ds.length) return;
+    ds.forEach(q=>{ p.dupOk=[...(p.dupOk||[]),q.id]; q.dupOk=[...(q.dupOk||[]),p.id]; q.historico.push({quando:agora(),quem:me.id,acao:'Conferiu: não é duplicado de '+p.id}); });
+    p.historico.push({quando:agora(),quem:me.id,acao:'Conferiu: não é duplicado de '+ds.map(q=>q.id).join(', ')});
+    save(); fechar(); render(); toast(p.id+': aviso de duplicidade retirado'); },
   aprovarMesmo: id => { const p=db.pedidos.find(x=>x.id===id); if(podeAprovar(p)) mudar(id,'aprovado','Aprovou o pedido (ciente da possível duplicidade com '+duplicados(p).map(q=>q.id).join(', ')+')'); },
   pagar: id => { const p=db.pedidos.find(x=>x.id===id); if(podePagar(p)) mudar(id,'pago','Marcou como pago'); },
   motivo: (id,arg) => pedirMotivo(id,arg),
