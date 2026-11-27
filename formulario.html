@@ -275,7 +275,7 @@ label.cb{position:relative}
     cx.innerHTML = '<h1>Como você quer enviar?</h1><p class="intro">Escolha uma opção.</p><div class="escolha">'
       + '<button type="button" id="opManual"><span class="ic">✍️</span><span><b>Lançamento manual</b><small>Preencher um pagamento por vez, com nota fiscal ou print se tiver.</small></span></button>'
       + '<button type="button" id="opNota"><span class="ic">🧾</span><span><b>Enviar nota fiscal ou recibo</b><small>Tirar uma foto ou escolher o PDF. A gente lê o documento e já preenche o pagamento para você conferir.</small></span></button>'
-      + '<button type="button" id="opZap"><span class="ic">💬</span><span><b>Colar mensagem do WhatsApp ou falar</b><small>Colar o texto da conversa ou gravar um áudio falando os pagamentos. A gente monta tudo para você conferir.</small></span></button>'
+      + '<button type="button" id="opZap"><span class="ic">💬</span><span><b>Colar mensagem ou gravar um áudio</b><small>Colar o texto da conversa ou gravar um áudio falando os pagamentos. A gente monta tudo para você conferir.</small></span></button>'
       + '<button type="button" id="opImport"><span class="ic">📥</span><span><b>Importar arquivo</b><small>Enviar uma planilha Excel com vários pagamentos de uma vez.</small></span></button></div>';
     document.getElementById('opManual').onclick = function(){ telaPedido(o); window.scrollTo(0,0); };
     document.getElementById('opNota').onclick = function(){ telaNota(o); window.scrollTo(0,0); };
