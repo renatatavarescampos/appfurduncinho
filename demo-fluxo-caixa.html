@@ -2114,7 +2114,7 @@ function concManualTx(txId){
 function concFiltrar(){
   const q = semAcento(document.getElementById('concBusca').value||'').trim().split(/\s+/).filter(Boolean);
   document.querySelectorAll('#concLista .conc-op').forEach(l=>{ const b=l.dataset.busca, marcado=l.querySelector('input').checked;
-    l.style.display = marcado || q.every(w=>b.includes(w)) ? '' : 'none'; });
+    l.style.display = marcado || q.every(w=>b.includes(w)) ? 'flex' : 'none'; });   // 'flex' (e não '') para não desmontar a linha
 }
 function concSomar(){
   const el = document.getElementById('concSoma'); if (!el) return;
@@ -3114,7 +3114,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.9';
+const APP_VERSAO = '9.10';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
