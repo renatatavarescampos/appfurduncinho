@@ -536,6 +536,10 @@ function filtrosHTML({periodo=true,status=true,categoria=true}={}){
 // pedidos que a gestora já conferiu e marcou como "Não é duplicado" saem do aviso
 const dupConferido = (p,q) => (p.dupOk||[]).includes(q.id) || (q.dupOk||[]).includes(p.id);
 const duplicados = p => db.pedidos.filter(q => q.id!==p.id && !dupConferido(p,q) && q.pessoaId===p.pessoaId && (q.eventoId||'')===(p.eventoId||'') && Math.round(q.valor*100)===Math.round(p.valor*100) && !['recusado','cancelado'].includes(q.status));
+// marca na lista: qualquer pedido válido (aguardando, aprovado ou pago) que tenha outro igual
+const marcaDup = p => !['recusado','cancelado'].includes(p.status) && duplicados(p).length>0;
+const podeConferirDup = () => isAdmin() || isDono();
+const btnNaoDup = p => podeConferirDup() ? ` <button class="btn sm" data-act="naoDup" data-id="${p.id}" title="Já conferi: não é pagamento em duplicidade">Não é duplicado</button>` : '';
 const tagDup = p => duplicados(p).length ? `<span class="tag" style="background:var(--recusado);white-space:nowrap" title="Mesmo favorecido, valor e evento de ${duplicados(p).map(q=>q.id).join(', ')}">⚠ Possível duplicidade</span>` : '';
 function avisoDuplicidade(id){
   const p = db.pedidos.find(x=>x.id===id); if (!p) return;
@@ -689,8 +693,9 @@ function celPagamento(p){
   let v, html;
   if (p.status==='pago'){ v='Pago'; const d=dataPagamento(p); html=`<span class="meta">✓ Pago${d?' em '+fmt(String(d).slice(0,10)):''}</span>`; }
   else if (p.status==='aprovado'){ v=atr?'Atrasado':'A pagar'; html=(atr?tagA:'<span class="tag" style="background:var(--aprovado)">A pagar</span> ')+(podePagar(p)?`<button class="btn sm" data-act="pagarConf" data-id="${p.id}" title="Registrar o pagamento">Marcar como pago</button>`:''); }
-  else if (p.status==='aguardando'){ v=atr?'Aguardando aprovação · atrasado':'Aguardando aprovação'; html=tagA+'<span class="meta">Aguardando aprovação</span>'+(duplicados(p).length?' '+tagDup(p)+(podeAprovar(p)?` <button class="btn sm" data-act="naoDup" data-id="${p.id}" title="Já conferi: não é pagamento em duplicidade">Não é duplicado</button>`:''):''); if(duplicados(p).length) v+=' · possível duplicidade'; }
+  else if (p.status==='aguardando'){ v=atr?'Aguardando aprovação · atrasado':'Aguardando aprovação'; html=tagA+'<span class="meta">Aguardando aprovação</span>'; }
   else { v='Recusado / cancelado'; html=`<span class="meta">${STATUS[p.status].nome}</span>`; }
+  if (marcaDup(p)){ html += ' '+tagDup(p)+btnNaoDup(p); v += ' · possível duplicidade'; }
   return `<td data-v="${v}" style="white-space:nowrap">${html}</td>`;
 }
 // seleção de contas na lista (para excluir várias de uma vez)
@@ -719,7 +724,7 @@ function telaLista(){
     ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkForm" title="Link para quem não tem acesso ao sistema enviar um pedido">🔗 Link do formulário</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
   <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}<th>Pagamento</th></tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click${inativo(p)?' inativo':''}${p.status==='aguardando'&&duplicados(p).length?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${inativo(p) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
+  <tbody>${lista.map(p=>`<tr class="click${inativo(p)?' inativo':''}${marcaDup(p)?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${inativo(p) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
   <tfoot><tr>${rodapeTotal((adm?1:0)+iv, cols.length-iv, `<b data-cnt="pedidos">${lista.length} pedidos</b> · ${F.status.some(s=>['recusado','cancelado'].includes(s))?'total':'total válido (sem recusados/cancelados)'}`, brl(tot))}</tr></tfoot></table></div>`;
 }
 // Tabela de pedidos com as mesmas colunas escolhidas na Lista (usada nas relações do dashboard e em Aprovações)
@@ -727,7 +732,7 @@ function tabelaPedidos(lista, key, {extraCols=[], acoes=null, vazio='Nenhum pedi
   const cols = [...colsLista(), ...extraCols.filter(c=>!colsLista().some(x=>x.id===c.id))];
   const n = cols.length + (acoes?1:0), tot = lista.reduce((a,p)=>a+p.valor,0), iv = cols.findIndex(c=>c.id==='valor');
   return `<table class="filtravel" data-key="${key}_${cols.map(c=>c.id).join('-')}"><thead><tr>${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}${acoes?'<th></th>':''}</tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click${p.status==='aguardando'&&duplicados(p).length?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${p.valor}">${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${acoes?`<td>${acoes(p)}</td>`:''}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">${vazio}</td></tr>`}</tbody>
+  <tbody>${lista.map(p=>`<tr class="click${marcaDup(p)?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${p.valor}">${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${acoes?`<td>${acoes(p)}</td>`:''}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">${vazio}</td></tr>`}</tbody>
   <tfoot><tr>${rodapeTotal(iv, cols.length-iv-1+(acoes?1:0), `<b data-cnt="${cnt}">${lista.length} ${cnt}</b>`, brl(tot))}</tr></tfoot></table>`;
 }
 let colsRasc = null, colsTipo = 'lista';
@@ -2529,7 +2534,7 @@ const acoes = {
   fechar: () => fechar(),
   salvarPedido: id => salvarPedido(id),
   aprovar: id => { const p=db.pedidos.find(x=>x.id===id); if(!podeAprovar(p)) return; if (duplicados(p).length) return avisoDuplicidade(id); mudar(id,'aprovado','Aprovou o pedido'); },
-  naoDup: id => { const p=db.pedidos.find(x=>x.id===id); if(!podeAprovar(p)) return; const ds=duplicados(p); if(!ds.length) return;
+  naoDup: id => { const p=db.pedidos.find(x=>x.id===id); if(!p || !podeConferirDup()) return; const ds=duplicados(p); if(!ds.length) return;
     ds.forEach(q=>{ p.dupOk=[...(p.dupOk||[]),q.id]; q.dupOk=[...(q.dupOk||[]),p.id]; q.historico.push({quando:agora(),quem:me.id,acao:'Conferiu: não é duplicado de '+p.id}); });
     p.historico.push({quando:agora(),quem:me.id,acao:'Conferiu: não é duplicado de '+ds.map(q=>q.id).join(', ')});
     save(); fechar(); render(); toast(p.id+': aviso de duplicidade retirado'); },
@@ -2987,7 +2992,7 @@ function fluxoPagamentos(lista){
   const ps = lista.filter(m=>m.tipo==='saida').sort((a,b)=>b.data.localeCompare(a.data));
   const tot = ps.reduce((a,m)=>a+m.valor,0);
   return `<div class="panel"><table class="filtravel cards" data-key="fcPag"><thead><tr><th>Data</th><th>Nº</th><th>Evento</th><th>Favorecido</th><th>Categoria</th><th>Forma</th><th>Situação</th><th class="right">Valor</th></tr></thead>
-  <tbody>${ps.map(m=>{ const p=m.ref; return `<tr class="click${p.status==='aguardando'&&duplicados(p).length?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${p.valor}"><td data-v="${fmt(m.data)}">${fmt(m.data)}${m.realizado?'':'<br><span class="meta">vencimento</span>'}</td><td>${p.id}</td><td>${h(evento(p.eventoId).nome)}</td><td>${h(pessoa(p.pessoaId).nome)}</td><td>${h(p.categoria)}</td><td>${h(p.forma)}</td>
+  <tbody>${ps.map(m=>{ const p=m.ref; return `<tr class="click${marcaDup(p)?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${p.valor}"><td data-v="${fmt(m.data)}">${fmt(m.data)}${m.realizado?'':'<br><span class="meta">vencimento</span>'}</td><td>${p.id}</td><td>${h(evento(p.eventoId).nome)}</td><td>${h(pessoa(p.pessoaId).nome)}</td><td>${h(p.categoria)}</td><td>${h(p.forma)}</td>
     <td data-v="${SIT[m.sit].nome}">${tagSit(m.sit)}${p.conc?' <span title="Conciliado com o banco">🏦✓</span>':''}</td><td class="right">${brl(p.valor)}</td></tr>`; }).join('') || '<tr><td colspan="8" class="empty">Nenhum pagamento com esses filtros</td></tr>'}</tbody>
   <tfoot><tr><td colspan="7"><b data-cnt="pagamentos">${ps.length} pagamentos</b> · pagos, aprovados a pagar e aguardando aprovação (sem recusados/cancelados)</td><td class="right"><b data-tot>${brl(tot)}</b></td></tr></tfoot></table></div>`;
 }
@@ -3069,12 +3074,14 @@ Object.assign(acoes, {
   pagarConf: id => { const p=db.pedidos.find(x=>x.id===id); if(!podePagar(p)) return;
     modal(`<h3>✓ Confirmar pagamento ${p.id}</h3>
     <div class="kpi" style="margin-bottom:12px"><div class="l">${h(pessoa(p.pessoaId).nome)} · ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}</div><div class="v" style="color:var(--recusado)">${brl(p.valor)}</div></div>
+    ${duplicados(p).length?`<div class="note" style="background:#fde2e1;border-color:var(--recusado);color:#7f1d1d;margin:0 0 12px"><b>⚠ Possível pagamento em duplicidade:</b> ${duplicados(p).map(q=>`${q.id} (${STATUS[q.status].nome}${q.status==='pago'&&dataPagamento(q)?' em '+fmt(String(dataPagamento(q)).slice(0,10)):''})`).join(', ')} tem o mesmo favorecido, valor e evento. Confira antes de pagar.<div class="btns" style="margin:8px 0 0"><button class="btn sm" data-act="naoDup" data-id="${p.id}">Não é duplicado</button></div></div>`:''}
     <form class="form" id="fPagOk"><label>Pago em *<input type="date" name="data" required value="${HOJE}"></label>
     <label>Banco (conta de onde saiu)${selectBanco('banco', (db.contasBanco||[]).slice(-1)[0]||'')}</label></form>
     <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn ok" data-act="pagarOk" data-id="${id}">Confirmar pagamento</button></div>`, 520); },
   pagarOk: id => { const p=db.pedidos.find(x=>x.id===id); const d=lerForm('fPagOk'); if(!d || !podePagar(p)) return;
     p.status='pago'; p.pagoEm=d.data; p.bancoPag=lembrarBanco(d.banco);
-    p.historico.push({quando:agora(),quem:me.id,acao:'Marcou como pago em '+fmt(d.data)+(p.bancoPag?' · '+p.bancoPag:'')}); save(); fechar(); render(); toast(id+' pago'); },
+    const dupPag = duplicados(p).map(q=>q.id);
+    p.historico.push({quando:agora(),quem:me.id,acao:'Marcou como pago em '+fmt(d.data)+(p.bancoPag?' · '+p.bancoPag:'')+(dupPag.length?' (ciente da possível duplicidade com '+dupPag.join(', ')+')':'')}); save(); fechar(); render(); toast(id+' pago'); },
   receberOk: id => { if(!isAdmin()) return; const x=recebimento(id); const d=lerForm('fRecOk'); if(!x || !d) return;
     x.recebidoEm = d.data; x.banco = lembrarBanco(d.banco) || x.banco || '';
     x.historico.push({quando:agora(),quem:me.id,acao:'Marcou como recebido em '+fmt(d.data)+(x.banco?' · '+x.banco:'')}); save(); fechar(); render(); toast(id+' recebido'); },
@@ -3144,7 +3151,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.12';
+const APP_VERSAO = '9.13';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
