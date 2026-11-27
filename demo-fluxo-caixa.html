@@ -768,6 +768,13 @@ function telaDash(){
   const lucroTotal = lucroEv.reduce((a,x)=>a+x.lucro,0);
   const recTotal = lucroEv.reduce((a,x)=>a+x.receita,0), pagTotal = lucroEv.reduce((a,x)=>a+x.custo,0);   // somam o mesmo que o lucro (recebimentos − pagamentos)
   // despesas sem evento e sem rateio (aluguel, contador…) ficam fora do lucro dos eventos; aparecem no gráfico Por categoria
+  // "Por evento" e "Por categoria" seguem os mesmos filtros do gráfico de lucro (período pela data do evento, centro de custo e evento)
+  const evsSel = new Set(lucroEv.map(x=>x.e.id)), ratIds = rateadoIds(RAT);
+  const dashItens = [
+    ...visiveis().filter(p=>evsSel.has(p.eventoId) && !['recusado','cancelado'].includes(p.status)).map(p=>({eventoId:p.eventoId, categoria:p.categoria, valor:p.valor})),
+    ...Object.entries(RAT).filter(([id])=>evsSel.has(id)).flatMap(([id,rs])=>rs.map(r=>({eventoId:id, categoria:r.p.categoria, valor:r.valor}))),
+    ...(LF.cc||LF.serie||F.evento.length ? [] : visiveis().filter(p=>!p.eventoId && !ratIds.has(p.id) && !['recusado','cancelado'].includes(p.status) && anosSel.includes(p.vencimento.slice(0,4)) && passa(F.mes,p.vencimento.slice(5,7))).map(p=>({eventoId:'', categoria:p.categoria, valor:p.valor})))
+  ];
   const graficoLucro = lucroEv.length ? `<div class="graf-rola"><div style="display:flex;gap:0;padding-top:4px;justify-content:center;min-width:${lucroEv.length*62}px">${lucroEv.map(x=>{
       // tamanhos em pixels: lucro acima da linha do zero, prejuízo abaixo, na mesma escala; os rótulos têm espaço próprio
       const AREA = 190, pxTopo = Math.round(topo/100*AREA), pxBaixo = AREA - pxTopo;
@@ -817,7 +824,7 @@ function telaDash(){
       <div class="seg" style="height:${x.aprovado/mx*85}%;background:var(--aprovado)"></div>
       <div class="seg" style="height:${x.pago/mx*85}%;background:var(--pago)"></div>
       <div class="lab" style="${on?'color:var(--brand);font-weight:700':''};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h(lab)}</div></div>`;
-  const agrupa = (chave, nome) => { const g={}; validos.forEach(p=>{ const k=p[chave]; g[k]=(g[k]||0)+p.valor; });
+  const agrupa = (chave, nome) => { const g={}; dashItens.forEach(p=>{ const k=p[chave]; g[k]=(g[k]||0)+p.valor; });
     return Object.entries(g).map(([k,v])=>({nome:nome(k),v})).sort((a,b)=>b.v-a.v); };
   const hbars = arr => { const mx=Math.max(1,...arr.map(x=>x.v)); return arr.map(x=>`<div class="hbar"><div class="name" title="${h(x.nome)}">${h(x.nome)}</div><div class="track"><div class="fill" style="width:${x.v/mx*100}%"></div></div><div class="right">${brl(x.v)}</div></div>`).join('') || '<div class="empty">Sem dados</div>'; };
   const kpi = (s,l) => `<div class="kpi click" data-act="kpi" data-id="${s}" title="Ver a lista"><div class="l"><span class="dot" style="background:${STATUS[s].cor}"></span>${l}</div><div class="v">${brl(soma(s))}</div><div class="s">${qtd(s)} pedidos</div></div>`;
@@ -859,7 +866,7 @@ function telaDash(){
         <div class="right"><b style="color:var(--pago)">${brl(totPago)}</b><small>${pagos} pago(s)${pend?' · '+pend+' em aberto':''}</small></div>
       </button>`).join('') || '<div class="empty">Nenhum evento neste período</div>'}</div></div></div>
   ${isProd()?'':/* gráficos por evento e por categoria: só gestora e sócios */`<div class="grid2">
-    <div class="panel"><b>Por evento (centro de custo)</b>${hbars(agrupa('eventoId',k=>evento(k).nome))}</div>
+    <div class="panel"><b>Por evento (centro de custo)</b>${hbars(agrupa('eventoId',k=>{ const e=evento(k); return (e.data?fmt(e.data).slice(0,5)+' · ':'')+e.nome; }))}</div>
     <div class="panel"><b>Por categoria</b>${hbars(agrupa('categoria',k=>k))}</div>
   </div>`}
   ${!isProd()?`<div class="panel" style="margin-top:12px"><b>Orçado × realizado por evento</b>
@@ -3114,7 +3121,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.10';
+const APP_VERSAO = '9.11';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
