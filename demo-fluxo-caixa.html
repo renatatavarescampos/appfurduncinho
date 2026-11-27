@@ -82,6 +82,10 @@ tr.dup.click:hover td{background:#fbcfcd}
 .kpi.click{cursor:pointer;transition:border-color .15s,box-shadow .15s}
 .kpi.click:hover{border-color:var(--brand);box-shadow:0 2px 10px #0026201f}
 .kpi.click::after{content:'Ver lista →';display:block;font-size:11px;color:var(--brand);margin-top:6px;opacity:.75}
+.kpi.filt::after{content:'Filtrar a lista ↓'}
+.kpi.filt.on{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand);background:#f4efeb}
+.kpi.filt.on::after{content:'✕ Mostrar tudo';font-weight:600;opacity:1}
+.kpi .falta{display:inline-block;margin:2px 4px 0 0;padding:1px 7px;border-radius:999px;background:#efbb3c33;color:#002620;font-size:11px}
 .kpi .l{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
 .kpi .v{font-size:22px;font-weight:700;margin-top:4px}
 .kpi .s{font-size:12px;color:var(--muted)}
@@ -633,6 +637,38 @@ function formCampos(voltar){
 // Colunas da Lista: a gestora escolhe quais aparecem e em que ordem (botão "⚙ Colunas")
 // Atraso: pedido aguardando/aprovado com vencimento antes de hoje; recebimento não recebido com data prevista antes de hoje
 const atrasadoPag = p => ['aguardando','aprovado'].includes(p.status) && p.vencimento < HOJE;
+// Painel de Contas a pagar: vence hoje e dupla aprovação (a gestora confere o que o sócio aprovou e completa o que falta)
+const venceHoje = p => ['aguardando','aprovado'].includes(p.status) && p.vencimento === HOJE;
+const aConferir = p => p.status==='aprovado' && !p.conferido;
+function faltasPedido(p){
+  const pe = pessoa(p.pessoaId), f = [];
+  if (!ccDe(p)) f.push('Centro de custo');
+  if (!p.forma) f.push('Forma de pagamento');
+  if (!['Boleto','Dinheiro'].includes(p.forma) && !pe.pix && !pe.conta) f.push('Dados bancários');
+  if (!p.link && !p.anexo && !(p.anexos||[]).length) f.push('Nota / recibo');
+  if (!String(p.descricao||'').trim()) f.push('Descrição');
+  extras().filter(c=>c.obrig && !valorExtra(p,c)).forEach(c=>f.push(c.nome));
+  return f;
+}
+let LP = '';   // filtro rápido dos cartões de Contas a pagar: 'hoje', 'atraso' ou 'conferir'
+const LP_CFG = {hoje:{nome:'Vence hoje', f:venceHoje}, atraso:{nome:'Atrasado', f:atrasadoPag}, conferir:{nome:'Aprovados para conferir', f:aConferir}};
+function painelPagar(){
+  const base = filtrar(visiveis(), {status:false}), sm = l => l.reduce((a,p)=>a+p.valor,0);
+  const hoje = base.filter(venceHoje), atr = base.filter(atrasadoPag), conf = isAdmin() ? base.filter(aConferir) : [];
+  const ag = base.filter(p=>p.status==='aguardando'), ap = base.filter(p=>p.status==='aprovado');
+  const stOn = s => !LP && F.status.length===1 && F.status[0]===s;
+  const card = (act, id, on, cor, nome, lst, extra='', corV='') => `<div class="kpi click filt${on?' on':''}" data-act="${act}" data-id="${id}" title="${on?'Mostrar a lista toda':'Mostrar só estes na lista'}">
+    <div class="l"><span class="dot" style="background:${cor}"></span>${nome}</div><div class="v" style="${corV&&lst.length?'color:'+corV:''}">${brl(sm(lst))}</div><div class="s">${lst.length} pedido(s)</div>${extra}</div>`;
+  const faltam = conf.filter(p=>faltasPedido(p).length).length;
+  return `<div class="kpis">
+    ${card('lpFiltro','hoje',LP==='hoje','#c37f36','Vence hoje',hoje, hoje.some(p=>p.status==='aguardando')?`<div class="s">${hoje.filter(p=>p.status==='aguardando').length} ainda aguardando aprovação</div>`:'')}
+    ${card('lpFiltro','atraso',LP==='atraso','var(--recusado)','Atrasado',atr, atr.length?`<div class="s">Mais antigo: <b>${fmt(atr.map(p=>p.vencimento).sort()[0])}</b></div>`:'', 'var(--recusado)')}
+    ${card('lpStatus','aguardando',stOn('aguardando'),'var(--aguardando)','Aguardando aprovação',ag)}
+    ${card('lpStatus','aprovado',stOn('aprovado'),'var(--aprovado)','A pagar',ap)}
+    ${isAdmin()?card('lpFiltro','conferir',LP==='conferir','#002620','Aprovados para conferir',conf, conf.length?`<div class="s">${faltam?`<b>${faltam}</b> com campos faltando`:'Todos com os dados completos'}</div>`:'<div class="s">Tudo conferido ✓</div>'):''}
+  </div>
+  ${LP?`<div class="note" style="background:#f4efeb;border-color:#efbb3c;color:#002620;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px">Mostrando só: <b>${LP_CFG[LP].nome}</b>${LP==='conferir'?' · aprovados pelos sócios que ainda não passaram pela sua conferência. Clique em <b>🔎 Conferir</b> para revisar, preencher o que falta e dar a segunda aprovação.':''}<div class="spacer"></div><button class="btn sm" data-act="lpFiltro" data-id="${LP}">✕ Mostrar tudo</button></div>`:''}`;
+}
 const atrasadoRec = r => !r.recebidoEm && r.status!=='cancelado' && r.previsto < HOJE;
 const TAG_ATRASO = '<span class="tag" style="background:var(--recusado);margin-left:4px">⏰ Atrasado</span>';
 const ccDe = p => p.centroCusto || evento(p.eventoId).centroCusto || '';
@@ -695,6 +731,10 @@ function celPagamento(p){
   else if (p.status==='aprovado'){ v=atr?'Atrasado':'A pagar'; html=(atr?tagA:'<span class="tag" style="background:var(--aprovado)">A pagar</span> ')+(podePagar(p)?`<button class="btn sm" data-act="pagarConf" data-id="${p.id}" title="Registrar o pagamento">Marcar como pago</button>`:''); }
   else if (p.status==='aguardando'){ v=atr?'Aguardando aprovação · atrasado':'Aguardando aprovação'; html=tagA+'<span class="meta">Aguardando aprovação</span>'; }
   else { v='Recusado / cancelado'; html=`<span class="meta">${STATUS[p.status].nome}</span>`; }
+  if (isAdmin() && p.status==='aprovado'){
+    if (p.conferido){ html += ` <span class="meta" title="Conferido por ${h(user(p.conferido.quem).nome)} em ${fmt(p.conferido.quando)}">✓ Conferido</span>`; v += ' · conferido'; }
+    else { const fl = faltasPedido(p); html += ` <button class="btn sm" style="border-color:#efbb3c" data-act="conferir" data-id="${p.id}" title="${fl.length?'Falta: '+h(fl.join(', ')):'Dados completos'}">🔎 Conferir${fl.length?' · falta '+fl.length:''}</button>`; v += ' · a conferir'; }
+  }
   if (marcaDup(p)){ html += ' '+tagDup(p)+btnNaoDup(p); v += ' · possível duplicidade'; }
   return `<td data-v="${v}" style="white-space:nowrap">${html}</td>`;
 }
@@ -716,13 +756,14 @@ document.addEventListener('change', e => {
 });
 function telaLista(){
   const inativo = p => ['recusado','cancelado'].includes(p.status);
-  const lista = filtrar(visiveis()).sort((a,b)=>b.vencimento.localeCompare(a.vencimento));
+  const lista = filtrar(visiveis()).filter(p=>!LP || LP_CFG[LP].f(p)).sort((a,b)=>LP ? a.vencimento.localeCompare(b.vencimento) : b.vencimento.localeCompare(a.vencimento));
   const tot = lista.filter(p=>!inativo(p)).reduce((a,p)=>a+p.valor,0);
   const cols = colsLista(), adm = isAdmin(), n = cols.length + 1 + (adm?1:0), iv = cols.findIndex(c=>c.id==='valor');
   [...SEL].forEach(id=>{ if(!db.pedidos.some(p=>p.id===id)) SEL.delete(id); });
   return `<div class="toolbar"><h2 style="margin:0">${isProd()?'Meus pedidos':'Contas a pagar'}</h2>${adm?`<button class="btn pri" id="btnEditSel" data-act="editarSel" style="${SEL.size?'':'display:none'}">✏️ Alterar selecionadas (<span data-sel-n>${SEL.size}</span>)</button><button class="btn bad" id="btnExclSel" data-act="excluirSel" style="${SEL.size?'':'display:none'}">🗑 Excluir selecionadas (<span data-sel-n>${SEL.size}</span>)</button>`:''}<div class="spacer"></div>
     ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkForm" title="Link para quem não tem acesso ao sistema enviar um pedido">🔗 Link do formulário</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
+  ${painelPagar()}
   <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}<th>Pagamento</th></tr></thead>
   <tbody>${lista.map(p=>`<tr class="click${inativo(p)?' inativo':''}${marcaDup(p)?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${inativo(p) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
   <tfoot><tr>${rodapeTotal((adm?1:0)+iv, cols.length-iv, `<b data-cnt="pedidos">${lista.length} pedidos</b> · ${F.status.some(s=>['recusado','cancelado'].includes(s))?'total':'total válido (sem recusados/cancelados)'}`, brl(tot))}</tr></tfoot></table></div>`;
@@ -1466,6 +1507,7 @@ function verPedido(id){
     ${(p.anexos||[]).length?`<dt>Anexos</dt><dd style="display:flex;flex-wrap:wrap;gap:6px">${p.anexos.map((a,i)=>`<button class="btn sm" data-act="abrirAnexo" data-id="${p.id}|${i}" title="Abrir o arquivo">📎 ${h(a.nome)}</button>`).join('')}</dd>`:''}
     ${p.solicitante?`<dt>Enviado por</dt><dd>${h(p.solicitante.nome)}${p.solicitante.contato?' · '+h(p.solicitante.contato):''} <span class="meta">(pelo link do formulário)</span></dd>`:''}
     <dt>Criado por</dt><dd>${h(user(p.criadoPor).nome)} em ${fmt(p.criadoEm)}</dd>
+    ${['aprovado','pago'].includes(p.status)?`<dt>Conferência da gestora</dt><dd>${p.conferido?`✓ Conferido por <b>${h(user(p.conferido.quem).nome)}</b> em ${fmt(p.conferido.quando)}`:'<span class="meta">Ainda não conferido</span>'}</dd>`:''}
   </dl>
   <h4 style="margin:16px 0 0">Histórico</h4>
   <div class="hist">${p.historico.map(x=>`<div>${h(x.acao)}<small>${h(user(x.quem).nome)} · ${fmt(x.quando)}</small></div>`).join('')}</div>
@@ -1473,15 +1515,21 @@ function verPedido(id){
     <select id="novoStatus" style="margin-left:6px">${ORDEM.map(s=>`<option value="${s}" ${s===p.status?'selected':''}>${STATUS[s].nome}</option>`).join('')}</select>
     <button class="btn sm" data-act="mudarStatus" data-id="${p.id}">Aplicar</button></div>`:''}
   ${isProd()&&p.status!=='aguardando'?'<div class="note">Este pedido já saiu de "Aguardando aprovação", então só o admin pode alterá-lo.</div>':''}
-  <div class="actions">${botoes(p)}${isAdmin()?`<button class="btn" data-act="form" data-id="${p.id}">Editar</button>`:''}<button class="btn" data-act="fechar">Fechar</button></div>`);
+  <div class="actions">${botoes(p)}${isAdmin()&&aConferir(p)?`<button class="btn" style="border-color:#efbb3c" data-act="conferir" data-id="${p.id}">🔎 Conferir</button>`:''}${isAdmin()?`<button class="btn" data-act="form" data-id="${p.id}">Editar</button>`:''}<button class="btn" data-act="fechar">Fechar</button></div>`);
 }
 
-function formPedido(id){
+function formPedido(id, conf=false){
   const p = id ? db.pedidos.find(x=>x.id===id) : null;
   if (p && !podeEditar(p)) return toast('Você não pode editar este pedido.');
+  if (conf && !(p && isAdmin() && aConferir(p))) conf = false;
   const v = p || {eventoId:F.evento.length===1?F.evento[0]:'',pessoaId:'',categoria:'',valor:'',vencimento:'',forma:'PIX',descricao:'',link:''};
   const evs = db.eventos.filter(e=>e.data>=addDias(HOJE,-60) || e.id===v.eventoId).sort((a,b)=>a.data.localeCompare(b.data));
-  modal(`<h3>${p?'Editar pedido '+p.id:'Novo pedido de pagamento'}</h3>
+  const aprov = p ? (p.historico.filter(x=>/^Aprovou/.test(x.acao)).pop()) : null, fl = conf ? faltasPedido(p) : [], pe = p ? pessoa(p.pessoaId) : null;
+  modal(`<h3>${conf?'🔎 Conferir pedido '+p.id:p?'Editar pedido '+p.id:'Novo pedido de pagamento'}</h3>
+  ${conf?`<div class="note" style="background:#f4efeb;border-color:#efbb3c;color:#002620;margin:-6px 0 12px">
+    Aprovado${aprov?` por <b>${h(user(aprov.quem).nome)}</b> em ${fmt(aprov.quando)}`:''}. Revise os dados, complete o que falta e clique em <b>Salvar e dar a segunda aprovação</b>.
+    ${fl.length?`<div style="margin-top:6px">Falta preencher: ${fl.map(x=>`<span class="tag" style="background:#c37f36">${h(x)}</span>`).join(' ')}</div>`:'<div style="margin-top:6px">✓ Todos os dados principais estão preenchidos.</div>'}
+    <div style="margin-top:6px;font-size:13px">Dados bancários de <b>${h(pe.nome)}</b>: ${bancoHTML(pe)} · <a href="#" data-act="formPessoa" data-id="${pe.id}">editar cadastro</a></div></div>`:''}
   <form class="form" id="fPedido">
     <label class="full">Evento *<select name="eventoId" required><option value="">Selecione…</option>${evs.map(e=>`<option value="${e.id}" ${v.eventoId===e.id?'selected':''}>${h(e.nome)} — ${fmt(e.data)}</option>`).join('')}<option value="_empresa" ${p && !v.eventoId?'selected':''}>— Sem evento (despesa da empresa) —</option></select></label>
     <label class="full">Favorecido *<select name="pessoaId" required><option value="">Selecione…</option>${[...db.pessoas].filter(x=>x.ativo!==false || x.id===v.pessoaId).sort((a,b)=>a.nome.localeCompare(b.nome)).map(x=>`<option value="${x.id}" ${v.pessoaId===x.id?'selected':''}>${h(x.nome)} — ${h(x.funcao)}</option>`).join('')}</select>
@@ -1500,7 +1548,7 @@ function formPedido(id){
     <label class="full">Descrição<textarea name="descricao" rows="2">${h(v.descricao)}</textarea></label>
     <label class="full">Link (nota, recibo, orçamento)<input name="link" value="${h(v.link||'')}" placeholder="Cole o link do documento (Google Drive, Dropbox…)"></label>
   </form>
-  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button><button class="btn pri" data-act="salvarPedido" data-id="${p?p.id:''}">${p?'Salvar alterações':'Enviar pedido'}</button></div>`);
+  <div class="actions"><button class="btn" data-act="fechar">Cancelar</button>${conf?`<button class="btn" data-act="salvarPedido" data-id="${p.id}">Só salvar</button><button class="btn pri" data-act="salvarConferir" data-id="${p.id}">✓ Salvar e dar a segunda aprovação</button>`:`<button class="btn pri" data-act="salvarPedido" data-id="${p?p.id:''}">${p?'Salvar alterações':'Enviar pedido'}</button>`}</div>`);
 }
 const centrosDeCusto = () => [...new Set([...(db.centrosCusto||[]), ...db.eventos.map(e=>e.centroCusto), ...db.pedidos.map(p=>p.centroCusto)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
 // Contas bancárias da empresa (onde o dinheiro saiu/entrou) — preenchidas na conciliação
@@ -1572,7 +1620,7 @@ function salvarLote(lista){
   });
   save(); fechar(); SEL.clear(); render(); toast(n ? n+' conta(s) alterada(s)' : 'Nada mudou: as contas já tinham esses dados');
 }
-function salvarPedido(id){
+function salvarPedido(id, conf=false){
   const f = document.getElementById('fPedido'); if(!f.reportValidity()) return;
   const d = Object.fromEntries(new FormData(f));
   const dados = {eventoId:d.eventoId==='_empresa'?'':d.eventoId,pessoaId:d.pessoaId,categoria:d.categoria,valor:Number(d.valor),vencimento:d.vencimento,forma:d.forma,descricao:d.descricao.trim(),link:urlOk(d.link),centroCusto:(d.centroCusto||'').trim(),
@@ -1586,10 +1634,14 @@ function salvarPedido(id){
     const rotulos = {eventoId:['Evento',v=>evento(v).nome],pessoaId:['Favorecido',v=>pessoa(v).nome],categoria:['Categoria',v=>v],valor:['Valor',v=>brl(v)],vencimento:['Vencimento',v=>fmt(v)],forma:['Forma',v=>v],descricao:['Descrição',v=>v||'—'],centroCusto:['Centro de custo',v=>v||'—'],link:['Link',v=>v||'—']};
     const difs = Object.keys(rotulos).filter(k=>String(p[k]??'')!==String(dados[k]??'')).map(k=>`${rotulos[k][0]}: ${rotulos[k][1](p[k])} → ${rotulos[k][1](dados[k])}`);
     extras().forEach(c=>{ const a=(p.extras||{})[c.id]||'', b=dados.extras[c.id]||''; if (String(a)!==String(b)) difs.push(`${c.nome}: ${valorExtra(p,c)||'—'} → ${valorExtra({extras:dados.extras},c)||'—'}`); });
-    if (!difs.length){ fechar(); return toast('Nenhum dado foi alterado.'); }
-    Object.assign(p, dados);
-    p.historico.push({quando:agora(),quem:me.id,acao:'Editou o pedido — '+difs.join('; ')});
-    toast('Pedido atualizado');
+    if (!difs.length && !conf){ fechar(); return toast('Nenhum dado foi alterado.'); }
+    if (difs.length){ Object.assign(p, dados); p.historico.push({quando:agora(),quem:me.id,acao:'Editou o pedido — '+difs.join('; ')}); }
+    if (conf && isAdmin() && aConferir(p)){
+      p.conferido = {quem:me.id, quando:agora()};
+      p.historico.push({quando:agora(),quem:me.id,acao:'Conferiu o pedido (segunda aprovação da gestora)'});
+      const fl = faltasPedido(p);
+      toast(p.id+' conferido'+(fl.length?' · ainda falta: '+fl.join(', '):''));
+    } else toast('Pedido atualizado');
   } else {
     // despesa mensal: um pedido por mês, mesmo dia de vencimento (dia 31 vira o último dia do mês)
     const n = d.repetir==='mes' ? Math.min(36, Math.max(2, parseInt(d.meses)||12)) : 1;
@@ -2372,7 +2424,8 @@ function aprovarTodos(){
 }
 function mudar(id, status, texto){
   const p = db.pedidos.find(x=>x.id===id); if(!p) return;
-  p.status = status; p.historico.push({quando:agora(),quem:me.id,acao:texto});
+  p.status = status; if (!['aprovado','pago'].includes(status)) delete p.conferido;
+  p.historico.push({quando:agora(),quem:me.id,acao:texto});
   save(); fechar(); render(); toast(p.id+': '+STATUS[status].nome);
 }
 function pedirMotivo(id, tipo){
@@ -2499,7 +2552,7 @@ const acoes = {
   // Cartões do Dashboard: abre a Lista com o mesmo período/evento/categoria e o status do cartão
   verAtrasos: () => verAtrasos(),
   kpiAtrasoPagar: () => { F.status = ['aprovado']; delete CFS.lista; view = 'lista'; render(); window.scrollTo(0,0); toast('Mostrando: A pagar (veja os vencimentos anteriores a hoje no topo da lista)'); },
-  kpi: id => { F.status = id.split(','); delete CFS.lista; view = 'lista'; render(); window.scrollTo(0,0);
+  kpi: id => { LP = ''; F.status = id.split(','); delete CFS.lista; view = 'lista'; render(); window.scrollTo(0,0);
     toast('Mostrando: ' + F.status.map(s=>STATUS[s].nome).join(' + ')); },
   csvPagos: id => { const e=evento(id), num=v=>v.toFixed(2).replace('.',',');
     const linhas=[['Data','Tipo','Nº','Evento','Favorecido / Origem','CPF/CNPJ','Categoria / Descrição','Centro de custo','Forma','Situação','Banco','Entrada','Saída']];
@@ -2527,12 +2580,16 @@ const acoes = {
   sair: () => { me=null; render(); },
   reset: () => { if (window.NUVEM) return; try{localStorage.removeItem(KEY)}catch(e){} db=seed(); if(me) me=user(me.id); fechar(); render(); toast('Dados de exemplo restaurados'); },
   aba: id => { view=id; render(); },
-  limpar: () => { for (const k in CFS) delete CFS[k]; F={ano:F.ano,mes:[],evento:[],categoria:[],status:[],produtor:[]}; render(); },
+  limpar: () => { LP = ''; for (const k in CFS) delete CFS[k]; F={ano:F.ano,mes:[],evento:[],categoria:[],status:[],produtor:[]}; render(); },
   mes: id => { F.mes = F.mes.includes(id) ? F.mes.filter(m=>m!==id) : [...F.mes, id]; render(); },
   ver: id => verPedido(id),
   form: id => formPedido(id),
   fechar: () => fechar(),
   salvarPedido: id => salvarPedido(id),
+  conferir: id => formPedido(id, true),
+  salvarConferir: id => salvarPedido(id, true),
+  lpFiltro: id => { LP = LP===id ? '' : id; if (LP) F.status = []; render(); },
+  lpStatus: s => { const on = !LP && F.status.length===1 && F.status[0]===s; LP = ''; F.status = on ? [] : [s]; render(); },
   aprovar: id => { const p=db.pedidos.find(x=>x.id===id); if(!podeAprovar(p)) return; if (duplicados(p).length) return avisoDuplicidade(id); mudar(id,'aprovado','Aprovou o pedido'); },
   naoDup: id => { const p=db.pedidos.find(x=>x.id===id); if(!p || !podeConferirDup()) return; const ds=duplicados(p); if(!ds.length) return;
     ds.forEach(q=>{ p.dupOk=[...(p.dupOk||[]),q.id]; q.dupOk=[...(q.dupOk||[]),p.id]; q.historico.push({quando:agora(),quem:me.id,acao:'Conferiu: não é duplicado de '+p.id}); });
@@ -3151,7 +3208,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.13';
+const APP_VERSAO = '9.14';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
