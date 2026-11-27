@@ -530,9 +530,22 @@ function filtrosHTML({periodo=true,status=true,categoria=true}={}){
    <button class="btn sm" data-act="limpar">Limpar filtros</button>`;
 }
 
+// Possível duplicidade: outro pedido válido com o mesmo favorecido, o mesmo valor e o mesmo evento
+const duplicados = p => db.pedidos.filter(q => q.id!==p.id && q.pessoaId===p.pessoaId && (q.eventoId||'')===(p.eventoId||'') && Math.round(q.valor*100)===Math.round(p.valor*100) && !['recusado','cancelado'].includes(q.status));
+const tagDup = p => duplicados(p).length ? `<span class="tag" style="background:#d97706;white-space:nowrap" title="Mesmo favorecido, valor e evento de ${duplicados(p).map(q=>q.id).join(', ')}">⚠ Possível duplicidade</span>` : '';
+function avisoDuplicidade(id){
+  const p = db.pedidos.find(x=>x.id===id); if (!p) return;
+  const ds = duplicados(p);
+  modal(`<h3>⚠ Possível pagamento em duplicidade</h3>
+  <p style="margin:-6px 0 10px">Antes de aprovar <b>${p.id}</b> (${h(pessoa(p.pessoaId).nome)} · <b>${brl(p.valor)}</b> · ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}), confira: já existe${ds.length>1?'m':''} ${ds.length} pedido(s) com o <b>mesmo favorecido, valor e evento</b>:</p>
+  <div style="overflow-x:auto"><table class="cards" style="font-size:13px"><thead><tr><th>Nº</th><th>Evento</th><th>Vencimento</th><th>Situação</th><th class="right">Valor</th><th>Descrição</th></tr></thead><tbody>
+  ${[p,...ds].map(q=>`<tr style="${q.id===p.id?'background:#fef3c7':''}"><td><b>${q.id}</b>${q.id===p.id?'<br><span class="meta">este</span>':''}</td><td>${h(evData(q.eventoId))}</td><td>${fmt(q.vencimento)}</td><td><span class="tag" style="background:${STATUS[q.status].cor}">${STATUS[q.status].nome}</span></td><td class="right">${brl(q.valor)}</td><td style="white-space:normal">${h(q.descricao||'—')}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="actions"><button class="btn" data-act="fechar">Voltar</button><div class="spacer"></div><button class="btn bad" data-act="motivo" data-id="${p.id}" data-arg="recusado">Recusar (é duplicado)</button><button class="btn blue" data-act="aprovarMesmo" data-id="${p.id}">Aprovar mesmo assim</button></div>`, 820);
+}
 function botoes(p){
   let b='';
-  if (podeAprovar(p)) b += `<button class="btn sm blue" data-act="aprovar" data-id="${p.id}">Aprovar</button><button class="btn sm bad" data-act="motivo" data-id="${p.id}" data-arg="recusado">Recusar</button>`;
+  if (podeAprovar(p)) b += tagDup(p) + `<button class="btn sm blue" data-act="aprovar" data-id="${p.id}">Aprovar</button><button class="btn sm bad" data-act="motivo" data-id="${p.id}" data-arg="recusado">Recusar</button>`;
   if (podePagar(p)) b += `<button class="btn sm ok" data-act="pagar" data-id="${p.id}">Marcar como pago</button>`;
   if (podeEditar(p) && !isAdmin()) b += `<button class="btn sm" data-act="form" data-id="${p.id}">Editar</button>`;
   if (podeCancelar(p) && isProd()) b += `<button class="btn sm bad" data-act="motivo" data-id="${p.id}" data-arg="cancelado">Cancelar</button>`;
@@ -672,7 +685,7 @@ function celPagamento(p){
   let v, html;
   if (p.status==='pago'){ v='Pago'; const d=dataPagamento(p); html=`<span class="meta">✓ Pago${d?' em '+fmt(String(d).slice(0,10)):''}</span>`; }
   else if (p.status==='aprovado'){ v=atr?'Atrasado':'A pagar'; html=(atr?tagA:'<span class="tag" style="background:var(--aprovado)">A pagar</span> ')+(podePagar(p)?`<button class="btn sm" data-act="pagarConf" data-id="${p.id}" title="Registrar o pagamento">Marcar como pago</button>`:''); }
-  else if (p.status==='aguardando'){ v=atr?'Aguardando aprovação · atrasado':'Aguardando aprovação'; html=tagA+'<span class="meta">Aguardando aprovação</span>'; }
+  else if (p.status==='aguardando'){ v=atr?'Aguardando aprovação · atrasado':'Aguardando aprovação'; html=tagA+'<span class="meta">Aguardando aprovação</span>'+(duplicados(p).length?' '+tagDup(p):''); if(duplicados(p).length) v+=' · possível duplicidade'; }
   else { v='Recusado / cancelado'; html=`<span class="meta">${STATUS[p.status].nome}</span>`; }
   return `<td data-v="${v}" style="white-space:nowrap">${html}</td>`;
 }
@@ -2345,6 +2358,7 @@ function aprovarTodos(){
   const lista = db.pedidos.filter(p=>p.status==='aguardando' && passa(F.produtor,p.criadoPor));
   modal(`<h3>Aprovar ${lista.length} pedido(s)?</h3>
   <p style="color:var(--muted)">Total de <b>${brl(lista.reduce((a,p)=>a+p.valor,0))}</b>${F.produtor.length?' de '+F.produtor.map(id=>h(user(id).nome)).join(', '):''}. Depois de aprovados, só o admin pode alterar.</p>
+  ${(()=>{ const dup = lista.filter(p=>duplicados(p).length); return dup.length ? `<div class="note" style="background:#fef3c7;border-color:#d97706;color:#78350f;margin:0 0 10px"><b>⚠ ${dup.length} pedido(s) com possível duplicidade</b> (mesmo favorecido, valor e evento de outro pedido):<br>${dup.map(p=>`${p.id} · ${h(pessoa(p.pessoaId).nome)} · ${brl(p.valor)} · ${h(evData(p.eventoId))} — igual a ${duplicados(p).map(q=>q.id).join(', ')}`).join('<br>')}<br>Confira antes de aprovar todos, ou volte e aprove um a um.</div>` : ''; })()}
   <div class="actions"><button class="btn" data-act="fechar">Voltar</button><button class="btn blue" data-act="confirmarTodos">Aprovar todos</button></div>`);
 }
 function mudar(id, status, texto){
@@ -2510,7 +2524,8 @@ const acoes = {
   form: id => formPedido(id),
   fechar: () => fechar(),
   salvarPedido: id => salvarPedido(id),
-  aprovar: id => { const p=db.pedidos.find(x=>x.id===id); if(podeAprovar(p)) mudar(id,'aprovado','Aprovou o pedido'); },
+  aprovar: id => { const p=db.pedidos.find(x=>x.id===id); if(!podeAprovar(p)) return; if (duplicados(p).length) return avisoDuplicidade(id); mudar(id,'aprovado','Aprovou o pedido'); },
+  aprovarMesmo: id => { const p=db.pedidos.find(x=>x.id===id); if(podeAprovar(p)) mudar(id,'aprovado','Aprovou o pedido (ciente da possível duplicidade com '+duplicados(p).map(q=>q.id).join(', ')+')'); },
   pagar: id => { const p=db.pedidos.find(x=>x.id===id); if(podePagar(p)) mudar(id,'pago','Marcou como pago'); },
   motivo: (id,arg) => pedirMotivo(id,arg),
   confirmarMotivo: (id,arg) => { const d=lerForm('fMotivo'); if(!d) return; const p=db.pedidos.find(x=>x.id===id);
@@ -3121,7 +3136,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.11';
+const APP_VERSAO = '9.12';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
