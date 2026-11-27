@@ -338,7 +338,7 @@ label.cb{position:relative}
         || '<div class="vz">Nenhum favorecido cadastrado ainda. Digite o nome.</div>';
       box.style.top = (inp.offsetTop + inp.offsetHeight) + 'px'; box.style.display = 'block';
     };
-    var escolhe = function(x){ if (!x) return; if (x.f){ sel = x.f; inp.value = x.f.nome; } else sel = null; fecha(); aoMudar(sel, inp.value.trim(), true); };
+    var escolhe = function(x){ if (!x) return; if (x.f){ sel = x.f; inp.value = x.f.nome; } else sel = null; fecha(); aoMudar(sel, inp.value.trim(), true, !!x.novo); };
     inp.addEventListener('input', function(){ sel = null; at = 0; desenha(); aoMudar(null, inp.value.trim(), false); });
     inp.addEventListener('focus', function(){ at = 0; desenha(); });
     inp.addEventListener('blur', function(){ setTimeout(function(){
@@ -839,7 +839,7 @@ label.cb{position:relative}
     if (!d.lido) return '<div class="nfLido" id="nfLido">🧾 <b>Não consegui ler os dados deste documento</b> (foto escura ou tremida, ou arquivo protegido). Ele já vai anexado: é só preencher os campos abaixo.</div>';
     var ok = function(t, v){ return '<li>✓ ' + t + ': <b>' + v + '</b></li>'; }, falta = function(t){ return '<li class="falta">Não achei ' + t + '. Preencha abaixo.</li>'; };
     return '<div class="nfLido" id="nfLido">🧾 <b>Lemos ' + (d.tipo === 'Recibo' ? 'o recibo' : 'a nota fiscal') + '.</b> Os campos em amarelo foram preenchidos sozinhos: confira antes de continuar.<ul>'
-      + (d.fav ? ok('Favorecido', esc(d.fav.nome) + ' (já cadastrado)') : d.nome ? ok('Favorecido', esc(d.nome) + (d.doc ? ' · ' + fmtDoc(d.doc) : '')) : d.doc ? '<li class="falta">Achei o CPF/CNPJ ' + fmtDoc(d.doc) + ', mas não o nome. Abrimos o cadastro do favorecido abaixo: complete o nome.</li>' : '<li class="falta">Não achei quem emitiu. Busque o favorecido na lista ou clique em "Cadastrar novo favorecido".</li>')
+      + (d.fav ? ok('Favorecido', esc(d.fav.nome) + ' (já cadastrado)') : d.nome ? '<li>✓ Favorecido: <b>' + esc(d.nome) + (d.doc ? ' · ' + fmtDoc(d.doc) : '') + '</b> <span class="falta">(ainda não cadastrado: clique em “Cadastrar novo favorecido” e os dados já vêm preenchidos)</span></li>' : d.doc ? '<li class="falta">Achei o CPF/CNPJ ' + fmtDoc(d.doc) + ', mas não o nome. Busque o favorecido na lista ou clique em “Cadastrar novo favorecido”.</li>' : '<li class="falta">Não achei quem emitiu. Busque o favorecido na lista ou clique em "Cadastrar novo favorecido".</li>')
       + (d.valor ? ok('Valor', brl(d.valor)) : falta('o valor'))
       + (d.vencimento ? ok('Vencimento', fmt(d.vencimento)) : '<li class="falta">O documento não tem vencimento. Informe a data em que precisa ser pago.</li>')
       + (d.pix ? ok('Chave PIX', esc(d.pix)) : '') + (d.boleto ? '<li>✓ Tem boleto' + (typeof d.boleto === 'string' ? ' (linha digitável na descrição)' : '') + '</li>' : '')
@@ -856,7 +856,6 @@ label.cb{position:relative}
     var bus = document.getElementById('busFav');
     if (d.fav){ bf.set(d.fav); marca(bus); }
     else if (d.nome){ bus.value = d.nome; bf.set(null); marca(bus); var pn = fm.querySelector('[name=p_nome]'); if (pn){ pn.value = d.nome; pn.dataset.auto = 1; marca(pn); } }
-    if (!d.fav && !d.nome && d.doc) document.getElementById('lkNovoFav').click();
     if (!d.fav){ poe('p_doc', d.doc ? fmtDoc(d.doc) : ''); poe('p_pix', d.pix); }
   }
   function telaNota(o){
@@ -923,9 +922,9 @@ label.cb{position:relative}
       + '<input type="file" id="arqIn" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.heif,.gif,.csv,.xls,.xlsx,.ods,application/pdf,image/*" style="display:none"><ul class="arqs" id="arqLista"></ul></div>'
       + '</div><button class="btn" id="btEnv" type="submit">Continuar</button><div class="msg" id="msg"></div></form><div id="passo2"></div>';
     var hid = document.querySelector('[name=pessoaId]'), box = document.getElementById('boxNovo'), stF = document.getElementById('stFav');
-    var bf = buscaFav(document.getElementById('busFav'), o.favorecidos || [], function(f, txt, fim){
-      hid.value = f ? f.id : txt && fim ? '__novo__' : '';
-      stF.className = 'stFav' + (f ? ' ok' : ''); stF.innerHTML = !f && txt && !fim ? '' : f ? '✓ Favorecido cadastrado' + (f.pix ? ' · PIX ' + esc(f.pix) : '') : hid.value ? 'Novo favorecido: preencha o cadastro abaixo.' : 'Digite o nome e escolha na lista. Se não estiver, cadastre na hora.';
+    var bf = buscaFav(document.getElementById('busFav'), o.favorecidos || [], function(f, txt, fim, novo){
+      hid.value = f ? f.id : txt && novo ? '__novo__' : '';
+      stF.className = 'stFav' + (f ? ' ok' : ''); stF.innerHTML = !f && txt && !fim ? '' : f ? '✓ Favorecido cadastrado' + (f.pix ? ' · PIX ' + esc(f.pix) : '') : hid.value ? 'Novo favorecido: preencha o cadastro abaixo.' : txt ? '<span style="color:var(--terra)">“' + esc(txt) + '” não está na lista.</span> Escolha um nome da lista ou clique em “Cadastrar novo favorecido”.' : 'Digite o nome e escolha na lista. Se não estiver, cadastre na hora.';
       if (hid.value === '__novo__'){ var pn = box.querySelector('[name=p_nome]'); if (pn && (!pn.value || pn.dataset.auto)){ pn.value = txt; pn.dataset.auto = 1; } }
       novoOn(); });
     function novoOn(){ var on = hid.value === '__novo__'; box.style.display = on ? '' : 'none'; document.getElementById('boxLkNovo').style.display = on ? 'none' : ''; box.querySelectorAll('[required]').forEach(function(i){ i.disabled = !on; }); box.querySelectorAll('input,select').forEach(function(i){ i.disabled = !on; }); }
