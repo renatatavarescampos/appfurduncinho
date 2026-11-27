@@ -118,7 +118,9 @@ label.cb{position:relative}
 .nfLido{background:#efbb3c14;border:1px solid #efbb3c66;border-radius:12px;padding:12px 14px;font-size:13px;margin:0 0 6px}
 .nfLido b{color:var(--verde)} .nfLido ul{margin:6px 0 0;padding-left:18px} .nfLido li{margin:2px 0}
 .nfLido .falta{color:var(--terra)}
-.auto{background:#efbb3c1f !important;border-color:#efbb3c99 !important}
+.auto{background-color:#efbb3c1f !important;border-color:#efbb3c99 !important}
+.selb{padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23002620' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center}
+.selb:disabled{background-color:#f4efeb80}
 @media (max-width:560px){ .form{grid-template-columns:1fr} h1{font-size:24px} }
 </style>
 </head>
@@ -282,6 +284,45 @@ label.cb{position:relative}
     document.getElementById('opZap').onclick = function(){ telaColar(o); window.scrollTo(0,0); };
     document.getElementById('opImport').onclick = function(){ telaImportar(o); window.scrollTo(0,0); };
   }
+  // listas de seleção viram campo de busca: digita e escolhe. A lista original fica escondida e guarda a escolha.
+  function buscaSelect(sel){
+    if (sel.dataset.busca) return; sel.dataset.busca = 1;
+    var ehVazio = function(op){ return !op.value && /^(selecione…?|—|)$/i.test(op.text.trim()); };
+    var lista = function(){ return [].slice.call(sel.options).map(function(op, i){ return {i: i, nome: op.text}; }).filter(function(e){ return !ehVazio(sel.options[e.i]); }); };
+    var lb = sel.closest('label') || sel.parentNode, inp = document.createElement('input'), box = document.createElement('div'), at = 0, ops = [], q = '', obrig = sel.required;
+    inp.className = 'selb'; inp.placeholder = 'Digite para buscar'; inp.maxLength = 150; inp.setAttribute('autocomplete', 'off'); inp.required = obrig;
+    sel.required = false; sel.style.display = 'none'; lb.classList.add('cb'); box.className = 'sug'; sel.parentNode.insertBefore(inp, sel); lb.appendChild(box);
+    var atual = function(){ var op = sel.options[sel.selectedIndex]; return op && !ehVazio(op) ? op.text : ''; };
+    var valida = function(){ inp.setCustomValidity(obrig && !sel.value ? (inp.value.trim() ? 'Escolha uma opção da lista.' : 'Escolha uma opção.') : ''); };
+    var sinc = function(){ inp.value = atual(); inp.disabled = sel.disabled; inp.classList.toggle('auto', sel.classList.contains('auto')); valida(); };
+    var acha = function(t){ var p = semAcento(t).split(' ').filter(Boolean); return lista().filter(function(e){ var n = semAcento(e.nome); return p.every(function(w){ return n.indexOf(w) >= 0; }); }); };
+    var fecha = function(){ box.style.display = 'none'; };
+    var desenha = function(){ ops = acha(q).slice(0, 80); if (at >= ops.length) at = 0;
+      box.innerHTML = ops.map(function(e, k){ var i = e.nome.lastIndexOf(' · '); return '<div class="op' + (k === at ? ' at' : '') + '" data-k="' + k + '">' + (i > 0 ? esc(e.nome.slice(0, i)) + '<small>' + esc(e.nome.slice(i + 3)) + '</small>' : esc(e.nome)) + '</div>'; }).join('')
+        || '<div class="vz">Nada encontrado com esse nome. Confira o que digitou.</div>';
+      box.style.top = (inp.offsetTop + inp.offsetHeight) + 'px'; box.style.display = 'block'; };
+    var muda = function(){ sel.dispatchEvent(new Event('change', {bubbles: true})); };
+    var escolhe = function(e){ if (!e) return; sel.selectedIndex = e.i; fecha(); muda(); };
+    // quando o código muda a lista (valor, desativar, destaque amarelo), o campo acompanha
+    var pv = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'), pi = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'selectedIndex');
+    Object.defineProperty(sel, 'value', {get: function(){ return pv.get.call(sel); }, set: function(v){ pv.set.call(sel, v); sinc(); }});
+    Object.defineProperty(sel, 'selectedIndex', {get: function(){ return pi.get.call(sel); }, set: function(v){ pi.set.call(sel, v); sinc(); }});
+    new MutationObserver(sinc).observe(sel, {attributes: true, attributeFilter: ['disabled', 'class']});
+    inp.addEventListener('input', function(){ q = inp.value; if (obrig && sel.value){ pi.set.call(sel, 0); muda(); } at = 0; valida(); desenha(); });
+    inp.addEventListener('focus', function(){ q = ''; at = Math.max(0, lista().map(function(e){ return e.i; }).indexOf(sel.selectedIndex)); desenha(); inp.select(); });
+    inp.addEventListener('blur', function(){ setTimeout(function(){ fecha();
+      if (inp.value.trim() && inp.value !== atual()){ var l = acha(inp.value); if (l.length === 1) return escolhe(l[0]); }
+      if (!obrig || !inp.value.trim()) sinc(); }, 150); });
+    inp.addEventListener('keydown', function(e){
+      if (box.style.display === 'none' && e.key === 'ArrowDown'){ desenha(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); at = (at + (e.key === 'ArrowDown' ? 1 : -1) + ops.length) % (ops.length || 1); desenha(); var a = box.querySelector('.at'); if (a) a.scrollIntoView({block: 'nearest'}); }
+      else if (e.key === 'Enter' && box.style.display !== 'none' && ops.length){ e.preventDefault(); escolhe(ops[at]); }
+      else if (e.key === 'Escape'){ fecha(); sinc(); }
+    });
+    box.addEventListener('mousedown', function(e){ e.preventDefault(); var o = e.target.closest('.op'); if (o) escolhe(ops[+o.dataset.k]); });
+    sinc();
+  }
+  function buscaSelects(raiz){ (raiz || cx).querySelectorAll('select').forEach(buscaSelect); }
   function voltarInicio(){ var a = document.getElementById('btInicio'); if (a) a.onclick = function(ev){ ev.preventDefault(); telaInicio(F.opcoes || {}); window.scrollTo(0,0); }; }
 
   // ---------- importar planilha ----------
@@ -1061,6 +1102,7 @@ label.cb{position:relative}
       erro(/Failed to fetch|NetworkError|Load failed/i.test(e.message) ? 'Sem conexão. Verifique a internet e tente de novo.' : e.message);
     });
   }
+  new MutationObserver(function(){ buscaSelects(); }).observe(cx, {childList: true, subtree: true});
   function montar(){
     var o = F.opcoes || {};
     document.getElementById('hTitulo').textContent = o.empresa || 'Equipe financeira';
