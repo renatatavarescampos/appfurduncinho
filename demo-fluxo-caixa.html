@@ -66,6 +66,8 @@ th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);white-spac
 th{font-size:12px;color:var(--muted);font-weight:600}
 tr.click{cursor:pointer}
 tr.click:hover td{background:#f4efeb}
+tr.dup td{background:#fde2e1}
+tr.dup.click:hover td{background:#fbcfcd}
 .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;color:#fff;font-weight:600}
 .right{text-align:right}
 /* dashboard */
@@ -530,9 +532,24 @@ function filtrosHTML({periodo=true,status=true,categoria=true}={}){
    <button class="btn sm" data-act="limpar">Limpar filtros</button>`;
 }
 
+// Possível duplicidade: outro pedido válido com o mesmo favorecido, o mesmo valor e o mesmo evento
+// pedidos que a gestora já conferiu e marcou como "Não é duplicado" saem do aviso
+const dupConferido = (p,q) => (p.dupOk||[]).includes(q.id) || (q.dupOk||[]).includes(p.id);
+const duplicados = p => db.pedidos.filter(q => q.id!==p.id && !dupConferido(p,q) && q.pessoaId===p.pessoaId && (q.eventoId||'')===(p.eventoId||'') && Math.round(q.valor*100)===Math.round(p.valor*100) && !['recusado','cancelado'].includes(q.status));
+const tagDup = p => duplicados(p).length ? `<span class="tag" style="background:var(--recusado);white-space:nowrap" title="Mesmo favorecido, valor e evento de ${duplicados(p).map(q=>q.id).join(', ')}">⚠ Possível duplicidade</span>` : '';
+function avisoDuplicidade(id){
+  const p = db.pedidos.find(x=>x.id===id); if (!p) return;
+  const ds = duplicados(p);
+  modal(`<h3>⚠ Possível pagamento em duplicidade</h3>
+  <p style="margin:-6px 0 10px">Antes de aprovar <b>${p.id}</b> (${h(pessoa(p.pessoaId).nome)} · <b>${brl(p.valor)}</b> · ${h(evData(p.eventoId))} · venc. ${fmt(p.vencimento)}), confira: já existe${ds.length>1?'m':''} ${ds.length} pedido(s) com o <b>mesmo favorecido, valor e evento</b>:</p>
+  <div style="overflow-x:auto"><table class="cards" style="font-size:13px"><thead><tr><th>Nº</th><th>Evento</th><th>Vencimento</th><th>Situação</th><th class="right">Valor</th><th>Descrição</th></tr></thead><tbody>
+  ${[p,...ds].map(q=>`<tr style="${q.id===p.id?'background:#fef3c7':''}"><td><b>${q.id}</b>${q.id===p.id?'<br><span class="meta">este</span>':''}</td><td>${h(evData(q.eventoId))}</td><td>${fmt(q.vencimento)}</td><td><span class="tag" style="background:${STATUS[q.status].cor}">${STATUS[q.status].nome}</span></td><td class="right">${brl(q.valor)}</td><td style="white-space:normal">${h(q.descricao||'—')}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="actions"><button class="btn" data-act="fechar">Voltar</button><div class="spacer"></div><button class="btn" data-act="naoDup" data-id="${p.id}">Não é duplicado</button><button class="btn bad" data-act="motivo" data-id="${p.id}" data-arg="recusado">Recusar (é duplicado)</button><button class="btn blue" data-act="aprovarMesmo" data-id="${p.id}">Aprovar mesmo assim</button></div>`, 820);
+}
 function botoes(p){
   let b='';
-  if (podeAprovar(p)) b += `<button class="btn sm blue" data-act="aprovar" data-id="${p.id}">Aprovar</button><button class="btn sm bad" data-act="motivo" data-id="${p.id}" data-arg="recusado">Recusar</button>`;
+  if (podeAprovar(p)) b += tagDup(p) + `<button class="btn sm blue" data-act="aprovar" data-id="${p.id}">Aprovar</button><button class="btn sm bad" data-act="motivo" data-id="${p.id}" data-arg="recusado">Recusar</button>`;
   if (podePagar(p)) b += `<button class="btn sm ok" data-act="pagar" data-id="${p.id}">Marcar como pago</button>`;
   if (podeEditar(p) && !isAdmin()) b += `<button class="btn sm" data-act="form" data-id="${p.id}">Editar</button>`;
   if (podeCancelar(p) && isProd()) b += `<button class="btn sm bad" data-act="motivo" data-id="${p.id}" data-arg="cancelado">Cancelar</button>`;
@@ -672,7 +689,7 @@ function celPagamento(p){
   let v, html;
   if (p.status==='pago'){ v='Pago'; const d=dataPagamento(p); html=`<span class="meta">✓ Pago${d?' em '+fmt(String(d).slice(0,10)):''}</span>`; }
   else if (p.status==='aprovado'){ v=atr?'Atrasado':'A pagar'; html=(atr?tagA:'<span class="tag" style="background:var(--aprovado)">A pagar</span> ')+(podePagar(p)?`<button class="btn sm" data-act="pagarConf" data-id="${p.id}" title="Registrar o pagamento">Marcar como pago</button>`:''); }
-  else if (p.status==='aguardando'){ v=atr?'Aguardando aprovação · atrasado':'Aguardando aprovação'; html=tagA+'<span class="meta">Aguardando aprovação</span>'; }
+  else if (p.status==='aguardando'){ v=atr?'Aguardando aprovação · atrasado':'Aguardando aprovação'; html=tagA+'<span class="meta">Aguardando aprovação</span>'+(duplicados(p).length?' '+tagDup(p)+(podeAprovar(p)?` <button class="btn sm" data-act="naoDup" data-id="${p.id}" title="Já conferi: não é pagamento em duplicidade">Não é duplicado</button>`:''):''); if(duplicados(p).length) v+=' · possível duplicidade'; }
   else { v='Recusado / cancelado'; html=`<span class="meta">${STATUS[p.status].nome}</span>`; }
   return `<td data-v="${v}" style="white-space:nowrap">${html}</td>`;
 }
@@ -702,7 +719,7 @@ function telaLista(){
     ${isAdmin()?'<button class="btn" data-act="colunas">⚙ Colunas</button><button class="btn" style="border-color:#efbb3c;color:#002620" data-act="linkForm" title="Link para quem não tem acesso ao sistema enviar um pedido">🔗 Link do formulário</button>':''}<button class="btn" data-act="csv">⬇ Exportar Excel (CSV)</button>${isAdmin()?'<button class="btn" style="border-color:#efbb3c;color:#002620" data-act="exportar">⬇ Exportar pagamentos</button><button class="btn" style="border-color:#00262033;color:#002620" data-act="aba" data-id="conciliacao">🏦 Conciliação bancária</button>':''}<button class="btn pri" data-act="form">+ Novo pedido</button></div>
   <div class="toolbar">${filtrosHTML()}</div>
   <div class="panel"><table class="filtravel" data-key="lista5_${adm?'s':''}${cols.map(c=>c.id).join('-')}"><thead><tr>${adm?`<th class="sel-col" title="Selecionar todas as contas que aparecem na lista"><input type="checkbox" data-sel-todos></th>`:''}${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}<th>Pagamento</th></tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click${inativo(p)?' inativo':''}" data-act="ver" data-id="${p.id}" data-valor="${inativo(p) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
+  <tbody>${lista.map(p=>`<tr class="click${inativo(p)?' inativo':''}${p.status==='aguardando'&&duplicados(p).length?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${inativo(p) && !F.status.includes(p.status)?0:p.valor}">${adm?`<td class="sel-col" data-act="selCel"><input type="checkbox" data-sel="${p.id}" ${SEL.has(p.id)?'checked':''}></td>`:''}${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${celPagamento(p)}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">Nenhum pedido com esses filtros</td></tr>`}</tbody>
   <tfoot><tr>${rodapeTotal((adm?1:0)+iv, cols.length-iv, `<b data-cnt="pedidos">${lista.length} pedidos</b> · ${F.status.some(s=>['recusado','cancelado'].includes(s))?'total':'total válido (sem recusados/cancelados)'}`, brl(tot))}</tr></tfoot></table></div>`;
 }
 // Tabela de pedidos com as mesmas colunas escolhidas na Lista (usada nas relações do dashboard e em Aprovações)
@@ -710,7 +727,7 @@ function tabelaPedidos(lista, key, {extraCols=[], acoes=null, vazio='Nenhum pedi
   const cols = [...colsLista(), ...extraCols.filter(c=>!colsLista().some(x=>x.id===c.id))];
   const n = cols.length + (acoes?1:0), tot = lista.reduce((a,p)=>a+p.valor,0), iv = cols.findIndex(c=>c.id==='valor');
   return `<table class="filtravel" data-key="${key}_${cols.map(c=>c.id).join('-')}"><thead><tr>${cols.map(c=>`<th${c.cls?` class="${c.cls}"`:''}>${c.nome}</th>`).join('')}${acoes?'<th></th>':''}</tr></thead>
-  <tbody>${lista.map(p=>`<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${p.valor}">${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${acoes?`<td>${acoes(p)}</td>`:''}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">${vazio}</td></tr>`}</tbody>
+  <tbody>${lista.map(p=>`<tr class="click${p.status==='aguardando'&&duplicados(p).length?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${p.valor}">${cols.map(c=>`<td${c.cls?` class="${c.cls}"`:''}${c.v?` data-v="${h(c.v(p))}"`:''}>${c.td(p)}</td>`).join('')}${acoes?`<td>${acoes(p)}</td>`:''}</tr>`).join('') || `<tr><td colspan="${n}" class="empty">${vazio}</td></tr>`}</tbody>
   <tfoot><tr>${rodapeTotal(iv, cols.length-iv-1+(acoes?1:0), `<b data-cnt="${cnt}">${lista.length} ${cnt}</b>`, brl(tot))}</tr></tfoot></table>`;
 }
 let colsRasc = null, colsTipo = 'lista';
@@ -2345,6 +2362,7 @@ function aprovarTodos(){
   const lista = db.pedidos.filter(p=>p.status==='aguardando' && passa(F.produtor,p.criadoPor));
   modal(`<h3>Aprovar ${lista.length} pedido(s)?</h3>
   <p style="color:var(--muted)">Total de <b>${brl(lista.reduce((a,p)=>a+p.valor,0))}</b>${F.produtor.length?' de '+F.produtor.map(id=>h(user(id).nome)).join(', '):''}. Depois de aprovados, só o admin pode alterar.</p>
+  ${(()=>{ const dup = lista.filter(p=>duplicados(p).length); return dup.length ? `<div class="note" style="background:#fef3c7;border-color:#d97706;color:#78350f;margin:0 0 10px"><b>⚠ ${dup.length} pedido(s) com possível duplicidade</b> (mesmo favorecido, valor e evento de outro pedido):<br>${dup.map(p=>`${p.id} · ${h(pessoa(p.pessoaId).nome)} · ${brl(p.valor)} · ${h(evData(p.eventoId))} — igual a ${duplicados(p).map(q=>q.id).join(', ')}`).join('<br>')}<br>Confira antes de aprovar todos, ou volte e aprove um a um.</div>` : ''; })()}
   <div class="actions"><button class="btn" data-act="fechar">Voltar</button><button class="btn blue" data-act="confirmarTodos">Aprovar todos</button></div>`);
 }
 function mudar(id, status, texto){
@@ -2510,7 +2528,12 @@ const acoes = {
   form: id => formPedido(id),
   fechar: () => fechar(),
   salvarPedido: id => salvarPedido(id),
-  aprovar: id => { const p=db.pedidos.find(x=>x.id===id); if(podeAprovar(p)) mudar(id,'aprovado','Aprovou o pedido'); },
+  aprovar: id => { const p=db.pedidos.find(x=>x.id===id); if(!podeAprovar(p)) return; if (duplicados(p).length) return avisoDuplicidade(id); mudar(id,'aprovado','Aprovou o pedido'); },
+  naoDup: id => { const p=db.pedidos.find(x=>x.id===id); if(!podeAprovar(p)) return; const ds=duplicados(p); if(!ds.length) return;
+    ds.forEach(q=>{ p.dupOk=[...(p.dupOk||[]),q.id]; q.dupOk=[...(q.dupOk||[]),p.id]; q.historico.push({quando:agora(),quem:me.id,acao:'Conferiu: não é duplicado de '+p.id}); });
+    p.historico.push({quando:agora(),quem:me.id,acao:'Conferiu: não é duplicado de '+ds.map(q=>q.id).join(', ')});
+    save(); fechar(); render(); toast(p.id+': aviso de duplicidade retirado'); },
+  aprovarMesmo: id => { const p=db.pedidos.find(x=>x.id===id); if(podeAprovar(p)) mudar(id,'aprovado','Aprovou o pedido (ciente da possível duplicidade com '+duplicados(p).map(q=>q.id).join(', ')+')'); },
   pagar: id => { const p=db.pedidos.find(x=>x.id===id); if(podePagar(p)) mudar(id,'pago','Marcou como pago'); },
   motivo: (id,arg) => pedirMotivo(id,arg),
   confirmarMotivo: (id,arg) => { const d=lerForm('fMotivo'); if(!d) return; const p=db.pedidos.find(x=>x.id===id);
@@ -2964,7 +2987,7 @@ function fluxoPagamentos(lista){
   const ps = lista.filter(m=>m.tipo==='saida').sort((a,b)=>b.data.localeCompare(a.data));
   const tot = ps.reduce((a,m)=>a+m.valor,0);
   return `<div class="panel"><table class="filtravel cards" data-key="fcPag"><thead><tr><th>Data</th><th>Nº</th><th>Evento</th><th>Favorecido</th><th>Categoria</th><th>Forma</th><th>Situação</th><th class="right">Valor</th></tr></thead>
-  <tbody>${ps.map(m=>{ const p=m.ref; return `<tr class="click" data-act="ver" data-id="${p.id}" data-valor="${p.valor}"><td data-v="${fmt(m.data)}">${fmt(m.data)}${m.realizado?'':'<br><span class="meta">vencimento</span>'}</td><td>${p.id}</td><td>${h(evento(p.eventoId).nome)}</td><td>${h(pessoa(p.pessoaId).nome)}</td><td>${h(p.categoria)}</td><td>${h(p.forma)}</td>
+  <tbody>${ps.map(m=>{ const p=m.ref; return `<tr class="click${p.status==='aguardando'&&duplicados(p).length?' dup':''}" data-act="ver" data-id="${p.id}" data-valor="${p.valor}"><td data-v="${fmt(m.data)}">${fmt(m.data)}${m.realizado?'':'<br><span class="meta">vencimento</span>'}</td><td>${p.id}</td><td>${h(evento(p.eventoId).nome)}</td><td>${h(pessoa(p.pessoaId).nome)}</td><td>${h(p.categoria)}</td><td>${h(p.forma)}</td>
     <td data-v="${SIT[m.sit].nome}">${tagSit(m.sit)}${p.conc?' <span title="Conciliado com o banco">🏦✓</span>':''}</td><td class="right">${brl(p.valor)}</td></tr>`; }).join('') || '<tr><td colspan="8" class="empty">Nenhum pagamento com esses filtros</td></tr>'}</tbody>
   <tfoot><tr><td colspan="7"><b data-cnt="pagamentos">${ps.length} pagamentos</b> · pagos, aprovados a pagar e aguardando aprovação (sem recusados/cancelados)</td><td class="right"><b data-tot>${brl(tot)}</b></td></tr></tfoot></table></div>`;
 }
@@ -3121,7 +3144,7 @@ document.addEventListener('change', e => { const k = e.target.dataset?.fc; if (k
 // ================= VERSÃO DO APP E AVISO DE ATUALIZAÇÃO =================
 // A cada atualização do app, mudar APP_VERSAO aqui e no arquivo version.json.
 // Quem estiver com o app aberto vê a faixa "Nova versão disponível" (sem detalhar o que mudou).
-const APP_VERSAO = '9.11';
+const APP_VERSAO = '9.12';
 let versaoNova = null, avisoAdiadoAte = 0;
 async function checarVersao(){
   if (location.protocol === 'file:') return;            // abrindo o arquivo direto não há servidor para consultar
